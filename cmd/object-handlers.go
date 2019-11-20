@@ -43,6 +43,9 @@ import (
 	"github.com/minio/minio/pkg/handlers"
 	"github.com/minio/minio/pkg/hash"
 	"github.com/minio/minio/pkg/ioutil"
+
+	//"github.com/minio/minio/pkg/kinetic"
+	//"github.com/minio/minio/pkg/kinetic_proto"
 	"github.com/minio/minio/pkg/policy"
 	"github.com/minio/minio/pkg/s3select"
 	sha256 "github.com/minio/sha256-simd"
@@ -378,8 +381,10 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		statusCodeWritten = true
 		w.WriteHeader(http.StatusPartialContent)
 	}
-	// Write object content to response body
-	if _, err = io.Copy(httpWriter, gr); err != nil {
+	buf := make([]byte, objInfo.Size)
+	if _, err = io.CopyBuffer(httpWriter, gr, buf); err != nil {
+		// Write object content to response body
+		//if _, err = io.Copy(httpWriter, gr); err != nil {
 		if !httpWriter.HasWritten() && !statusCodeWritten { // write error response only if no data or headers has been written to client yet
 			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		}

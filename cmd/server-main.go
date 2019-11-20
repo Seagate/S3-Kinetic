@@ -397,8 +397,17 @@ func newObjectLayer(endpoints EndpointList) (newObject ObjectLayer, err error) {
 
 	isFS := len(endpoints) == 1
 	if isFS {
-		// Initialize new FS object layer.
-		return NewFSObjectLayer(endpoints[0].Path)
+		fmt.Println(" END POINT ", endpoints[0].Path)
+		if string([]byte(endpoints[0].Path)[:8]) == "kinetic:" {
+			//if endpoints[0].Path == "kinetic" {
+			IP := string([]byte(endpoints[0].Path)[8:])
+			fmt.Println("CREATE KINETIC OBJECT LAYER IP", IP)
+			return NewKineticObjectLayer(IP)
+		} else {
+			// Initialize new FS object layer.
+			fmt.Printf(" END POINT PATH %s\n", endpoints[0].Path)
+			return NewFSObjectLayer(endpoints[0].Path)
+		}
 	}
 
 	format, err := waitForFormatXL(context.Background(), endpoints[0].IsLocal, endpoints, globalXLSetCount, globalXLSetDriveCount)

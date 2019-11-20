@@ -351,7 +351,7 @@ func fsCreateFile(ctx context.Context, filePath string, reader io.Reader, buf []
 			return 0, err
 		}
 	}
-
+	writer.Sync()
 	return bytesWritten, nil
 }
 

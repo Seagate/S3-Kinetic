@@ -35,6 +35,7 @@ const (
 	// Multi disk BackendErasure (single, distributed) backend.
 	BackendErasure
 	// Add your own backend.
+	KineticKeyValue
 )
 
 // StorageInfo - represents total capacity of underlying storage.

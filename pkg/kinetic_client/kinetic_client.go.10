@@ -1,0 +1,158 @@
+//package kinetic_client
+
+package main
+
+import (
+	//"errors"
+	"fmt"
+	"github.com/minio/minio/pkg/client"
+	"github.com/minio/minio/pkg/kinetic_proto"
+)
+
+var c client.Client
+var identity int64 = 1
+var hmac_key string = "asdfasdf"
+
+func Init(tls bool) (*client.Client, bool) {
+	fmt.Println("Init client")
+	c := new(client.Client)
+	c.ConnectionID = 0
+	c.Identity = identity
+	c.Hmac_key = hmac_key
+	if !tls {
+		c.Connect("127.0.0.1:8123")
+	} else {
+		c.TlsConnect("127.0.0.1:8443")
+	}
+	ok := c.GetSignOnMessageFor()
+	if !ok {
+		return nil, false
+	}
+	return c, true
+}
+
+//* Test
+func main() {
+	tlsc, ok := Init(true)
+	if !ok {
+		return
+	}
+	var value3 = make([]byte, 1024*1024)
+	cmd := client.Cmd{
+		ClusterVersion:  0,
+		Force:           true,
+		Algorithm:       kinetic.Command_SHA1,
+		Synchronization: kinetic.Command_WRITETHROUGH,
+		Timeout:         60000, //60 sec
+		Priority:        kinetic.Command_NORMAL,
+	}
+	tlsc.InstantSecureErase(cmd)
+	tlsc.GetStatus()
+	fmt.Println()
+	c, ok := Init(false)
+	//return
+	c.GetLog([]kinetic.Command_GetLog_Type{kinetic.Command_GetLog_UTILIZATIONS}, value3, cmd)
+	//return
+	c.GetLog([]kinetic.Command_GetLog_Type{kinetic.Command_GetLog_TEMPERATURES}, value3, cmd)
+	c.GetLog([]kinetic.Command_GetLog_Type{kinetic.Command_GetLog_CAPACITIES}, value3, cmd)
+	c.GetLog([]kinetic.Command_GetLog_Type{kinetic.Command_GetLog_LIMITS}, value3, cmd)
+	//c.GetLog([]kinetic.Command_GetLog_Type{kinetic.Command_GetLog_CAPACITIES,
+	//	kinetic.Command_GetLog_MESSAGES}, value3, cmd)
+	//PUT Test
+	key := "123"
+	value := "abc"
+	c.Put(key, value, cmd)
+	c.GetStatus()
+
+	key1 := "1234"
+	value1 := "abcd"
+	c.Put(key1, value1, cmd)
+	c.GetStatus()
+
+	key2 := "12345"
+	value2 := "abcde"
+	c.Put(key2, value2, cmd)
+	c.GetStatus()
+	//GET KEY RANGE test
+	c.GetKeyRange("", "", true, true, 200, false, value3, cmd)
+	//kinetic_cmds.GetStatus(&c)
+	//GET Test
+	value_size, ok := c.Get(key, value3, cmd)
+	if ok {
+		fmt.Printf(" VALUE RETURNED TO CALLER:\n %s\n", string(value3[:value_size]))
+		fmt.Printf(" EXPECTED %s\n ", value)
+	}
+	//GET test
+	value_size, ok = c.Get(key1, value3, cmd)
+	if ok {
+		fmt.Printf(" VALUE RETURNED TO CALLER:\n %s\n", string(value3[:value_size]))
+		fmt.Printf(" EXPECTED %s\n", value1)
+
+	}
+	//GETNEXTTEST
+	value_size, ok = c.GetNext(key, value3, cmd)
+	if ok {
+		fmt.Printf(" VALUE RETURNED TO CALLER:\n %s\n", string(value3[:value_size]))
+		fmt.Printf(" EXPECTED %s\n", value1)
+	}
+	//GETPREVIOUS test
+	value_size, ok = c.GetPrevious(key2, value3, cmd)
+	if ok {
+		fmt.Printf(" VALUE RETURNED TO CALLER:\n %s\n", string(value3[:value_size]))
+		fmt.Printf(" EXPECTED %s\n", value1)
+	}
+	//GETNEXT test
+	value_size, ok = c.GetNext(key1, value3, cmd)
+	if ok {
+		fmt.Printf(" VALUE RETURNED TO CALLER:\n %s\n", string(value3[:value_size]))
+		fmt.Printf(" EXPECTED %s\n", value2)
+	}
+	//GET key1
+	value_size, ok = c.Get(key1, value3, cmd)
+	if ok {
+		fmt.Printf(" VALUE RETURNED TO CALLER:\n %s\n", string(value3[:value_size]))
+	}
+	//GET KEY2
+	value_size, ok = c.Get(key2, value3, cmd)
+	if ok {
+		fmt.Printf(" VALUE RETURNED TO CALLER:\n %s\n", string(value3[:value_size]))
+	}
+	//BATCH TEST
+	cmd.BatchID = 0
+	c.StartBatch(cmd)
+	c.GetStatus()
+	c.AbortBatch(cmd)
+	c.GetStatus()
+	c.StartBatch(cmd)
+	c.GetStatus()
+	key4 := "4123"
+	value4 := "4abc"
+	c.PutB(key4, value4, cmd)
+	key5 := "5123"
+	value5 := "5abc"
+	c.PutB(key5, value5, cmd)
+	c.EndBatch(2, cmd)
+	c.GetStatus()
+	c.FlushAllData(cmd)
+	c.GetStatus()
+	c.NoOp(cmd)
+	c.GetStatus()
+	oldPin := []byte{}
+	newPin := []byte{1, 2, 3}
+	tlsc.SetErasePin(oldPin, newPin, cmd)
+	tlsc.GetStatus()
+	tlsc.SetLockPin(oldPin, newPin, cmd)
+	tlsc.GetStatus()
+	start := []byte{}
+	end := []byte{}
+	c.MediaScan(start, end, false, false, cmd)
+	c.GetStatus()
+	//c.MediaOptimize(cmd)
+	//c.GetStatus()
+	//c.LockPin(newPin, cmd)
+	//.GetStatus()
+	//c.UnlockPin(oldPin, cmd)
+	//c.GetStatus()
+	//c.ErasePin(oldPin, cmd)
+	//c.GetStatus()
+}

@@ -66,7 +66,8 @@ func saveConfig(ctx context.Context, objAPI ObjectLayer, configFile string, data
 func checkConfig(ctx context.Context, objAPI ObjectLayer, configFile string) error {
 	if _, err := objAPI.GetObjectInfo(ctx, minioMetaBucket, configFile, ObjectOptions{}); err != nil {
 		// Treat object not found as config not found.
-		if isErrObjectNotFound(err) {
+		//if isErrObjectNotFound(err) {
+		if err != nil {
 			return errConfigNotFound
 		}
 
