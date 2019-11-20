@@ -132,6 +132,7 @@ func initFederatorBackend(objLayer ObjectLayer) {
 // -------------------------
 // This operation returns bucket location.
 func (api objectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(" GET BUCKET LOCATION")
 	ctx := newContext(r, w, "GetBucketLocation")
 
 	defer logger.AuditLog(w, r, "GetBucketLocation", mustGetClaimsFromToken(r))
@@ -235,6 +236,7 @@ func (api objectAPIHandlers) ListMultipartUploadsHandler(w http.ResponseWriter, 
 // This implementation of the GET operation returns a list of all buckets
 // owned by the authenticated sender of the request.
 func (api objectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(" LIST BUCKET HANDLER")
 	ctx := newContext(r, w, "ListBuckets")
 
 	defer logger.AuditLog(w, r, "ListBuckets", mustGetClaimsFromToken(r))
@@ -744,7 +746,7 @@ func (api objectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 			pReader = NewPutObjReader(rawReader, hashReader, objectEncryptionKey)
 		}
 	}
-
+	fmt.Println(" objectAPI PutObj")
 	objInfo, err := objectAPI.PutObject(ctx, bucket, object, pReader, opts)
 	if err != nil {
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))

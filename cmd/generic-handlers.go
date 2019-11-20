@@ -19,6 +19,9 @@ package cmd
 import (
 	"bufio"
 	"context"
+	//"fmt"
+	log "github.com/sirupsen/logrus"
+
 	"net"
 	"net/http"
 	"strings"
@@ -39,6 +42,7 @@ import (
 type HandlerFunc func(http.Handler) http.Handler
 
 func registerHandlers(h http.Handler, handlerFns ...HandlerFunc) http.Handler {
+	log.Trace("REGISTER HANDLERS")
 	for _, hFn := range handlerFns {
 		h = hFn(h)
 	}
@@ -66,6 +70,7 @@ func setRequestSizeLimitHandler(h http.Handler) http.Handler {
 
 func (h requestSizeLimitHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Restricting read data to a given maximum length
+	log.Trace("REQUESTSIZELIMITHANDLER ServeHTTP")
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxBodySize)
 	h.handler.ServeHTTP(w, r)
 }
@@ -88,6 +93,7 @@ func setRequestHeaderSizeLimitHandler(h http.Handler) http.Handler {
 // ServeHTTP restricts the size of the http header to 8 KB and the size
 // of the user-defined metadata to 2 KB.
 func (h requestHeaderSizeLimitHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("REQUESTHEADERSIZELIMITHANDLER ServeHTTP")
 	if isHTTPHeaderSizeTooLarge(r.Header) {
 		writeErrorResponse(context.Background(), w, errorCodes.ToAPIErr(ErrMetadataTooLarge), r.URL, guessIsBrowserReq(r))
 		return
@@ -131,6 +137,7 @@ func filterReservedMetadata(h http.Handler) http.Handler {
 // ServeHTTP fails if the request contains at least one reserved header which
 // would be treated as metadata.
 func (h reservedMetadataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("RESERVEMETADATAHANDLER ServHTTP")
 	if containsReservedMetadata(r.Header) {
 		writeErrorResponse(context.Background(), w, errorCodes.ToAPIErr(ErrUnsupportedMetadata), r.URL, guessIsBrowserReq(r))
 		return
@@ -236,6 +243,7 @@ func guessIsRPCReq(req *http.Request) bool {
 
 func (h redirectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Re-direction is handled specifically for browser requests.
+	log.Trace("REDIRECTHANDLER ServeHTTP")
 	if guessIsBrowserReq(r) {
 		// Fetch the redirect location if any.
 		redirectLocation := getRedirectLocation(r.URL.Path)
@@ -258,6 +266,7 @@ func setBrowserCacheControlHandler(h http.Handler) http.Handler {
 }
 
 func (h cacheControlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("CACHECONTROLHANDLER ServeHTTP")
 	if r.Method == http.MethodGet && guessIsBrowserReq(r) {
 		// For all browser requests set appropriate Cache-Control policies
 		if hasPrefix(r.URL.Path, minioReservedBucketPath+SlashSeparator) {
@@ -291,6 +300,7 @@ func setReservedBucketHandler(h http.Handler) http.Handler {
 }
 
 func (h minioReservedBucketHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("MINIORESERVEDBUCKETHANDLET ServeHTTP")
 	switch {
 	case guessIsRPCReq(r), guessIsBrowserReq(r), guessIsHealthCheckReq(r), guessIsMetricsReq(r), isAdminReq(r):
 		// Allow access to reserved buckets
@@ -354,6 +364,7 @@ func parseAmzDateHeader(req *http.Request) (time.Time, APIErrorCode) {
 }
 
 func (h timeValidityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("TIMEVALIDHANDLER ServeHTTP")
 	aType := getRequestAuthType(r)
 	if aType == authTypeSigned || aType == authTypeSignedV2 || aType == authTypeStreamingSigned {
 		// Verify if date headers are set, if not reject the request
@@ -494,6 +505,7 @@ var notimplementedObjectResourceNames = map[string]bool{
 
 // Resource handler ServeHTTP() wrapper
 func (h resourceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("RESOURCE HANDLER ServeHTTP")
 	bucketName, objectName := request2BucketObjectName(r)
 
 	// If bucketName is present and not objectName check for bucket level resource queries.
@@ -554,6 +566,7 @@ func setHTTPStatsHandler(h http.Handler) http.Handler {
 }
 
 func (h httpStatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("HTTPSTATSHANDLER ServeHTTP")
 	// Wraps w to record http response information
 	ww := &httpResponseRecorder{ResponseWriter: w}
 
@@ -620,6 +633,7 @@ func hasMultipleAuth(r *http.Request) bool {
 
 func (h requestValidityHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Check for bad components in URL path.
+	log.Trace("REQUESTVALIDHANDLER ServeHTTP")
 	if hasBadPathComponent(r.URL.Path) {
 		writeErrorResponse(context.Background(), w, errorCodes.ToAPIErr(ErrInvalidResourceName), r.URL, guessIsBrowserReq(r))
 		return
@@ -649,6 +663,7 @@ type bucketForwardingHandler struct {
 }
 
 func (f bucketForwardingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("BUCKETFORWARDHANDLER ServeHTTP")
 	if globalDNSConfig == nil || len(globalDomainNames) == 0 ||
 		guessIsHealthCheckReq(r) || guessIsMetricsReq(r) ||
 		guessIsRPCReq(r) || isAdminReq(r) {
@@ -788,6 +803,7 @@ func addSecurityHeaders(h http.Handler) http.Handler {
 }
 
 func (s securityHeaderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("SECURITYHEADERHANDLER ServeHTTP")
 	header := w.Header()
 	header.Set("X-XSS-Protection", "1; mode=block")                  // Prevents against XSS attacks
 	header.Set("Content-Security-Policy", "block-all-mixed-content") // prevent mixed (HTTP / HTTPS content)
@@ -801,6 +817,7 @@ func (s securityHeaderHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 type criticalErrorHandler struct{ handler http.Handler }
 
 func (h criticalErrorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("CRITICALERRORHANDLER ServeHTTP")
 	defer func() {
 		if err := recover(); err == logger.ErrCritical { // handle
 			writeErrorResponse(context.Background(), w, errorCodes.ToAPIErr(ErrInternalError), r.URL, guessIsBrowserReq(r))
@@ -817,6 +834,7 @@ func setSSETLSHandler(h http.Handler) http.Handler { return sseTLSHandler{h} }
 type sseTLSHandler struct{ handler http.Handler }
 
 func (h sseTLSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Trace("SSETLSHANDLER ServeHTTP")
 	// Deny SSE-C requests if not made over TLS
 	if !globalIsSSL && (crypto.SSEC.IsRequested(r.Header) || crypto.SSECopy.IsRequested(r.Header)) {
 		if r.Method == http.MethodHead {

@@ -304,6 +304,7 @@ func serverMain(ctx *cli.Context) {
 	}()
 
 	newObject, err := newObjectLayer(globalEndpoints)
+	fmt.Printf(" Object Layer %v", globalEndpoints)
 	logger.SetDeploymentID(globalDeploymentID)
 	if err != nil {
 		// Stop watching for any certificate changes.

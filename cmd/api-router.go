@@ -18,7 +18,7 @@ package cmd
 
 import (
 	"net/http"
-
+    "fmt"
 	"github.com/gorilla/mux"
 	xhttp "github.com/minio/minio/cmd/http"
 )
@@ -57,6 +57,7 @@ func registerAPIRouter(router *mux.Router, encryptionEnabled, allowSSEKMS bool) 
 	routers = append(routers, apiRouter.PathPrefix("/{bucket}").Subrouter())
 
 	for _, bucket := range routers {
+		fmt.Println("OBJECT OPERATION")
 		// Object operations
 		// HeadObject
 		bucket.Methods(http.MethodHead).Path("/{object:.+}").HandlerFunc(httpTraceAll(api.HeadObjectHandler))

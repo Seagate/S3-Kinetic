@@ -61,7 +61,7 @@ func (endpoint Endpoint) String() string {
 	if endpoint.Host == "" {
 		return endpoint.Path
 	}
-
+	fmt.Println("***** END POINT STRING ", endpoint.URL.String())
 	return endpoint.URL.String()
 }
 
@@ -355,6 +355,7 @@ func checkCrossDeviceMounts(endpoints EndpointList) (err error) {
 
 // CreateEndpoints - validates and creates new endpoints for given args.
 func CreateEndpoints(serverAddr string, args ...[]string) (string, EndpointList, SetupType, error) {
+	fmt.Println(" CREATE ENDPOINTS")
 	var endpoints EndpointList
 	var setupType SetupType
 	var err error

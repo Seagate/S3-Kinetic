@@ -19,6 +19,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	//"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -952,6 +953,7 @@ func (fs *FSObjects) putObject(ctx context.Context, bucket string, object string
 // DeleteObjects - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (fs *FSObjects) DeleteObjects(ctx context.Context, bucket string, objects []string) ([]error, error) {
+	//fmt.Println(" *** DELETE OBJS *****", bucket, " ", objects)
 	errs := make([]error, len(objects))
 	for idx, object := range objects {
 		errs[idx] = fs.DeleteObject(ctx, bucket, object)
@@ -963,6 +965,8 @@ func (fs *FSObjects) DeleteObjects(ctx context.Context, bucket string, objects [
 // and there are no rollbacks supported.
 func (fs *FSObjects) DeleteObject(ctx context.Context, bucket, object string) error {
 	// Acquire a write lock before deleting the object.
+	//fmt.Println(" *** DELETE OBJ *****", bucket, " ", object)
+
 	objectLock := fs.nsMutex.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetLock(globalOperationTimeout); err != nil {
 		return err
@@ -1111,6 +1115,7 @@ func (fs *FSObjects) getObjectETag(ctx context.Context, bucket, entry string, lo
 // ListObjects - list all objects at prefix upto maxKeys., optionally delimited by '/'. Maintains the list pool
 // state for future re-entrant list requests.
 func (fs *FSObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
+	//fmt.Println("LIST OBJECTS in Bucket ", bucket, " prefix ", prefix, " marker ", marker, " deli ", delimiter, " ", maxKeys)
 	return listObjects(ctx, fs, bucket, prefix, marker, delimiter, maxKeys, fs.listPool,
 		fs.listDirFactory(), fs.getObjectInfo, fs.getObjectInfo)
 }
@@ -1191,6 +1196,7 @@ func (fs *FSObjects) DeleteBucketLifecycle(ctx context.Context, bucket string) e
 
 // ListObjectsV2 lists all blobs in bucket filtered by prefix
 func (fs *FSObjects) ListObjectsV2(ctx context.Context, bucket, prefix, continuationToken, delimiter string, maxKeys int, fetchOwner bool, startAfter string) (result ListObjectsV2Info, err error) {
+	//fmt.Println("*** LIST OBJECTS V2 ***")
 	marker := continuationToken
 	if marker == "" {
 		marker = startAfter

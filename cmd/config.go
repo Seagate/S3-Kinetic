@@ -70,6 +70,7 @@ func saveServerConfig(ctx context.Context, objAPI ObjectLayer, config *serverCon
 
 func readServerConfig(ctx context.Context, objAPI ObjectLayer) (*serverConfig, error) {
 	configFile := path.Join(minioConfigPrefix, minioConfigFile)
+	fmt.Println(" READCONFIG")
 	configData, err := readConfig(ctx, objAPI, configFile)
 	if err != nil {
 		return nil, err
@@ -127,9 +128,10 @@ func (sys *ConfigSys) Init(objAPI ObjectLayer) error {
 	if objAPI == nil {
 		return errInvalidArgument
 	}
-
+	fmt.Println("INIT OBJAPI")
 	doneCh := make(chan struct{})
 	defer close(doneCh)
+	fmt.Println("1. INIT OBJAPI")
 
 	// Initializing configuration needs a retry mechanism for
 	// the following reasons:
@@ -163,6 +165,7 @@ func NewConfigSys() *ConfigSys {
 
 // Initialize and load config from remote etcd or local config directory
 func initConfig(objAPI ObjectLayer) error {
+	fmt.Printf("initConfig %v\n ", objAPI)
 	if objAPI == nil {
 		return errServerNotInitialized
 	}

@@ -187,7 +187,7 @@ func createFormatFS(ctx context.Context, fsFormatPath string) error {
 // migrate the backend when we are actively working on the backend.
 func initFormatFS(ctx context.Context, fsPath string) (rlk *lock.RLockedFile, err error) {
 	fsFormatPath := pathJoin(fsPath, minioMetaBucket, formatConfigFile)
-
+	//key := fsFormatPath + formatConfigFile
 	// Add a deployment ID, if it does not exist.
 	if err := formatFSFixDeploymentID(fsFormatPath); err != nil {
 		return nil, err

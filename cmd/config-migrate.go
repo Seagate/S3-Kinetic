@@ -45,6 +45,7 @@ func Save(configFile string, data interface{}) error {
 
 // Load config from backend
 func Load(configFile string, data interface{}) (quick.Config, error) {
+	fmt.Print("LOAD CONFIG FROM BACKEND")
 	return quick.LoadConfig(configFile, globalEtcdClient, data)
 }
 
@@ -2424,6 +2425,7 @@ func migrateConfigToMinioSys(objAPI ObjectLayer) (err error) {
 	}
 
 	defer func() {
+		fmt.Println(" RUN DEFER")
 		if err == nil {
 			if globalEtcdClient != nil {
 				deleteKeyEtcd(context.Background(), globalEtcdClient, configFile)
@@ -2433,7 +2435,10 @@ func migrateConfigToMinioSys(objAPI ObjectLayer) (err error) {
 				os.Rename(getConfigFile(), getConfigFile()+".deprecated")
 			}
 		}
+		fmt.Println(" END RUN DEFER")
+
 	}()
+	fmt.Println(" 0. checkCOnfig")
 
 	transactionConfigFile := configFile + ".transaction"
 
@@ -2448,14 +2453,17 @@ func migrateConfigToMinioSys(objAPI ObjectLayer) (err error) {
 
 	// Verify if backend already has the file (after holding lock)
 	if err = checkConfig(context.Background(), objAPI, configFile); err != errConfigNotFound {
+		fmt.Println(" ERR : ", err)
 		return err
 	} // if errConfigNotFound proceed to migrate..
-
+	fmt.Println(" 1. checkCOnfig")
 	var configFiles = []string{
 		getConfigFile(),
 		getConfigFile() + ".deprecated",
 		configFile,
 	}
+	fmt.Println(" 2. checkCOnfig")
+
 	var config = &serverConfig{}
 	for _, cfgFile := range configFiles {
 		if _, err = Load(cfgFile, config); err != nil {
@@ -2466,17 +2474,21 @@ func migrateConfigToMinioSys(objAPI ObjectLayer) (err error) {
 		}
 		break
 	}
+	fmt.Println(" 3. checkCOnfig")
+
 	if os.IsNotExist(err) {
 		// Initialize the server config, if no config exists.
 		return newSrvConfig(objAPI)
 	}
+	fmt.Println(" 4. checkCOnfig")
+
 	return saveServerConfig(context.Background(), objAPI, config)
 }
 
 // Migrates '.minio.sys/config.json' to v33.
 func migrateMinioSysConfig(objAPI ObjectLayer) error {
 	configFile := path.Join(minioConfigPrefix, minioConfigFile)
-
+	fmt.Println(" CONFIG FILE ", configFile)
 	// Check if the config version is latest, if not migrate.
 	ok, _, err := checkConfigVersion(objAPI, configFile, serverConfigVersion)
 	if err != nil {
@@ -2499,18 +2511,27 @@ func migrateMinioSysConfig(objAPI ObjectLayer) error {
 	defer objLock.Unlock()
 
 	if err := migrateV27ToV28MinioSys(objAPI); err != nil {
+		fmt.Println(" migrate")
 		return err
 	}
 	if err := migrateV28ToV29MinioSys(objAPI); err != nil {
+		fmt.Println(" 1.migrate")
+
 		return err
 	}
 	if err := migrateV29ToV30MinioSys(objAPI); err != nil {
+		fmt.Println(" 2. migrate")
+
 		return err
 	}
 	if err := migrateV30ToV31MinioSys(objAPI); err != nil {
+		fmt.Println(" 3. migrate")
+
 		return err
 	}
 	if err := migrateV31ToV32MinioSys(objAPI); err != nil {
+		fmt.Println(" 4. migrate")
+
 		return err
 	}
 	return migrateV32ToV33MinioSys(objAPI)

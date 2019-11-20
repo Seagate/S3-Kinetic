@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -91,6 +92,7 @@ var globalHandlers = []HandlerFunc{
 
 // configureServer handler returns final handler for the http server.
 func configureServerHandler(endpoints EndpointList) (http.Handler, error) {
+	fmt.Println("***configureServerHandler***")
 	// Initialize router. `SkipClean(true)` stops gorilla/mux from
 	// normalizing URL path minio/minio#3256
 	router := mux.NewRouter().SkipClean(true)

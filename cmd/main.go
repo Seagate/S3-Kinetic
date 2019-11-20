@@ -17,14 +17,14 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
-	"sort"
-
+	"fmt"
 	"github.com/minio/cli"
 	"github.com/minio/mc/pkg/console"
 	"github.com/minio/minio/pkg/trie"
 	"github.com/minio/minio/pkg/words"
+	"os"
+	"path/filepath"
+	"sort"
 )
 
 // GlobalFlags - global flags for minio.
@@ -78,6 +78,7 @@ VERSION:
 	`{{ "\n"}}`
 
 func newApp(name string) *cli.App {
+	fmt.Println("newApp ", name)
 	// Collection of minio commands currently supported are.
 	commands := []cli.Command{}
 
@@ -86,11 +87,13 @@ func newApp(name string) *cli.App {
 
 	// registerCommand registers a cli command.
 	registerCommand := func(command cli.Command) {
+		//fmt.Println("Command %T %v ", command, command)
 		commands = append(commands, command)
 		commandsTree.Insert(command.Name)
 	}
 
 	findClosestCommands := func(command string) []string {
+		fmt.Println("findClosestCommands")
 		var closestCommands []string
 		for _, value := range commandsTree.PrefixMatch(command) {
 			closestCommands = append(closestCommands, value.(string))
@@ -114,6 +117,7 @@ func newApp(name string) *cli.App {
 	}
 
 	// Register all commands.
+	fmt.Printf("Register Server cmd %v", serverCmd)
 	registerCommand(serverCmd)
 	registerCommand(gatewayCmd)
 	registerCommand(versionCmd)
@@ -156,8 +160,9 @@ func newApp(name string) *cli.App {
 func Main(args []string) {
 	// Set the minio app name.
 	appName := filepath.Base(args[0])
-
+	fmt.Println(" APP NAME ", appName)
 	// Run the app - exit on error.
+	fmt.Println(" Args ", args)
 	if err := newApp(appName).Run(args); err != nil {
 		os.Exit(1)
 	}

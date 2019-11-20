@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-
+	"fmt"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/hash"
 )
@@ -64,10 +64,12 @@ func saveConfig(ctx context.Context, objAPI ObjectLayer, configFile string, data
 }
 
 func checkConfig(ctx context.Context, objAPI ObjectLayer, configFile string) error {
+	fmt.Println(" checkConfig")
 	if _, err := objAPI.GetObjectInfo(ctx, minioMetaBucket, configFile, ObjectOptions{}); err != nil {
 		// Treat object not found as config not found.
 		//if isErrObjectNotFound(err) {
 		if err != nil {
+			fmt.Println("ERR: CONFIG NOT FOUND")
 			return errConfigNotFound
 		}
 
