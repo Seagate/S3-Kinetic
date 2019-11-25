@@ -29,6 +29,7 @@ import (
 	"time"
 
 	jsoniter "github.com/json-iterator/go"
+	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/lock"
 	"github.com/minio/minio/pkg/mimedb"
@@ -168,11 +169,11 @@ func (m fsMetaV1) ToKVObjectInfo(bucket, object string, fi *KVInfo) ObjectInfo {
 	objInfo.ETag = extractETag(m.Meta)
 	objInfo.ContentType = m.Meta["content-type"]
 	objInfo.ContentEncoding = m.Meta["content-encoding"]
-	if storageClass, ok := m.Meta[amzStorageClass]; ok {
-		objInfo.StorageClass = storageClass
-	} else {
+	//if storageClass, ok := m.Meta[amzStorageClass]; ok {
+	//	objInfo.StorageClass = storageClass
+	//} else {
 		objInfo.StorageClass = globalMinioDefaultStorageClass
-	}
+	//}
 	var (
 		t time.Time
 		e error
@@ -231,7 +232,7 @@ func (m fsMetaV1) ToObjectInfo(bucket, object string, fi os.FileInfo) ObjectInfo
 	objInfo.ETag = extractETag(m.Meta)
 	objInfo.ContentType = m.Meta["content-type"]
 	objInfo.ContentEncoding = m.Meta["content-encoding"]
-	if storageClass, ok := m.Meta[amzStorageClass]; ok {
+	if storageClass, ok := m.Meta[xhttp.AmzStorageClass]; ok {
 		objInfo.StorageClass = storageClass
 	} else {
 		objInfo.StorageClass = globalMinioDefaultStorageClass

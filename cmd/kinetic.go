@@ -232,6 +232,11 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	return Ko, nil
 }
 
+func (ko *KineticObjects) NewNSLock(ctx context.Context, bucket string, object string) RWLocker {
+    // lockers are explicitly 'nil' for FS mode since there are only local lockers
+    return ko.nsMutex.NewNSLock(ctx, nil, bucket, object)
+}
+
 func (ko *KineticObjects) Shutdown(ctx context.Context) error {
 	return nil
 }
@@ -274,7 +279,7 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
 // already exists.
 func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, location string) error {
 	//fmt.Printf(" CREATE NEW BUCKET %s LOCATION %s\n", bucket, location)
-	bucketLock := ko.nsMutex.NewNSLock(ctx, bucket, "")
+	bucketLock := ko.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
 		return err
 	}
@@ -371,7 +376,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 // with the bucket including pending multipart, object metadata.
 func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error {
 	//fmt.Println("*** DELETE BUCKET *** ", bucket)
-	bucketLock := ko.nsMutex.NewNSLock(ctx, bucket, "")
+	bucketLock := ko.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
 		logger.LogIf(ctx, err)
 		return err
@@ -425,7 +430,7 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	var nsUnlocker = func() {}
 	if lockType != noLock {
 		// Lock the object before reading.
-		lock := ko.nsMutex.NewNSLock(ctx, bucket, object)
+		lock := ko.NewNSLock(ctx, bucket, object)
 		switch lockType {
 		case writeLock:
 			if err = lock.GetLock(globalObjectTimeout); err != nil {
@@ -647,7 +652,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 func (ko *KineticObjects) getObjectInfoWithLock(ctx context.Context, bucket, object string) (oi ObjectInfo, e error) {
 	//fmt.Println(" GET OBJ INFO WITH LOCK")
 	// Lock the object before reading.
-	objectLock := ko.nsMutex.NewNSLock(ctx, bucket, object)
+	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetRLock(globalObjectTimeout); err != nil {
 		return oi, err
 	}
@@ -673,7 +678,7 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 	//fmt.Println(" GET OBJ INFO")
 	oi, err := ko.getObjectInfoWithLock(ctx, bucket, object)
 	if err == errCorruptedFormat || err == io.EOF {
-		objectLock := ko.nsMutex.NewNSLock(ctx, bucket, object)
+		objectLock := ko.NewNSLock(ctx, bucket, object)
 		if err = objectLock.GetLock(globalObjectTimeout); err != nil {
 			return oi, toObjectErr(err, bucket, object)
 		}
@@ -693,7 +698,7 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 /*
 	oi, err := ko.getObjectInfoWithLock(ctx, bucket, object)
 	if err == errCorruptedFormat || err == io.EOF {
-		objectLock := ko.nsMutex.NewNSLock(ctx, bucket, object)
+		objectLock := ko.NewNSLock(ctx, bucket, object)
 		if err = objectLock.GetLock(globalObjectTimeout); err != nil {
 			return oi, toObjectErr(err, bucket, object)
 		}
@@ -718,7 +723,7 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}
-	objectLock := ko.nsMutex.NewNSLock(ctx, bucket, object)
+	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetRLock(globalObjectTimeout); err != nil {
 		logger.LogIf(ctx, err)
 		return err
@@ -839,7 +844,7 @@ func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object s
 		return ObjectInfo{}, err
 	}
 	// Lock the object.
-	objectLock := ko.nsMutex.NewNSLock(ctx, bucket, object)
+	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetLock(globalObjectTimeout); err != nil {
 		logger.LogIf(ctx, err)
 		return objInfo, err
@@ -1001,7 +1006,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 	//fmt.Println(" KINETIC: DELETE OBJ ", bucket, " ", object)
 	// Acquire a write lock before deleting the object.
 	//fmt.Printf(" DELETE OBJECT %s in Bucket %s\n", object, bucket)
-	objectLock := ko.nsMutex.NewNSLock(ctx, bucket, object)
+	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetLock(globalOperationTimeout); err != nil {
 		return err
 	}

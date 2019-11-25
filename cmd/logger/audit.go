@@ -1,5 +1,5 @@
 /*
- * MinIO Cloud Storage, (C) 2018 MinIO, Inc.
+ * MinIO Cloud Storage, (C) 2018, 2019 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -155,6 +155,6 @@ func AuditLog(w http.ResponseWriter, r *http.Request, api string, reqClaims map[
 		entry.API.StatusCode = statusCode
 		entry.API.TimeToFirstByte = timeToFirstByte.String()
 		entry.API.TimeToResponse = timeToResponse.String()
-		_ = t.Send(entry)
+		_ = t.Send(entry, string(All))
 	}
 }
