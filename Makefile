@@ -62,7 +62,7 @@ spelling:
 check: test
 test: verifiers build
 	@echo "Running unit tests"
-	@GO111MODULE=on CGO_ENABLED=0 go test -tags kqueue ./... 1>/dev/null
+	@GO111MODULE=on CGO_ENABLED=1 go test -tags kqueue ./... 1>/dev/null
 
 # Verify minio binary
 # TODO: enable races as well
@@ -79,7 +79,7 @@ coverage: build
 # Builds minio locally.
 build: checks
 	@echo "Building minio binary to './minio'"
-	@GO111MODULE=on CGO_ENABLED=0 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/minio 1>/dev/null
+	@GO111MODULE=on CGO_ENABLED=1 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/minio 1>/dev/null
 
 docker: build
 	@docker build -t $(TAG) . -f Dockerfile.dev

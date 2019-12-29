@@ -59,6 +59,7 @@ const (
 // -- If yes, check if the IP of entry matches local IP. This means entry is for this instance.
 // -- If IP of the entry doesn't match, this means entry is for another instance. Log an error to console.
 func initFederatorBackend(buckets []BucketInfo, objLayer ObjectLayer) {
+	fmt.Println(" initFederatorBackend")
 	if len(buckets) == 0 {
 		return
 	}
@@ -129,6 +130,7 @@ func initFederatorBackend(buckets []BucketInfo, objLayer ObjectLayer) {
 			logger.LogIf(context.Background(), err)
 		}
 	}
+	fmt.Println(" END initFederatorBackend")
 }
 
 // GetBucketLocationHandler - GET Bucket location.

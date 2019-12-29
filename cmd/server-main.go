@@ -26,7 +26,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-
+	//"time"
 	"github.com/minio/cli"
 	"github.com/minio/minio/cmd/config"
 	xhttp "github.com/minio/minio/cmd/http"
@@ -250,6 +250,7 @@ func initSafeModeInit(buckets []BucketInfo) (err error) {
 
 func initAllSubsystems(buckets []BucketInfo, newObject ObjectLayer) (err error) {
 	// Initialize config system.
+	fmt.Println("INIT ALL SUB SYSTEMS")
 	if err = globalConfigSys.Init(newObject); err != nil {
 		return fmt.Errorf("Unable to initialize config system: %w", err)
 	}
@@ -366,7 +367,7 @@ func serverMain(ctx *cli.Context) {
 	}()
 
 	newObject, err := newObjectLayer(globalEndpoints)
-	fmt.Printf(" Object Layer %v", globalEndpoints)
+	fmt.Println(" Object Layer %v", globalEndpoints)
 	logger.SetDeploymentID(globalDeploymentID)
 	if err != nil {
 		// Stop watching for any certificate changes.
@@ -375,6 +376,8 @@ func serverMain(ctx *cli.Context) {
 		globalHTTPServer.Shutdown()
 		logger.Fatal(err, "Unable to initialize backend")
 	}
+	        fmt.Println(" 2. Object Layer %v", globalEndpoints)
+
 
 	// Re-enable logging
 	logger.Disable = false
@@ -384,19 +387,22 @@ func serverMain(ctx *cli.Context) {
 	globalSafeMode = true
 	globalObjectAPI = newObject
 	globalObjLayerMutex.Unlock()
+        fmt.Println("********1. OBJECT LAYER")
 
 	buckets, err := newObject.ListBuckets(context.Background())
 	if err != nil {
 		logger.Fatal(err, "Unable to list buckets")
 	}
+        fmt.Println("********2 OBJECT LAYER")
 
 	// Populate existing buckets to the etcd backend
 	if globalDNSConfig != nil {
 		initFederatorBackend(buckets, newObject)
 	}
+        fmt.Println("********3. OBJECT LAYER")
 
 	logger.FatalIf(initSafeModeInit(buckets), "Unable to initialize server")
-
+	fmt.Println("********4. OBJECT LAYER")
 	if globalCacheConfig.Enabled {
 		msg := color.RedBold("Disk caching is disabled in 'server' mode, 'caching' is only supported in gateway deployments")
 		logger.StartupMessage(msg)

@@ -54,7 +54,7 @@ func Save(configFile string, data interface{}) error {
 
 // Load config from backend
 func Load(configFile string, data interface{}) (quick.Config, error) {
-	fmt.Print("LOAD CONFIG FROM BACKEND")
+	fmt.Println("LOAD CONFIG FROM BACKEND ", configFile)
 	return quick.LoadConfig(configFile, globalEtcdClient, data)
 }
 

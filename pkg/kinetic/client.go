@@ -1,11 +1,16 @@
 package kinetic
 
 import (
+// #cgo CXXFLAGS: --std=c++0x  -DKDEBUG=1 -DNDEBUG=1 -DNDEBUGW=1 -DSMR_ENABLED=1
+// #cgo LDFLAGS: libkinetic.a libseapubcmds.a kernel_mem_mgr.a libssl.a libcrypto.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a qual_kin.a libprotobuf.a libgflags.a -lpthread -ldl -lrt libglog.a
+// #include "minio_skinny_waist.h"
+       "C"
+	"unsafe"
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/tls"
 	"errors"
-	//"fmt"
+	"fmt"
 	"sync"
 	//"crypto/x509"
 	"encoding/binary"
@@ -17,6 +22,23 @@ import (
 )
 
 var mutex = &sync.Mutex{}
+var Skinny_waist_if bool = false
+/*
+struct CPrimaryStoreValue {
+    char* version;
+    char* tag;
+    char* value;
+    int32_t algorithm;
+};
+
+
+type PrimaryStoreValue struct {
+    version   *[]byte
+    tag       *[]byte
+    value     *[]byte
+    algorithm *kinetic_proto.Command_Algorithm
+}
+*/
 
 type CmdOpts struct {
 	//Command         kinetic_proto.Command_MessageType
@@ -25,8 +47,8 @@ type CmdOpts struct {
 	Priority       kinetic_proto.Command_Priority
 	BatchID        uint32
 	//cmd_keyvalue := &kinetic_proto.Command_KeyValue
-	NewVersion []byte
-	Force      bool
+	NewVersion     []byte
+	Force           bool
 	//Key             []byte
 	DbVersion       []byte
 	Tag             []byte
@@ -51,6 +73,12 @@ type Client struct {
 	Opts         CmdOpts
 	ReleaseConn  func(int)
 }
+
+func (c *Client) InitClient() {
+        fmt.Printf(" INITMAIN")
+	go C.CInitMain()
+}
+
 
 func (c *Client) Read(p []byte) (int, error) {
 	//fmt.Println(" Kinetic: io.Reader")
@@ -456,7 +484,48 @@ func (c *Client) AbortBatch(cmd CmdOpts) error {
 	return err
 }
 
+
+func (c *Client) CGet(key string, value []byte, cmd CmdOpts) (uint32, error) {
+	mutex.Lock()
+        fmt.Println(" CALL CGET\n")
+        var psv C._CPrimaryStoreValue
+        //psv  := &C.CPrimaryStoreValue {}
+        //psv := make([]_Ctype_PrimaryStoreValue, max)
+        //psv.version = C.CString(cmd.NewVersion)
+        //psv.tag  = C.CString(cmd.Tag)
+        //psv.algorithm = C.CString(cmd.Algorithm)
+        psv.version = C.CString(string(cmd.NewVersion))
+        psv.tag = C.CString(string(cmd.Tag))
+        psv.algorithm = C.int(cmd.Algorithm)
+        fmt.Println(" GET KEY %s\n ", key)
+        //var user_id int64 
+        //user_id = 1
+        //current_version := "1"
+        c_key := C.CString(key)
+        c_value := (*C.char)(unsafe.Pointer(&value[0]))
+        //defer C.free(unsafe.Pointer(c_key))
+        //defer C.free(unsafe.Pointer(c_value))
+        //fmt.Print(" 1. CALL CGET BUFF \n")
+	var c_size C.uint
+        C.Get(1, c_key, &psv,  c_value, &c_size)
+	value = []byte(C.GoStringN(c_value, C.int(c_size)))
+	
+        fmt.Println(" VALUE: ", c_size)
+	mutex.Unlock()
+        //return uint32(len(string(value))),  nil
+	var err error = nil;
+	if c_size == 0 {
+		err = errors.New("NOT FOUND") 
+	}
+        return uint32(c_size), err                   
+}
+
+
+
 func (c *Client) Get(key string, value []byte, cmd CmdOpts) (uint32, error) {
+	if Skinny_waist_if {
+		return c.CGet(key, value, cmd)
+	}
 	mutex.Lock()
 	auth_type := kinetic_proto.Message_HMACAUTH
 	cmd_header := &kinetic_proto.Command_Header{}
@@ -499,6 +568,7 @@ func (c *Client) Get(key string, value []byte, cmd CmdOpts) (uint32, error) {
 	}
 	return value_size, err
 }
+
 
 func (c *Client) Delete(key string, cmd CmdOpts) error {
 	mutex.Lock()
@@ -544,7 +614,40 @@ func (c *Client) Delete(key string, cmd CmdOpts) error {
 	return err
 }
 
+
+func (c *Client) CPut(key string, value string, cmd CmdOpts) (uint32, error) {
+	mutex.Lock()
+        fmt.Printf(" 1. CALL CPUT\n")
+	var psv C._CPrimaryStoreValue
+	//psv  := &C.CPrimaryStoreValue {}
+	//psv := make([]_Ctype_PrimaryStoreValue, max)
+	//psv.version = C.CString(cmd.NewVersion)
+	//psv.tag  = C.CString(cmd.Tag)
+	//psv.algorithm = C.CString(cmd.Algorithm)
+	psv.version = C.CString(string(cmd.NewVersion))
+	psv.tag = C.CString(string(cmd.Tag))
+	psv.algorithm = C.int(cmd.Algorithm)
+        fmt.Printf(" PUT %s\n ", key)
+        //var user_id int64 
+        //user_id = 1
+        current_version := "1"
+	c_key := C.CString(key)
+	c_value := C.CString(value)
+	//defer C.free(unsafe.Pointer(c_key))
+        //defer C.free(unsafe.Pointer(c_value))
+	fmt.Println(" 2. CALL CPUT LEN ") //, len(value))
+	C.Put(1, c_key, C.CString(current_version), &psv,  c_value, C.size_t(len(value)), false, 1, 1)
+	mutex.Unlock()
+        return uint32(len(value)), nil
+        //return 0, nil			
+}
+
+
 func (c *Client) Put(key string, value string, cmd CmdOpts) (uint32, error) {
+        if Skinny_waist_if {
+		return c.CPut(key, value, cmd)
+	}
+	fmt.Println(" PUT ", key)
 	mutex.Lock()
 	auth_type := kinetic_proto.Message_HMACAUTH
 	cmd_header := &kinetic_proto.Command_Header{}
@@ -591,6 +694,7 @@ func (c *Client) Put(key string, value string, cmd CmdOpts) (uint32, error) {
 	mutex.Unlock()
 	return uint32(len(value)), nil
 }
+
 
 func (c *Client) PutB(key string, value string, cmd CmdOpts) error {
 	mutex.Lock()

@@ -18,7 +18,7 @@ package cmd
 
 import (
 	"net/http"
-    "fmt"
+	"fmt"
 	"github.com/gorilla/mux"
 	xhttp "github.com/minio/minio/cmd/http"
 )

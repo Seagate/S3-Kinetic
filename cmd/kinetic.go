@@ -17,11 +17,15 @@
 package cmd
 
 import (
+// #cgo CXXFLAGS: --std=c++0x  -DKDEBUG=1 -DNDEBUG=1 -DNDEBUGW=1 -DSMR_ENABLED=1
+// #cgo LDFLAGS: libkinetic.a libseapubcmds.a kernel_mem_mgr.a libssl.a libcrypto.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a qual_kin.a libprotobuf.a libgflags.a -lpthread -ldl -lrt libglog.a
+// #include "minio_skinny_waist.h"
+	"C"
 	"bytes"
 	"context"
 	"encoding/gob"
 	"errors"
-	//"fmt"
+	"fmt"
 	"io"
 	"net/http"
 	"path"
@@ -51,7 +55,7 @@ import (
 	"sync"
 )
 
-var numberOfKinConns int = 100
+var numberOfKinConns int = 10
 
 type KConnsPool struct {
 	idx    int
@@ -65,12 +69,19 @@ var identity int64 = 1
 var hmac_key string = "asdfasdf"
 var wg = sync.WaitGroup{}
 
+
+func InitKineticd() {
+	fmt.Printf(" START KINETICD\n")
+	go C.CInitMain()
+	fmt.Printf("SLEEP 5 sec\n")
+        time.Sleep(5 * time.Second)
+}
+
 func InitKineticConnection(IP string, tls bool, kc *kinetic.Client) error {
-	//fmt.Printf("Init client %v\n", kc)
+        var err error = nil
 	kc.ConnectionID = 0
 	kc.Identity = identity
 	kc.Hmac_key = hmac_key
-	var err error = nil
 	if !tls {
 		err = kc.Connect(IP + ":8123")
 
@@ -143,7 +154,7 @@ func (ki KVInfo) Sys() interface{}   { return nil }
 func initKineticMeta(kc *kinetic.Client) error {
 	var value string
 	bucketKey := "bucket." + minioMetaBucket
-	//fmt.Println("1. BUCKET FOR MINIO META ", bucketKey)
+	fmt.Println("1. BUCKET FOR MINIO META ", bucketKey)
 	kopts := kinetic.CmdOpts{
 		ClusterVersion:  0,
 		Force:           true,
@@ -161,11 +172,11 @@ func initKineticMeta(kc *kinetic.Client) error {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
-	//fmt.Println(" META BUCKET ", metaKey)
+	fmt.Println(" META BUCKET ", metaKey)
 	kc.Put(metaKey, buf.String(), kopts)
 
 	bucketKey = "bucket." + minioMetaTmpBucket
-	//fmt.Println("2. BUCKET FOR MINIO META ", bucketKey)
+	fmt.Println("2. BUCKET FOR MINIO META ", bucketKey)
 
 	kc.Put(bucketKey, value, kopts)
 	bucketInfo.Name = bucketKey
@@ -173,11 +184,11 @@ func initKineticMeta(kc *kinetic.Client) error {
 	metaKey = "meta." + bucketKey
 	enc = gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
-	//fmt.Println(" META BUCKET ", metaKey)
+	fmt.Println(" META BUCKET ", metaKey)
 	kc.Put(metaKey, buf.String(), kopts)
 
 	bucketKey = "bucket." + minioMetaMultipartBucket
-	//fmt.Println("3. BUCKET FOR MINIO META ", bucketKey)
+	fmt.Println("3. BUCKET FOR MINIO META ", bucketKey)
 
 	kc.Put(bucketKey, value, kopts)
 	bucketInfo.Name = bucketKey
@@ -185,18 +196,21 @@ func initKineticMeta(kc *kinetic.Client) error {
 	metaKey = "meta." + bucketKey
 	enc = gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
-	//fmt.Println(" META BUCKET ", metaKey)
+	fmt.Println(" META BUCKET ", metaKey)
 	kc.Put(metaKey, buf.String(), kopts)
 
 	return nil
 }
 
 func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
-	//fmt.Println("NEWKINETICOBJECTLAYER")
+	fmt.Printf("NEWKINETICOBJECTLAYER\n")
 	//ctx := context.Background()
 	//fsUUID := mustGetUUID()
-	var err error
-	//err = InitKinetic(false, kc)
+	var err error = nil
+	if IP[:6] == "skinny" {
+		kinetic.Skinny_waist_if = true
+		InitKineticd()
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -210,9 +224,14 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 		kc := new(kinetic.Client)
 		kConnsPool.kcs[i] = kc
 		kConnsPool.inUsed[i] = 0
-		err = InitKineticConnection(IP, false, kConnsPool.kcs[i])
+		if !kinetic.Skinny_waist_if {
+			err = InitKineticConnection(IP, false, kConnsPool.kcs[i])
+		} else {
+                        err = InitKineticConnection("127.0.0.1", false, kConnsPool.kcs[i])
+		}
+
 		if err != nil {
-			//fmt.Println("CAN NOT CONNECT ", err)
+			fmt.Println("CAN NOT CONNECT ", err)
 			return nil, err
 		}
 	}
@@ -278,7 +297,7 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
 //THAI:/ MakeBucketWithLocation - create a new bucket, returns if it
 // already exists.
 func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, location string) error {
-	//fmt.Printf(" CREATE NEW BUCKET %s LOCATION %s\n", bucket, location)
+	fmt.Printf(" CREATE NEW BUCKET %s LOCATION %s\n", bucket, location)
 	bucketLock := ko.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
 		return err
@@ -309,7 +328,7 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
-	//fmt.Println(" META BUCKET ", metaKey)
+	fmt.Println(" META BUCKET ", metaKey)
 	kc.Put(metaKey, buf.String(), kopts)
 
 	ReleaseConnection(kc.Idx)
@@ -375,7 +394,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 // DeleteBucket - delete a bucket and all the metadata associated
 // with the bucket including pending multipart, object metadata.
 func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error {
-	//fmt.Println("*** DELETE BUCKET *** ", bucket)
+	fmt.Println("*** DELETE BUCKET *** ", bucket)
 	bucketLock := ko.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
 		logger.LogIf(ctx, err)
@@ -418,7 +437,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 
 //THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
-	////fmt.Println("***GetObjectNInfo***")
+	fmt.Println("***GetObjectNInfo***")
 	//return nil, nil
 	//}
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
@@ -546,7 +565,7 @@ func (ko *KineticObjects) createFsJSON(object, fsMetaPath string) error {
 
 // getObjectInfo - wrapper for reading object metadata and constructs ObjectInfo.
 func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object string) (oi ObjectInfo, e error) {
-	//fmt.Println(" KineticObject getObjectInfo ", bucket, " ", object)
+	fmt.Println(" KineticObject getObjectInfo ", bucket, " ", object)
 	fsMeta := fsMetaV1{}
 
 	if hasSuffix(object, SlashSeparator) {
@@ -567,7 +586,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		_, err := kc.Get(metakey, value, kopts)
 		ReleaseConnection(kc.Idx)
 		if err != nil {
-			////fmt.Println(" OBJECT NOT FOUND")
+			fmt.Println(" OBJECT NOT FOUND")
 			return oi, err
 		}
 	}
@@ -624,6 +643,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
 	kc := GetKineticConnection()
+        fmt.Println("GET IN getObjectInfo ", metakey)
 	size, err := kc.Get(metakey, value, kopts)
 	ReleaseConnection(kc.Idx)
 	n := 0
@@ -645,12 +665,13 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		size:    int64(n),
 		modTime: time.Now(),
 	}
+	fmt.Println(" KVINFO: ", fi)
 	return fsMeta.ToKVObjectInfo(bucket, object, fi), err
 }
 
 // getObjectInfoWithLock - reads object metadata and replies back ObjectInfo.
 func (ko *KineticObjects) getObjectInfoWithLock(ctx context.Context, bucket, object string) (oi ObjectInfo, e error) {
-	//fmt.Println(" GET OBJ INFO WITH LOCK")
+	fmt.Println(" GET OBJ INFO WITH LOCK")
 	// Lock the object before reading.
 	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetRLock(globalObjectTimeout); err != nil {
@@ -675,7 +696,7 @@ func (ko *KineticObjects) getObjectInfoWithLock(ctx context.Context, bucket, obj
 
 // GetObjectInfo - reads object metadata and replies back ObjectInfo.
 func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object string, opts ObjectOptions) (oi ObjectInfo, e error) {
-	//fmt.Println(" GET OBJ INFO")
+	fmt.Println(" GET OBJ INFO: bucket ", bucket, " object ",object)
 	oi, err := ko.getObjectInfoWithLock(ctx, bucket, object)
 	if err == errCorruptedFormat || err == io.EOF {
 		objectLock := ko.NewNSLock(ctx, bucket, object)
@@ -719,7 +740,7 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 
 //THAI:
 func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
-	//fmt.Println(" GET KINETIC OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
+	fmt.Println(" GET KINETIC OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}
@@ -734,7 +755,7 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 
 //getObject - wrapper for GetObject
 func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
-	//fmt.Printf(" 1. GET OBJ %s %s\n", bucket, object)
+	fmt.Printf(" 1. GET OBJ %s %s\n", bucket, object)
 	if _, err = ko.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
 	}
@@ -839,7 +860,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 // Additionally writes `ko.json` which carries the necessary metadata
 // for future object operations.
 func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
-	//fmt.Printf(" PutObject %s in Bucket %s\n", object, bucket)
+	fmt.Printf(" PutObject %s in Bucket %s\n", object, bucket)
 	if err := checkPutObjectArgs(ctx, bucket, object, ko, r.Size()); err != nil {
 		return ObjectInfo{}, err
 	}
@@ -856,7 +877,7 @@ func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object s
 
 // putObject - wrapper for PutObject
 func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
-	//fmt.Printf(" putObject  %s in %s\n", object, bucket)
+	fmt.Printf(" putObject  %s in %s\n", object, bucket)
 	data := r.Reader
 
 	// No metadata is set, allocate a new one.
@@ -870,7 +891,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	var err error
 
 	// Validate if bucket name is valid and exists.
-	// TODO: Kinetic Get bucket to cjeck if it exists.
+	// TODO: Kinetic Get bucket to check if it exists.
 	/*
 		key := bucket + ".bucket"
 		value := make([]byte, 1024*1024)
@@ -965,7 +986,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	metakey := "meta." + key
 	kc.Put(metakey, string(bytes), kopts)
 	ReleaseConnection(kc.Idx)
-	//fmt.Println(" putObject: Done")
+	fmt.Println(" putObject: Done ", string(bytes))
 	//}()
 	objectInfo := ObjectInfo{
 		Bucket:  bucket,
