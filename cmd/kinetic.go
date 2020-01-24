@@ -49,7 +49,7 @@ import (
 	"strconv"
 )
 
-var numberOfKinConns int = 50 
+var numberOfKinConns int = 90 
 
 type KConnsPool struct {
 	idx    int
@@ -62,8 +62,7 @@ var kConnsPool KConnsPool
 var identity int64 = 1
 var hmac_key string = "asdfasdf"
 var wg = sync.WaitGroup{}
-var kineticMutex sync.Mutex
-var kineticMutex2 sync.Mutex
+var kineticMutex = &sync.Mutex{}
 
 func InitKineticd(storePartition []byte) {
 	//fmt.Printf(" START KINETICD\n")
@@ -127,8 +126,8 @@ func GetKineticConnection() *kinetic.Client {
 	//fmt.Println("GET CONN ", kConnsPool.idx, " ", kConnsPool.inUsed[kConnsPool.idx])
 	var kc *kinetic.Client
 	//if !inUsed[idx] {
-        for true {
-                if kConnsPool.inUsed[kConnsPool.idx] == 0 {
+        //for true {
+        //        if kConnsPool.inUsed[kConnsPool.idx] == 0 {
                         kc = kConnsPool.kcs[kConnsPool.idx]
                         kc.Idx = kConnsPool.idx
                         kc.ReleaseConn = func(x int) {
@@ -139,10 +138,10 @@ func GetKineticConnection() *kinetic.Client {
                         if kConnsPool.idx > (numberOfKinConns - 1) {
                                 kConnsPool.idx = 0
                         }
-                        break;
-                }
-                time.Sleep(time.Millisecond)
-         }
+                        //break;
+        //        }
+        //        time.Sleep(time.Millisecond)
+        // }
 	kConnsPool.Unlock()
 	return kc
 }
@@ -483,10 +482,8 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 
 //THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
-        //kineticM/Mutex2.Lock()
-        fmt.Println("***GetObjectNInfo***", object)
+        //fmt.Println("***GetObjectNInfo***", object)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
-	        //kineticMutex2.Unlock()
 		return nil, err
 	}
 	//Check to see if Bucket exists
@@ -494,42 +491,34 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 
 	var nsUnlocker = func() {}
 	if lockType != noLock {
-        fmt.Println("***1.1 GetObjectNInfo***", object)
 		// Lock the object before reading.
 		lock := ko.NewNSLock(ctx, bucket, object)
 		switch lockType {
 		case writeLock:
 			if err = lock.GetLock(globalObjectTimeout); err != nil {
 				logger.LogIf(ctx, err)
-				//kineticMutex2.Unlock()
 				return nil, err
 			}
 			nsUnlocker = lock.Unlock
 		case readLock:
 			if err = lock.GetRLock(globalObjectTimeout); err != nil {
 				logger.LogIf(ctx, err)
-				//kineticMutex2.Unlock()
 				return nil, err
 			}
 			nsUnlocker = lock.RUnlock
 		}
 	}
-        fmt.Println("***1. GetObjectNInfo***", object)
 	// Otherwise we get the object info
-
 	var objInfo ObjectInfo
 	if objInfo, err = ko.getObjectInfo(ctx, bucket, object); err != nil {
 		nsUnlocker()
-		//kineticMutex2.Unlock()
 		return nil, toObjectErr(err, bucket, object)
 	}
-        //fmt.Println("***2. GetObjectNInfo***", object)
 	//fmt.Println(" ++++SIZE ", objInfo.Size)
 	// For a directory, we need to send an reader that returns no bytes.
 	if hasSuffix(object, SlashSeparator) {
 		// The lock taken above is released when
 		// objReader.Close() is called by the caller.
-		//kineticMutex2.Unlock()
 		return NewGetObjectReaderFromReader(bytes.NewBuffer(nil), objInfo, opts.CheckCopyPrecondFn, nsUnlocker)
 	}
 	// Take a rwPool lock for NFS gateway type deployment
@@ -540,7 +529,6 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 		if err != nil && err != errFileNotFound {
 			logger.LogIf(ctx, err)
 			nsUnlocker()
-			//kineticMutex2.Unlock()
 			return nil, toObjectErr(err, bucket, object)
 		}
 		// Need to clean up lock after getObject is
@@ -550,15 +538,12 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 
 	objReaderFn, off, length, rErr := NewGetObjectReader(rs, objInfo, opts.CheckCopyPrecondFn, nsUnlocker, rwPoolUnlocker)
 	if rErr != nil {
-		//kineticMutex2.Unlock()
 		return nil, rErr
 	}
-        fmt.Println("***3. GetObjectNInfo***", object)
 	// Read the object, doesn't exist returns an s3 compatible error.
 	size := length
 	closeFn := func() {
 	}
-	//fmt.Println("    1.2 READ OBJECT OK ")
 	// Check if range is valid
 	if off > size || off+length > size {
 		err = InvalidRange{off, length, size}
@@ -566,21 +551,19 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 		//closeFn()
 		//rwPoolUnlocker()
 		//nsUnlocer()
-		//kineticMutex2.Unlock()
 		return nil, err
 	}
 	//kc := kinetic.Client{}
-        fmt.Println("***4. GetObjectNInfo***", object)
 	kineticMutex.Lock()
 	kc := GetKineticConnection()
+        //fmt.Println("***5. GetObjectNInfo***", object)
 	kc.Key = []byte(bucket + "/" + object)
 	var reader1 io.Reader = kc
-        fmt.Println("IO LIMIT READER")
-	reader := io.LimitReader(reader1, length)
         kineticMutex.Unlock()
-
-        fmt.Println("***END: GetObjectNInfo***", object)
-
+        //fmt.Println("IO LIMIT READER")
+	reader := io.LimitReader(reader1, length)
+//        kineticMutex.Unlock()
+        //fmt.Println("***END: GetObjectNInfo***", object)
 	return objReaderFn(reader, h, opts.CheckCopyPrecondFn, closeFn)
 }
 
@@ -694,7 +677,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
         }
 	ReleaseConnection(kc.Idx)
 	kineticMutex.Unlock()
-	n := 0
+	var n int64 = 0
 	if err != nil {
 		fsMeta = ko.defaultFsJSON(object)
 		err = errFileNotFound  //errors.New("file not found")
@@ -705,11 +688,12 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		fsMeta.Meta = make(map[string]string)
 		err = json.Unmarshal(value[:size], &fsMeta)
                 C.deallocate_gvalue_buffer((*C.char)(ptr))
-		_, err := strconv.ParseInt(fsMeta.Meta["size"], 10, 64)
+		n, err = strconv.ParseInt(fsMeta.Meta["size"], 10, 64)
 		if err != nil {
 			return oi, err
 		}
 	}
+        //fmt.Println(" SIZE ", object, n)
 	fi := &KVInfo{
 		name:    object,
 		size:    int64(n),
