@@ -1,8 +1,8 @@
 package kinetic
 
 import (
-// #cgo CXXFLAGS: --std=c++0x  -DKDEBUG=1 -DNDEBUG=1 -DNDEBUGW=1 -DSMR_ENABLED=1
-// #cgo LDFLAGS: libkinetic.a libseapubcmds.a kernel_mem_mgr.a libssl.a libcrypto.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a qual_kin.a libprotobuf.a libgflags.a -lpthread -ldl -lrt libglog.a
+// #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
+// #cgo LDFLAGS: libkinetic.a kernel_mem_mgr.a libssl.a libcrypto.a libglog.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a lldp_kin.a  qual_kin.a libprotobuf.a libgflags.a  libgflags_nothreads.a libprotoc.a libksapi.a libpbkdf.a libapi.a libtransports.a  libseapubcmds.a libapi.a -lpthread -ldl -lrt 
 // #include "minio_skinny_waist.h"
        "C"
 	"unsafe"
@@ -10,8 +10,9 @@ import (
 	"crypto/sha1"
 	"crypto/tls"
 	"errors"
-	"fmt"
+	//"fmt"
 	"sync"
+	//"time"
 	//"crypto/x509"
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
@@ -22,7 +23,8 @@ import (
 )
 
 var mutex = &sync.Mutex{}
-var Skinny_waist_if bool = false
+var SkinnyWaistIF bool = false
+var ptr **C.char
 /*
 struct CPrimaryStoreValue {
     char* version;
@@ -73,23 +75,38 @@ type Client struct {
 	Opts         CmdOpts
 	ReleaseConn  func(int)
 }
-
+/*
 func (c *Client) InitClient() {
         fmt.Printf(" INITMAIN")
 	go C.CInitMain()
 }
-
-
+*/
+/*
 func (c *Client) Read(p []byte) (int, error) {
-	//fmt.Println(" Kinetic: io.Reader")
+        //fmt.Println(" ****READ****")
+        //var cvalue =(*C.char)(unsafe.Pointer(&p[0]))
 	n, err := c.Get(string(c.Key), p, c.Opts)
-	//fmt.Println(" Kinetic: io.Reader ", c.Idx)
 	c.ReleaseConn(c.Idx)
 	return int(n), err
 }
+*/
 
-func (c *Client) Write(p []byte) (int, error) {
-	n, err := c.Put(string(c.Key), string(p), c.Opts)
+func (c *Client) Read(value []byte) (int, error) {
+        //fmt.Println(" ****READ****")
+        //var cvalue =(*C.char)(unsafe.Pointer(&p[0]))
+        cvalue, ptr1, size, err := c.CGet(string(c.Key), c.Opts)
+        if err == nil {
+	        value1 := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+	        copy(value, value1)
+		C.deallocate_gvalue_buffer((*C.char)(ptr1))
+        }
+        c.ReleaseConn(c.Idx)
+        return int(size), err
+}
+
+
+func (c *Client) Write(p []byte, size int) (int, error) {
+	n, err := c.Put(string(c.Key), p, size, c.Opts)
 	return int(n), err
 }
 
@@ -109,7 +126,7 @@ func ComputeHMAC(msg, hmac_key []byte) []byte {
 	return khmac
 }
 
-func (c *Client) Send(msg *kinetic_proto.Message, value string) error {
+func (c *Client) Send(msg *kinetic_proto.Message, value []byte, size int) error {
 	if *msg.AuthType == kinetic_proto.Message_HMACAUTH {
 		khmac := ComputeHMAC(msg.CommandBytes, []byte(c.Hmac_key))
 		message_HMACauth := &kinetic_proto.Message_HMACauth{
@@ -120,7 +137,7 @@ func (c *Client) Send(msg *kinetic_proto.Message, value string) error {
 	}
 	msgMarshal, _ := proto.Marshal(msg)
 	var msg_size uint32 = uint32(len(msgMarshal))
-	var value_size uint32 = uint32(len([]byte(value)))
+	var value_size uint32 = uint32(size) //len([]byte(value)))
 	tx_header := make([]byte, 9)
 	tx_header[0] = 'F'
 	binary.BigEndian.PutUint32(tx_header[1:5], msg_size)
@@ -133,7 +150,7 @@ func (c *Client) Send(msg *kinetic_proto.Message, value string) error {
 	if err != nil {
 		return err
 	}
-	err = Write(c.socket, []byte(value), value_size)
+	err = Write(c.socket, value, value_size)
 	return err
 }
 
@@ -347,9 +364,9 @@ func (c *Client) SetLockPin(oldpin, newpin []byte, cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send Get command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	mutex.Unlock()
 	return err
 }
@@ -384,9 +401,9 @@ func (c *Client) SetErasePin(oldpin, newpin []byte, cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send Get command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	if err != nil {
 		mutex.Unlock()
 		return err
@@ -416,9 +433,9 @@ func (c *Client) StartBatch(cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send Get command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	mutex.Unlock()
 	return err
 }
@@ -450,9 +467,9 @@ func (c *Client) EndBatch(count uint32, cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send Get command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	mutex.Unlock()
 	return err
 }
@@ -477,56 +494,61 @@ func (c *Client) AbortBatch(cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	mutex.Unlock()
 	return err
 }
 
 
-func (c *Client) CGet(key string, value []byte, cmd CmdOpts) (uint32, error) {
+func (c *Client) CGet(key string, acmd CmdOpts) (*C.char, *C.char, uint32, error) {
 	mutex.Lock()
-        fmt.Println(" CALL CGET\n")
+        //fmt.Println(" CALL CGET ", key)
         var psv C._CPrimaryStoreValue
         //psv  := &C.CPrimaryStoreValue {}
         //psv := make([]_Ctype_PrimaryStoreValue, max)
         //psv.version = C.CString(cmd.NewVersion)
         //psv.tag  = C.CString(cmd.Tag)
         //psv.algorithm = C.CString(cmd.Algorithm)
-        psv.version = C.CString(string(cmd.NewVersion))
-        psv.tag = C.CString(string(cmd.Tag))
-        psv.algorithm = C.int(cmd.Algorithm)
-        fmt.Println(" GET KEY %s\n ", key)
+        psv.version = C.CString(string(acmd.NewVersion))
+        psv.tag = C.CString(string(acmd.Tag))
+        psv.algorithm = C.int(acmd.Algorithm)
+        //fmt.Println(" GET KEY %s\n ", key)
         //var user_id int64 
         //user_id = 1
         //current_version := "1"
         c_key := C.CString(key)
-        c_value := (*C.char)(unsafe.Pointer(&value[0]))
+        //c_value := (*C.char)(unsafe.Pointer(&value[0]))
         //defer C.free(unsafe.Pointer(c_key))
         //defer C.free(unsafe.Pointer(c_value))
         //fmt.Print(" 1. CALL CGET BUFF \n")
-	var c_size C.uint
-        C.Get(1, c_key, &psv,  c_value, &c_size)
-	value = []byte(C.GoStringN(c_value, C.int(c_size)))
-	
-        fmt.Println(" VALUE: ", c_size)
+	//ptrptr = &ptr
+	var size  int
+	var status int
+	var cvalue *C.char
+        //fmt.Println(" 1. CALL CGET ", key, &ptr )
+        cvalue = C.Get(1, c_key, &psv, &ptr, (*C.int)(unsafe.Pointer(&size)), (*C.int)(unsafe.Pointer(&status)))
+        //fmt.Println(" 2. CALL CGET ", key)
+        //fmt.Println("   STAT ", status)
+        //fmt.Println("   SIZE ", size, cvalue)
 	mutex.Unlock()
-        //return uint32(len(string(value))),  nil
-	var err error = nil;
-	if c_size == 0 {
-		err = errors.New("NOT FOUND") 
+	var err error = nil
+	if status != 0 || cvalue == nil {
+		err =  errors.New("NOT FOUND")
 	}
-        return uint32(c_size), err                   
+        //fmt.Println(" CGET DONE ", err, cvalue, *ptr)
+        return cvalue, *ptr, uint32(size), err                   
 }
 
 
 
 func (c *Client) Get(key string, value []byte, cmd CmdOpts) (uint32, error) {
-	if Skinny_waist_if {
-		return c.CGet(key, value, cmd)
-	}
+	//if SkinnyWaistIF {
+	//	return c.CGet(key, value, cmd)
+	//}
 	mutex.Lock()
+        //fmt.Println(" NORMAL GET")
 	auth_type := kinetic_proto.Message_HMACAUTH
 	cmd_header := &kinetic_proto.Command_Header{}
 	err := SetCmdInHeader(c, cmd_header, kinetic_proto.Command_GET, cmd)
@@ -548,9 +570,9 @@ func (c *Client) Get(key string, value []byte, cmd CmdOpts) (uint32, error) {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	if err != nil {
 		mutex.Unlock()
 		return 0, err
@@ -569,8 +591,20 @@ func (c *Client) Get(key string, value []byte, cmd CmdOpts) (uint32, error) {
 	return value_size, err
 }
 
+func (c *Client) CDelete(key string, cmd CmdOpts)  error {
+        mutex.Lock()
+        current_version := "1"
+        c_key := C.CString(key)
+        C.Delete(1, c_key, C.CString(current_version), false, 1, 1)
+        mutex.Unlock()
+        return  nil
+}
 
 func (c *Client) Delete(key string, cmd CmdOpts) error {
+        if SkinnyWaistIF {
+                return c.CDelete(key, cmd)
+        }
+
 	mutex.Lock()
 	//fmt.Println("\nCMD DELETE: ", key)
 	auth_type := kinetic_proto.Message_HMACAUTH
@@ -596,8 +630,8 @@ func (c *Client) Delete(key string, cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value string
-	err = c.Send(message, value)
+	var value []byte
+	err = c.Send(message, value, 0)
 
 	if err != nil {
 		log.Trace("SENT FAILED")
@@ -615,9 +649,12 @@ func (c *Client) Delete(key string, cmd CmdOpts) error {
 }
 
 
-func (c *Client) CPut(key string, value string, cmd CmdOpts) (uint32, error) {
+func (c *Client) CPut(key string, value []byte, size int, cmd CmdOpts) (uint32, error) {
+	//start := time.Now()
 	mutex.Lock()
-        fmt.Printf(" 1. CALL CPUT\n")
+        //fmt.Println(" CALL CPUT ", key)
+	//fmt.Println(" DATA ", string(value))
+	//start := time.Now()
 	var psv C._CPrimaryStoreValue
 	//psv  := &C.CPrimaryStoreValue {}
 	//psv := make([]_Ctype_PrimaryStoreValue, max)
@@ -627,27 +664,38 @@ func (c *Client) CPut(key string, value string, cmd CmdOpts) (uint32, error) {
 	psv.version = C.CString(string(cmd.NewVersion))
 	psv.tag = C.CString(string(cmd.Tag))
 	psv.algorithm = C.int(cmd.Algorithm)
-        fmt.Printf(" PUT %s\n ", key)
+        //fmt.Printf(" PUT %s\n ", key)
         //var user_id int64 
         //user_id = 1
         current_version := "1"
 	c_key := C.CString(key)
-	c_value := C.CString(value)
+	//c_key := (*C.char)(unsafe.Pointer(&key[0]))
+	//c_value := C.CString(value)
+	var c_value *C.char
+	if  size  > 0 {
+		c_value = (*C.char)(unsafe.Pointer(&value[0]))
+	} else {
+		c_value  = (*C.char)(nil)
+	}
 	//defer C.free(unsafe.Pointer(c_key))
         //defer C.free(unsafe.Pointer(c_value))
-	fmt.Println(" 2. CALL CPUT LEN ") //, len(value))
-	C.Put(1, c_key, C.CString(current_version), &psv,  c_value, C.size_t(len(value)), false, 1, 1)
+	//fmt.Println(" 2. CALL CPUT LEN ", len(value))
+	//end := time.Now()
+	//fmt.Println(" MINIO  PREPARE ", end.Sub(start))
+	//fmt.Printf("GOSUB %p\n", c_value)
+	C.Put(1, c_key, C.CString(current_version), &psv, c_value, C.size_t(size), false, 1, 1)
+	//end1 := time.Now()
+	//fmt.Println("MINIO CPUT DONE ")
 	mutex.Unlock()
-        return uint32(len(value)), nil
+        return uint32(size), nil
         //return 0, nil			
 }
 
 
-func (c *Client) Put(key string, value string, cmd CmdOpts) (uint32, error) {
-        if Skinny_waist_if {
-		return c.CPut(key, value, cmd)
+func (c *Client) Put(key string, value []byte, size int, cmd CmdOpts) (uint32, error) {
+        if SkinnyWaistIF {
+		return c.CPut(key, value, size, cmd)
 	}
-	fmt.Println(" PUT ", key)
 	mutex.Lock()
 	auth_type := kinetic_proto.Message_HMACAUTH
 	cmd_header := &kinetic_proto.Command_Header{}
@@ -678,7 +726,7 @@ func (c *Client) Put(key string, value string, cmd CmdOpts) (uint32, error) {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	err = c.Send(message, value)
+	err = c.Send(message, value, size)
 	if err != nil {
 		mutex.Unlock()
 		return 0, err
@@ -692,11 +740,11 @@ func (c *Client) Put(key string, value string, cmd CmdOpts) (uint32, error) {
 	}
 
 	mutex.Unlock()
-	return uint32(len(value)), nil
+	return uint32(size), nil
 }
 
 
-func (c *Client) PutB(key string, value string, cmd CmdOpts) error {
+func (c *Client) PutB(key string, value []byte, size int, cmd CmdOpts) error {
 	mutex.Lock()
 	log.Trace("\nCMD PUT BATCH: ")
 	auth_type := kinetic_proto.Message_HMACAUTH
@@ -724,7 +772,7 @@ func (c *Client) PutB(key string, value string, cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	err = c.Send(message, value)
+	err = c.Send(message, value, size )
 	mutex.Unlock()
 	return err
 }
@@ -749,9 +797,9 @@ func (c *Client) GetNext(key string, value []byte, cmd CmdOpts) (uint32, error) 
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err := c.Send(message, value1)
+	err := c.Send(message, value1, 0)
 	//mutex.Unlock()
 	if err != nil {
 		return 0, err
@@ -793,14 +841,16 @@ func (c *Client) GetKeyRange(startKey string, endKey string, startKeyInclusive b
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err := c.Send(message, value1)
+	err := c.Send(message, value1, 0)
+
 	//mutex.Unlock()
 	if err != nil {
 		return nil, err
 	}
 	value, _, err := c.GetStatus()
+        //c.ReleaseConn(c.Idx)
 	if err != nil {
 		log.Trace("GETKEYRANGE FAILED")
 		return nil, err
@@ -837,9 +887,9 @@ func (c *Client) GetLog(ltype []kinetic_proto.Command_GetLog_Type, value []byte,
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	//mutex.Unlock()
 	if err != nil {
 		return 0, err
@@ -883,9 +933,9 @@ func (c *Client) NoOp(cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	mutex.Unlock()
 	return err
 }
@@ -919,9 +969,9 @@ func (c *Client) MediaScan(startkey, endkey []byte, startKeyInclusive,
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send Get command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	mutex.Unlock()
 	return err
 }
@@ -944,9 +994,9 @@ func (c *Client) MediaOptimize(cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send Get command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	mutex.Unlock()
 	return err
 }
@@ -969,9 +1019,9 @@ func (c *Client) FlushAllData(cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	mutex.Unlock()
 	return err
 }
@@ -1000,9 +1050,9 @@ func (c *Client) UnlockPin(pin []byte, cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send  command, value1 is fake and will not be sent
-	err := c.Send(message, value1)
+	err := c.Send(message, value1, 0)
 	// mutex.Unlock()
 	if err != nil {
 		mutex.Unlock()
@@ -1046,9 +1096,9 @@ func (c *Client) LockPin(pin []byte, cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	mutex.Unlock()
 	return err
 }
@@ -1081,9 +1131,9 @@ func (c *Client) ErasePin(pin []byte, cmd CmdOpts) error {
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	if err != nil {
 		mutex.Unlock()
 		return err
@@ -1128,9 +1178,9 @@ func (c *Client) InstantSecureErase(pin []byte, cmd CmdOpts) error {
 		PinAuth:      pinauth,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	if err != nil {
 		mutex.Unlock()
 		return err
@@ -1169,9 +1219,9 @@ func (c *Client) GetPrevious(key string, value []byte, cmd CmdOpts) (uint32, err
 		AuthType:     &auth_type,
 		CommandBytes: commandbytes,
 	}
-	var value1 string
+	var value1 []byte
 	// Send command, value1 is fake and will not be sent
-	err = c.Send(message, value1)
+	err = c.Send(message, value1, 0)
 	if err != nil {
 		mutex.Unlock()
 		return 0, err

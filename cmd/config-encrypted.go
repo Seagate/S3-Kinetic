@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"unicode/utf8"
@@ -59,7 +60,7 @@ func handleEncryptedConfigBackend(objAPI ObjectLayer, server bool) error {
 		}
 		break
 	}
-
+	fmt.Println(" ****** ENCRYPTED?  ", encrypted)
 	if encrypted {
 		// backend is encrypted, but credentials are not specified
 		// we shall fail right here. if not proceed forward.
@@ -121,10 +122,15 @@ func checkBackendEtcdEncrypted(ctx context.Context, client *etcd.Client) (bool, 
 }
 
 func checkBackendEncrypted(objAPI ObjectLayer) (bool, error) {
+	fmt.Println(" *******CHECK BACKEND")
 	data, err := readConfig(context.Background(), objAPI, backendEncryptedFile)
+        fmt.Println(" *******1.CHECK BACKEND ", data)
+
 	if err != nil && err != errConfigNotFound {
+                fmt.Println(" err ERRCONFIGNOT FOUND")
 		return false, err
 	}
+        fmt.Println( " ***** EQUAL ",  bytes.Equal(data, backendEncryptedMigrationComplete))
 	return err == nil && bytes.Equal(data, backendEncryptedMigrationComplete), nil
 }
 
@@ -282,7 +288,7 @@ func migrateConfigPrefixToEncrypted(objAPI ObjectLayer, activeCredOld auth.Crede
 	} else {
 		logger.Info("Attempting encryption of all config, IAM users and policies on MinIO backend")
 	}
-
+	fmt.Println( "SAVE CONFIG")
 	err := saveConfig(context.Background(), objAPI, backendEncryptedFile, backendEncryptedMigrationIncomplete)
 	if err != nil {
 		return err

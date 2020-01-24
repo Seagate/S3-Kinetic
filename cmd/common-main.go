@@ -211,7 +211,7 @@ func handleCommonEnvVars() {
 				"Unable to validate credentials inherited from the shell environment")
 		}
 		globalActiveCred = cred
-		globalConfigEncrypted = true
+		globalConfigEncrypted =  false //Thai default is true
 	}
 }
 
