@@ -50,17 +50,22 @@ import (
 )
 
 var numberOfKinConns int = 90 
+var maxQueue int = 200
 
 type KConnsPool struct {
 	idx    int
 	kcs    map[int]*kinetic.Client
 	inUsed map[int]int
+	totalInUsed int
+	max    int
 	sync.Mutex
+	cond *sync.Cond
 }
 
 var kConnsPool KConnsPool
 var identity int64 = 1
 var hmac_key string = "asdfasdf"
+
 var wg = sync.WaitGroup{}
 var kineticMutex = &sync.Mutex{}
 
@@ -110,24 +115,25 @@ type KVInfo struct {
 	size    int64       // length in bytes for regular files; system-dependent for others
 	mode    FileMode    // file mode bits
 	modTime time.Time   // modification time
-	isDir   bool        // abbreviation for Mode().IsDir()
+	isDir   bool       // abbreviation for Mode().IsDir()
 	sys     interface{} // underlying data source (can return nil)
 }
 
 func ReleaseConnection(ix int) {
 	kConnsPool.Lock()
 	kConnsPool.inUsed[ix]--
-	//c.Broadcast()
+	kConnsPool.totalInUsed--
+	kConnsPool.cond.Broadcast()
 	kConnsPool.Unlock()
 }
 
 func GetKineticConnection() *kinetic.Client {
 	kConnsPool.Lock()
-	//fmt.Println("GET CONN ", kConnsPool.idx, " ", kConnsPool.inUsed[kConnsPool.idx])
 	var kc *kinetic.Client
-	//if !inUsed[idx] {
         //for true {
         //        if kConnsPool.inUsed[kConnsPool.idx] == 0 {
+	for true {
+		if kConnsPool.totalInUsed < maxQueue {
                         kc = kConnsPool.kcs[kConnsPool.idx]
                         kc.Idx = kConnsPool.idx
                         kc.ReleaseConn = func(x int) {
@@ -135,13 +141,14 @@ func GetKineticConnection() *kinetic.Client {
                         }
                         kConnsPool.inUsed[kConnsPool.idx]++
                         kConnsPool.idx++
+			kConnsPool.totalInUsed++;
                         if kConnsPool.idx > (numberOfKinConns - 1) {
                                 kConnsPool.idx = 0
                         }
-                        //break;
-        //        }
-        //        time.Sleep(time.Millisecond)
-        // }
+                        break;
+                }
+		kConnsPool.cond.Wait()
+        }
 	kConnsPool.Unlock()
 	return kc
 }
@@ -249,6 +256,9 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	kConnsPool.idx = 0
 	kConnsPool.kcs = make(map[int]*kinetic.Client, numberOfKinConns)
 	kConnsPool.inUsed = make(map[int]int)
+        kConnsPool.max = maxQueue
+	kConnsPool.totalInUsed = 0
+	kConnsPool.cond = sync.NewCond(&kConnsPool)
 	for i := 0; i < numberOfKinConns; i++ {
 		kc := new(kinetic.Client)
 		kConnsPool.kcs[i] = kc
@@ -987,19 +997,15 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	if size := data.Size(); size > 0 && bufSize > size {
 		bufSize = size
 	}
-        kineticMutex.Lock()
-
-	//buf := make([]byte, int(bufSize))
+        //kineticMutex.Lock()
         goBuf := allocateValBuf(int(bufSize))
-
 	//Read data to buf
 	_, err = readToBuffer(r, goBuf)
-
+	//kineticMutex.Unlock()
 	if err != nil {
 		kineticMutex.Unlock()
 		return ObjectInfo{}, err
 	}
-
 	fsMeta.Meta["etag"] = r.MD5CurrentHexString()
 	fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
 
@@ -1023,12 +1029,13 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         buf := allocateValBuf(len(bytes))
         copy(buf, bytes)
 
+        //kineticMutex.Lock()
         kc := GetKineticConnection()
 	kc.Put(key, goBuf, int(bufSize), kopts)
 	kc.Put(metakey, buf, len(bytes), kopts) 
 	ReleaseConnection(kc.Idx)
 
-        kineticMutex.Unlock()
+        //kineticMutex.Unlock()
 
 	//}()
 	objectInfo := ObjectInfo{
