@@ -474,6 +474,7 @@ func (api objectAPIHandlers) DeleteMultipleObjectsHandler(w http.ResponseWriter,
 // ----------
 // This implementation of the PUT operation creates a new bucket for authenticated request
 func (api objectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println(" PUT BUCKET HANDLER")
 	ctx := newContext(r, w, "PutBucket")
 
 	defer logger.AuditLog(w, r, "PutBucket", mustGetClaimsFromToken(r))
@@ -581,6 +582,7 @@ func (api objectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Req
 // This implementation of the POST operation handles object creation with a specified
 // signature policy in multipart/form-data
 func (api objectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("POST POLICY BUCKET HANDLER")
 	ctx := newContext(r, w, "PostPolicyBucket")
 
 	defer logger.AuditLog(w, r, "PostPolicyBucket", mustGetClaimsFromToken(r))
@@ -835,6 +837,7 @@ func (api objectAPIHandlers) PostPolicyBucketHandler(w http.ResponseWriter, r *h
 // have permission to access it. Otherwise, the operation might
 // return responses such as 404 Not Found and 403 Forbidden.
 func (api objectAPIHandlers) HeadBucketHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("HEAD BUCKET HANDLER")
 	ctx := newContext(r, w, "HeadBucket")
 
 	defer logger.AuditLog(w, r, "HeadBucket", mustGetClaimsFromToken(r))
@@ -942,6 +945,7 @@ func (api objectAPIHandlers) PutBucketVersioningHandler(w http.ResponseWriter, r
 // ----------
 // No-op. Available for API compatibility.
 func (api objectAPIHandlers) GetBucketVersioningHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("GET BUCKET VERSION HANDLER")
 	ctx := newContext(r, w, "GetBucketVersioning")
 
 	defer logger.AuditLog(w, r, "GetBucketVersioning", mustGetClaimsFromToken(r))
@@ -971,6 +975,7 @@ func (api objectAPIHandlers) GetBucketVersioningHandler(w http.ResponseWriter, r
 // specified in the Object Lock configuration will be applied by default
 // to every new object placed in the specified bucket.
 func (api objectAPIHandlers) PutBucketObjectLockConfigHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("PIT BUCKET OBJECT LOCK CONFIG HANDLER")
 	ctx := newContext(r, w, "PutBucketObjectLockConfig")
 
 	defer logger.AuditLog(w, r, "PutBucketObjectLockConfig", mustGetClaimsFromToken(r))
@@ -1044,6 +1049,7 @@ func (api objectAPIHandlers) PutBucketObjectLockConfigHandler(w http.ResponseWri
 // the Object Lock configuration will be applied by default to every new
 // object placed in the specified bucket.
 func (api objectAPIHandlers) GetBucketObjectLockConfigHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("GET BUCKET OBJECT LOCK CONFIG HANDLER")
 	ctx := newContext(r, w, "GetBucketObjectLockConfig")
 
 	defer logger.AuditLog(w, r, "GetBucketObjectLockConfig", mustGetClaimsFromToken(r))

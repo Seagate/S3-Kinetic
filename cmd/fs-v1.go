@@ -19,7 +19,7 @@ package cmd
 import (
 	"bytes"
 	"context"
-	//"fmt"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -297,6 +297,8 @@ func (fs *FSObjects) statBucketDir(ctx context.Context, bucket string) (os.FileI
 // MakeBucketWithLocation - create a new bucket, returns if it
 // already exists.
 func (fs *FSObjects) MakeBucketWithLocation(ctx context.Context, bucket, location string) error {
+        fmt.Printf(" CREATE NEW BUCKET %s LOCATION %s\n", bucket, location)
+
 	bucketLock := fs.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
 		return err
@@ -310,8 +312,9 @@ func (fs *FSObjects) MakeBucketWithLocation(ctx context.Context, bucket, locatio
 	if err != nil {
 		return toObjectErr(err, bucket)
 	}
-
+        fmt.Println(" CREATE DIR", bucketDir)
 	if err = fsMkdir(ctx, bucketDir); err != nil {
+		fmt.Println(" FAILED ", err)
 		return toObjectErr(err, bucket)
 	}
 

@@ -46,7 +46,8 @@ import (
 )
 
 const (
-	diskMinFreeSpace  = 900 * humanize.MiByte // Min 900MiB free space.
+//THAI CHECK MIN DISK FREE SPACE
+	diskMinFreeSpace  = 100 * humanize.MiByte // Min 900MiB free space.
 	diskMinTotalSpace = diskMinFreeSpace      // Min 900MiB total space.
 	maxAllowedIOError = 5
 	readBlockSize     = 4 * humanize.MiByte // Default read block size 4MiB.
