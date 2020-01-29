@@ -22,7 +22,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/xml"
-	"fmt"
+	//"fmt"
 	"io"
 	goioutil "io/ioutil"
 	"net/http"
@@ -245,7 +245,7 @@ func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 // This implementation of the GET operation retrieves object. To use GET,
 // you must have READ access to the object.
 func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(" GET OBJECT HANDLER")
+	//fmt.Println(" GET OBJECT HANDLER")
 	ctx := newContext(r, w, "GetObject")
 
 	defer logger.AuditLog(w, r, "GetObject", mustGetClaimsFromToken(r))
@@ -423,7 +423,7 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 // -----------
 // The HEAD operation retrieves metadata from an object without returning the object itself.
 func (api objectAPIHandlers) HeadObjectHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(" HEAD OBJECT HANDLER")
+	//fmt.Println(" HEAD OBJECT HANDLER")
 	ctx := newContext(r, w, "HeadObject")
 
 	defer logger.AuditLog(w, r, "HeadObject", mustGetClaimsFromToken(r))
@@ -653,7 +653,7 @@ func isRemoteCallRequired(ctx context.Context, bucket string, objAPI ObjectLayer
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
 func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(" COPY OBJECT HANDLER")
+	//fmt.Println(" COPY OBJECT HANDLER")
 	ctx := newContext(r, w, "CopyObject")
 
 	defer logger.AuditLog(w, r, "CopyObject", mustGetClaimsFromToken(r))
@@ -1063,7 +1063,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
 func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(" PUT OBJECT HANDLER")
+	//fmt.Println(" PUT OBJECT HANDLER")
 	ctx := newContext(r, w, "PutObject")
 	defer logger.AuditLog(w, r, "PutObject", mustGetClaimsFromToken(r))
 

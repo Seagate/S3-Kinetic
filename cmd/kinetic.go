@@ -301,7 +301,7 @@ func (ko *KineticObjects) StorageInfo(ctx context.Context) StorageInfo {
 // corresponding valid bucket names on the backend in a platform
 // compatible way for all operating systems.
 func (ko *KineticObjects) getBucketDir(ctx context.Context, bucket string) (string, error) {
-	fmt.Println(" GET BUCKET ", bucket)
+	//fmt.Println(" GET BUCKET ", bucket)
 	if bucket == "" || bucket == "." || bucket == ".." {
 		return "", errVolumeNotFound
 	}
@@ -388,7 +388,7 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 //THAI:
 
 func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi BucketInfo, err error) {
-	fmt.Println(" GET BUCKET INFO ", bucket)
+	//fmt.Println(" GET BUCKET INFO ", bucket)
         bucketLock := ko.NewNSLock(ctx, bucket, "")
         if e := bucketLock.GetRLock(globalObjectTimeout); e != nil {
                 return bi, e
@@ -422,8 +422,8 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
         dec := gob.NewDecoder(buf)
         dec.Decode(&bi)
 
-        name := []byte(bi.Name)
-        fmt.Println(" BUCKET INFO NAME: ", bi.Created, string(name),  err)
+        //name := []byte(bi.Name)
+        //fmt.Println(" BUCKET INFO NAME: ", bi.Created, string(name),  err)
         C.deallocate_gvalue_buffer((*C.char)(ptr))
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
@@ -538,7 +538,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 
 //THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
-        fmt.Println("***GetObjectNInfo***", object)
+        //fmt.Println("***GetObjectNInfo***", object)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
 	}
@@ -650,7 +650,7 @@ func (ko *KineticObjects) createFsJSON(object, fsMetaPath string) error {
 
 // getObjectInfo - wrapper for reading object metadata and constructs ObjectInfo.
 func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object string) (oi ObjectInfo, e error) {
-	fmt.Println(" GETOBJECT META", bucket, " ", object)
+	//fmt.Println(" GETOBJECT META", bucket, " ", object)
 	fsMeta := fsMetaV1{}
 /*
 	if hasSuffix(object, SlashSeparator) {
@@ -810,7 +810,7 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 
 //THAI:
 func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
-	fmt.Println(" GET OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
+	//fmt.Println(" GET OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}
@@ -827,7 +827,7 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 
 //getObject - wrapper for GetObject
 func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
-	fmt.Printf(" 1. GET OBJ %s %s %d\n", bucket, object, length)
+	//fmt.Printf(" 1. GET OBJ %s %s %d\n", bucket, object, length)
 	if _, err = ko.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
 	}
@@ -922,7 +922,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 	}
         value := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	//_, err = io.Copy(value[:size], writer)
-	fmt.Println(" WRITE VALUE")
+	//fmt.Println(" WRITE VALUE")
 	writer.Write(value[:size])
         C.deallocate_gvalue_buffer((*C.char)(ptr))
 
