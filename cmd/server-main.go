@@ -26,7 +26,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	//"time"
+
 	"github.com/minio/cli"
 	"github.com/minio/minio/cmd/config"
 	xhttp "github.com/minio/minio/cmd/http"

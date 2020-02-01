@@ -1,5 +1,5 @@
 PWD := $(shell pwd)
-$(sh ./goarmenv.sh)
+$(shell ./goarmenv.sh)
 GOPATH := $(shell go env GOPATH)
 LDFLAGS := $(shell go run buildscripts/gen-ldflags.go)
 
