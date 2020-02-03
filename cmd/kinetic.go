@@ -416,14 +416,14 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 	        C.deallocate_gvalue_buffer((*C.char)(ptr))
 		ReleaseConnection(kc.Idx)
 		kineticMutex.Unlock()
-		return bi, err
+		return bi, toObjectErr(errVolumeNotFound, bucket)
 	}
         buf := bytes.NewBuffer(value[:size])
         dec := gob.NewDecoder(buf)
         dec.Decode(&bi)
 
-        //name := []byte(bi.Name)
-        //fmt.Println(" BUCKET INFO NAME: ", bi.Created, string(name),  err)
+        name := []byte(bi.Name)
+        fmt.Println(" BUCKET INFO NAME: ", bi.Created, string(name),  err)
         C.deallocate_gvalue_buffer((*C.char)(ptr))
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
