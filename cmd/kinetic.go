@@ -49,7 +49,7 @@ import (
 	"strconv"
 )
 
-var numberOfKinConns int = 90 
+var numberOfKinConns int = 20 
 var maxQueue int = 200
 
 type KConnsPool struct {
