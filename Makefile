@@ -97,3 +97,7 @@ clean:
 	@rm -rvf minio
 	@rm -rvf build
 	@rm -rvf release
+	@rm *.a
+	@rm cmd/*.a
+	@rm pkg/kinetic/*.a
+
