@@ -27,34 +27,77 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"github.com/minio/minio/pkg/kinetic"
+        "github.com/minio/minio/pkg/kinetic_proto"
+        "github.com/minio/minio/cmd/logger"
+        "log"
 	jsoniter "github.com/json-iterator/go"
-	"github.com/minio/minio/cmd/logger"
 	mioutil "github.com/minio/minio/pkg/ioutil"
 )
 
+
+func (fs *KineticObjects) getUploadIDDir(bucket, object, uploadID string) string {
+	log.Println("K: getUploadIDDir", fs.fsPath, minioMetaMultipartBucket)
+        return pathJoin(fs.fsPath, minioMetaMultipartBucket, getSHA256Hash([]byte(pathJoin(bucket, object))), uploadID)
+}
+
 // Returns EXPORT/.minio.sys/multipart/SHA256/UPLOADID
 func (fs *FSObjects) getUploadIDDir(bucket, object, uploadID string) string {
-	fmt.Println("getUploadIDDir")
+	log.Println("getUploadIDDir", fs.fsPath, minioMetaMultipartBucket)
 	return pathJoin(fs.fsPath, minioMetaMultipartBucket, getSHA256Hash([]byte(pathJoin(bucket, object))), uploadID)
 }
 
 // Returns EXPORT/.minio.sys/multipart/SHA256
+func (fs *KineticObjects) getMultipartSHADir(bucket, object string) string {
+        log.Println("getMultipartSHADir", minioMetaMultipartBucket,)
+        return pathJoin(fs.fsPath, minioMetaMultipartBucket, getSHA256Hash([]byte(pathJoin(bucket, object))))
+}
+
+// Returns EXPORT/.minio.sys/multipart/SHA256
 func (fs *FSObjects) getMultipartSHADir(bucket, object string) string {
-	fmt.Println("getMultipartSHADir")
+	log.Println("getMultipartSHADir", minioMetaMultipartBucket,)
 	return pathJoin(fs.fsPath, minioMetaMultipartBucket, getSHA256Hash([]byte(pathJoin(bucket, object))))
 }
 
+func (fs *KineticObjects) encodePartFile(partNumber int, etag string, actualSize int64) string {
+        log.Println("encodePartFile", partNumber, etag, actualSize)
+
+        return fmt.Sprintf("%.5d.%s.%d", partNumber, etag, actualSize)
+}
+
+
 // Returns partNumber.etag
 func (fs *FSObjects) encodePartFile(partNumber int, etag string, actualSize int64) string {
-	fmt.Println("encodePartFile")
+        log.Println("encodePartFile", partNumber, etag, actualSize)
 
 	return fmt.Sprintf("%.5d.%s.%d", partNumber, etag, actualSize)
 }
 
 // Returns partNumber and etag
+func (fs *KineticObjects) decodePartFile(name string) (partNumber int, etag string, actualSize int64, err error) {
+        log.Println("decodePartFile")
+
+        result := strings.Split(name, ".")
+        if len(result) != 3 {
+                return 0, "", 0, errUnexpected
+        }
+        partNumber, err = strconv.Atoi(result[0])
+        if err != nil {
+                return 0, "", 0, errUnexpected
+        }
+        actualSize, err = strconv.ParseInt(result[2], 10, 64)
+        if err != nil {
+                return 0, "", 0, errUnexpected
+        }
+	log.Println("DECODE PART FILE", partNumber, result[1], actualSize)
+        return partNumber, result[1], actualSize, nil
+}
+
+
+
+// Returns partNumber and etag
 func (fs *FSObjects) decodePartFile(name string) (partNumber int, etag string, actualSize int64, err error) {
-	fmt.Println("decodePartFile")
+	log.Println("decodePartFile")
 
 	result := strings.Split(name, ".")
 	if len(result) != 3 {
@@ -71,9 +114,12 @@ func (fs *FSObjects) decodePartFile(name string) (partNumber int, etag string, a
 	return partNumber, result[1], actualSize, nil
 }
 
+func (fs *KineticObjects) backgroundAppend(ctx context.Context, bucket, object, uploadID string) {
+        log.Println("backgroundAppend")
+}
 // Appends parts to an appendFile sequentially.
 func (fs *FSObjects) backgroundAppend(ctx context.Context, bucket, object, uploadID string) {
-	fmt.Println("backgroundAppend")
+	log.Println("backgroundAppend")
 
 	fs.appendFileMapMu.Lock()
 	logger.GetReqInfo(ctx).AppendTags("uploadID", uploadID)
@@ -134,7 +180,7 @@ func (fs *FSObjects) backgroundAppend(ctx context.Context, bucket, object, uploa
 }
 
 func (fs *KineticObjects) ListMultipartUploads(ctx context.Context, bucket, object, keyMarker, uploadIDMarker, delimiter string, maxUploads int) (result ListMultipartsInfo, e error) {
-	fmt.Println("ListMultipartUploads")
+	log.Println("ListMultipartUploads")
 
 	return result, nil
 }
@@ -142,7 +188,7 @@ func (fs *KineticObjects) ListMultipartUploads(ctx context.Context, bucket, obje
 // ListMultipartUploads - lists all the uploadIDs for the specified object.
 // We do not support prefix based listing.
 func (fs *FSObjects) ListMultipartUploads(ctx context.Context, bucket, object, keyMarker, uploadIDMarker, delimiter string, maxUploads int) (result ListMultipartsInfo, e error) {
-	fmt.Println("1. ListMultipartUploads")
+	log.Println("1. ListMultipartUploads")
 
 	if err := checkListMultipartArgs(ctx, bucket, object, keyMarker, uploadIDMarker, delimiter, fs); err != nil {
 		return result, toObjectErr(err)
@@ -222,9 +268,50 @@ func (fs *FSObjects) ListMultipartUploads(ctx context.Context, bucket, object, k
 }
 
 func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object string, opts ObjectOptions) (string, error) {
-	fmt.Println("NewMultipartUpload")
+	log.Println("NewMultipartUpload")
 
-	return "", nil
+        if err := checkNewMultipartArgs(ctx, bucket, object, fs); err != nil {
+                return "", toObjectErr(err, bucket)
+        }
+        if _, err := fs.GetBucketInfo(ctx, bucket); err != nil {
+                return "", toObjectErr(err, bucket)
+        }
+
+        uploadID := mustGetUUID()
+        //uploadIDDir := fs.getUploadIDDir(bucket, object, uploadID)
+        // Initialize fs.json values.
+        fsMeta := newFSMetaV1()
+
+        fsMeta.Meta = opts.UserDefined
+        fsMeta.Meta["size"] = strconv.FormatInt(0, 10)
+        fsMeta.KoInfo = KOInfo{Name: object, Size: 0, CreatedTime: time.Now()}
+
+        fsMetaBytes, err := json.Marshal(fsMeta)
+        if err != nil {
+                logger.LogIf(ctx, err)
+                return "", err
+        }
+	log.Println(" META BYTES", string(fsMetaBytes))
+
+	kopts := kinetic.CmdOpts{
+                ClusterVersion:  0,
+                Force:           true,
+                Tag:             []byte{}, //(fsMeta.Meta),
+                Algorithm:       kinetic_proto.Command_SHA1,
+                Synchronization: kinetic_proto.Command_WRITEBACK,
+                Timeout:         60000, //60 sec
+                Priority:        kinetic_proto.Command_NORMAL,
+        }
+	key := bucket + "/" + object + "/" + fs.metaJSONFile
+        // metadata file
+	metaKey := "meta." + key
+        buf := allocateValBuf(len(fsMetaBytes))
+        copy(buf, fsMetaBytes)
+	log.Println(" WRITE TO: ", metaKey)
+        kc := GetKineticConnection()
+        kc.Put(metaKey, buf, len(fsMetaBytes), kopts) 
+        ReleaseConnection(kc.Idx)
+        return uploadID, nil
 }
 
 // NewMultipartUpload - initialize a new multipart upload, returns a
@@ -233,7 +320,7 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
 //
 // Implements S3 compatible initiate multipart API.
 func (fs *FSObjects) NewMultipartUpload(ctx context.Context, bucket, object string, opts ObjectOptions) (string, error) {
-	fmt.Println("1. NewMultipartUpload")
+	log.Println("1. NewMultipartUpload")
 
 	if err := checkNewMultipartArgs(ctx, bucket, object, fs); err != nil {
 		return "", toObjectErr(err, bucket)
@@ -261,7 +348,7 @@ func (fs *FSObjects) NewMultipartUpload(ctx context.Context, bucket, object stri
 		logger.LogIf(ctx, err)
 		return "", err
 	}
-	fmt.Println(" WRITE TO FILE ", pathJoin(uploadIDDir, fs.metaJSONFile))
+	log.Println(" WRITE TO FILE ", pathJoin(uploadIDDir, fs.metaJSONFile))
 	if err = ioutil.WriteFile(pathJoin(uploadIDDir, fs.metaJSONFile), fsMetaBytes, 0644); err != nil {
 		logger.LogIf(ctx, err)
 		return "", err
@@ -275,14 +362,14 @@ func (fs *FSObjects) NewMultipartUpload(ctx context.Context, bucket, object stri
 // and safely renamed to '.minio.sys/multipart' for reach parts.
 func (fs *KineticObjects) CopyObjectPart(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject, uploadID string, partID int,
 	startOffset int64, length int64, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (pi PartInfo, e error) {
-	fmt.Println("CopyObjectPart")
+	log.Println("CopyObjectPart")
 
 	return pi, nil
 }
 
 func (fs *FSObjects) CopyObjectPart(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject, uploadID string, partID int,
 	startOffset int64, length int64, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (pi PartInfo, e error) {
-	fmt.Println("1. CopyObjectPart")
+	log.Println("1. CopyObjectPart")
 
 	if err := checkNewMultipartArgs(ctx, srcBucket, srcObject, fs); err != nil {
 		return pi, toObjectErr(err)
@@ -301,14 +388,91 @@ func (fs *FSObjects) CopyObjectPart(ctx context.Context, srcBucket, srcObject, d
 // written to '.minio.sys/tmp' location and safely renamed to
 // '.minio.sys/multipart' for reach parts.
 func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID string, partID int, r *PutObjReader, opts ObjectOptions) (pi PartInfo, e error) {
-	fmt.Println("PutObjectPart")
+	log.Println("PutObjectPart", bucket, object, partID, uploadID)
 
-	return pi, nil
+        data := r.Reader
+        if err := checkPutObjectPartArgs(ctx, bucket, object, fs); err != nil {
+                return pi, toObjectErr(err, bucket)
+        }
+
+        if _, err := fs.GetBucketInfo(ctx, bucket); err != nil {
+                return pi, toObjectErr(err, bucket)
+        }
+
+        // Validate input data size and it can never be less than -1.
+        if data.Size() < -1 {
+                logger.LogIf(ctx, errInvalidArgument, logger.Application)
+                return pi, toObjectErr(errInvalidArgument)
+        }
+
+        //uploadIDDir := fs.getUploadIDDir(bucket, object, uploadID)
+	//fmt.Println(" uploadIDDir", uploadIDDir)
+        // Just check if the uploadID exists to avoid copy if it doesn't.
+/*
+        _, err := fsStatFile(ctx, pathJoin(uploadIDDir, fs.metaJSONFile))
+        if err != nil {
+                if err == errFileNotFound || err == errFileAccessDenied {
+                        return pi, InvalidUploadID{UploadID: uploadID}
+                }
+                return pi, toObjectErr(err, bucket, object)
+        }
+*/
+        bufSize := int64(blockSizeV1)
+        if size := data.Size(); size > 0 && bufSize > size {
+                bufSize = size
+        }
+        goBuf := allocateValBuf(int(bufSize))
+        //Read data to buf
+        _, err := readToBuffer(r, goBuf)
+        if err != nil {
+		log.Println("READ ERROR")
+                return pi, err
+        }
+        kopts := kinetic.CmdOpts{
+                ClusterVersion:  0,
+                Force:           true,
+                Tag:             []byte{}, //(fsMeta.Meta),
+                Algorithm:       kinetic_proto.Command_SHA1,
+                Synchronization: kinetic_proto.Command_WRITEBACK,
+                Timeout:         60000, //60 sec
+                Priority:        kinetic_proto.Command_NORMAL,
+        }
+
+        etag := r.MD5CurrentHexString()
+
+        if etag == "" {
+                etag = GenETag()
+        }
+	key :=  bucket + "/" + object + "/" +  fs.encodePartFile(partID, etag, data.ActualSize())
+        meta := make(map[string]string)
+        fsMeta := newFSMetaV1()
+	fsMeta.Meta = meta
+        fsMeta.Meta["etag"] = r.MD5CurrentHexString()
+        fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
+        fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
+	// metadata file
+        bytes, _ := json.Marshal(fsMeta)
+        metakey := "meta." +  key
+        buf := allocateValBuf(len(bytes))
+        copy(buf, bytes)
+
+
+	kc := GetKineticConnection()
+        kc.Put(key, goBuf, int(bufSize), kopts)
+	kc.Put(metakey, buf, len(bytes), kopts)
+        ReleaseConnection(kc.Idx)
+	//log.Println("END: PutObjectPart", key, bufSize)
+        return PartInfo{
+                PartNumber:   partID,
+                LastModified: time.Now(),
+                ETag:         etag,
+                Size:         bufSize,
+                ActualSize:   data.ActualSize(),
+        }, nil
 }
 
 func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID string, partID int, r *PutObjReader, opts ObjectOptions) (pi PartInfo, e error) {
-	fmt.Println("1. PutObjectPart")
-
+	//log.Println("1. PutObjectPart")
 	data := r.Reader
 	if err := checkPutObjectPartArgs(ctx, bucket, object, fs); err != nil {
 		return pi, toObjectErr(err, bucket)
@@ -335,13 +499,14 @@ func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID
 		return pi, toObjectErr(err, bucket, object)
 	}
 
-	bufSize := int64(readSizeV1)
+	bufSize := int64(blockSizeV1)
 	if size := data.Size(); size > 0 && bufSize > size {
 		bufSize = size
 	}
 	buf := make([]byte, bufSize)
 
 	tmpPartPath := pathJoin(fs.fsPath, minioMetaTmpBucket, fs.fsUUID, uploadID+"."+mustGetUUID()+"."+strconv.Itoa(partID))
+	//log.Println("TEMP PART PATH ", tmpPartPath)
 	bytesWritten, err := fsCreateFile(ctx, tmpPartPath, data, buf, data.Size())
 	if err != nil {
 		fsRemoveFile(ctx, tmpPartPath)
@@ -366,7 +531,7 @@ func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID
 	}
 
 	partPath := pathJoin(uploadIDDir, fs.encodePartFile(partID, etag, data.ActualSize()))
-
+	//log.Println(" PART PATH: ", partPath)
 	// Make sure not to create parent directories if they don't exist - the upload might have been aborted.
 	if err = fsSimpleRenameFile(ctx, tmpPartPath, partPath); err != nil {
 		if err == errFileNotFound || err == errFileAccessDenied {
@@ -391,8 +556,96 @@ func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID
 }
 
 func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, uploadID string, partNumberMarker, maxParts int, opts ObjectOptions) (result ListPartsInfo, e error) {
-	fmt.Println("ListObjectParts")
+	log.Println("ListObjectParts", bucket, object, uploadID, partNumberMarker, maxParts)
+        if err := checkListPartsArgs(ctx, bucket, object, fs); err != nil {
+                return result, toObjectErr(err)
+        }
+        result.Bucket = bucket
+        result.Object = object
+        result.UploadID = uploadID
+        result.MaxParts = maxParts
+        result.PartNumberMarker = partNumberMarker
 
+        // Check if bucket exists
+        if _, err := fs.GetBucketInfo(ctx, bucket); err != nil {
+                return result, toObjectErr(err, bucket)
+        }
+
+//        uploadIDDir := fs.getUploadIDDir(bucket, object, uploadID)
+/*        if _, err := fsStatFile(ctx, pathJoin(uploadIDDir, fs.metaJSONFile)); err != nil {
+                if err == errFileNotFound || err == errFileAccessDenied {
+                        return result, InvalidUploadID{UploadID: uploadID}
+                }
+                return result, toObjectErr(err, bucket, object)
+        }
+
+        entries, err := readDir(uploadIDDir)
+        if err != nil {
+                logger.LogIf(ctx, err)
+                return result, toObjectErr(err, bucket)
+        }
+
+*/
+        kopts := kinetic.CmdOpts{
+                ClusterVersion:  0,
+                Force:           true,
+                Tag:             []byte{},
+                Algorithm:       kinetic_proto.Command_SHA1,
+                Synchronization: kinetic_proto.Command_WRITEBACK,
+                Timeout:         60000, //60 sec
+                Priority:        kinetic_proto.Command_NORMAL,
+        }
+
+	startKey := "meta." + bucket + "/" + object
+	endKey := startKey +"0" 
+	println(" START/END KEY", startKey, endKey)
+        kc := GetKineticConnection()
+        keys, err := kc.GetKeyRange(startKey, endKey, true, true, 800, false, kopts)
+        if err != nil {
+		log.Println("ERROR", err)
+                ReleaseConnection(kc.Idx)
+                //kineticMutex.Unlock()
+                return result, toObjectErr(err, bucket)
+        }
+
+        partsMap := make(map[int]string)
+
+        for _, key := range keys {
+		k  := string(key[len("meta.") + len(bucket) + len(object) + 2:])
+                log.Println("ENTRY: ", k)
+		if k == fs.metaJSONFile {
+			log.Println("***** CONTINUE******")
+                        continue
+                }
+                partNumber, etag1, _, derr := fs.decodePartFile(k)
+                        log.Println("***** PART******", partNumber)
+
+                if derr != nil {
+                        // Skip part files whose name don't match expected format. These could be backend filesystem specific files.
+                        continue
+                }
+                etag2, ok := partsMap[partNumber]
+		log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
+                if !ok {
+                        partsMap[partNumber] = etag1
+                        continue
+                }
+                //log.Println("GET PART FILE 1 ",  getPartFile(string(entries), partNumber, etag1))
+                //stat1, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag1)))
+                //if serr != nil {
+                //        return result, toObjectErr(serr)
+                //}
+                //log.Println("GET PART FILE 2",  getPartFile(string(entries), partNumber, etag2))
+
+                //stat2, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag2)))
+                //if serr != nil {
+                //        return result, toObjectErr(serr)
+                //}
+                //if stat1.ModTime().After(stat2.ModTime()) {
+                //        partsMap[partNumber] = etag1
+                //}
+
+	}
 	return result, nil
 }
 
@@ -404,7 +657,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 // ListPartsInfo structure is unmarshalled directly into XML and
 // replied back to the client.
 func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, uploadID string, partNumberMarker, maxParts int, opts ObjectOptions) (result ListPartsInfo, e error) {
-	fmt.Println("1. ListObjectParts")
+	log.Println("1. ListObjectParts")
 
 	if err := checkListPartsArgs(ctx, bucket, object, fs); err != nil {
 		return result, toObjectErr(err)
@@ -427,8 +680,9 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 		}
 		return result, toObjectErr(err, bucket, object)
 	}
-
+	log.Println(" UPLOADIDDIR", uploadIDDir)
 	entries, err := readDir(uploadIDDir)
+	log.Println("1. UPLOADIDDIR", entries)
 	if err != nil {
 		logger.LogIf(ctx, err)
 		return result, toObjectErr(err, bucket)
@@ -436,6 +690,7 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 
 	partsMap := make(map[int]string)
 	for _, entry := range entries {
+		log.Println("ENTRY: ", entry)
 		if entry == fs.metaJSONFile {
 			continue
 		}
@@ -445,14 +700,19 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 			continue
 		}
 		etag2, ok := partsMap[partNumber]
+                log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
+
 		if !ok {
 			partsMap[partNumber] = etag1
 			continue
 		}
+		log.Println("GET PART FILE 1 ",  getPartFile(entries, partNumber, etag1))
 		stat1, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag1)))
 		if serr != nil {
 			return result, toObjectErr(serr)
 		}
+                log.Println("GET PART FILE 2 ",  getPartFile(entries, partNumber, etag2))
+
 		stat2, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag2)))
 		if serr != nil {
 			return result, toObjectErr(serr)
@@ -537,13 +797,13 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 //
 // Implements S3 compatible Complete multipart API.
 func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket string, object string, uploadID string, parts []CompletePart, opts ObjectOptions) (oi ObjectInfo, e error) {
-	fmt.Println("CompleteMultipartUpload")
+	log.Println("CompleteMultipartUpload")
 
 	return oi, nil
 }
 
 func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string, object string, uploadID string, parts []CompletePart, opts ObjectOptions) (oi ObjectInfo, e error) {
-	fmt.Println("1. CompleteMultipartUpload")
+	log.Println("1. CompleteMultipartUpload")
 	var actualSize int64
 
 	if err := checkCompleteMultipartArgs(ctx, bucket, object, fs); err != nil {
@@ -659,7 +919,7 @@ func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string,
 	// 1. The last PutObjectPart triggers go-routine fs.backgroundAppend, this go-routine has not started yet.
 	// 2. Now CompleteMultipartUpload gets called which sees that lastPart is not appended and starts appending
 	//    from the beginning
-	fmt.Println("Calling backgroundAppend")
+	log.Println("Calling backgroundAppend")
 	fs.backgroundAppend(ctx, bucket, object, uploadID)
 
 	fs.appendFileMapMu.Lock()

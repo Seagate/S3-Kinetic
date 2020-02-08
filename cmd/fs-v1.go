@@ -323,6 +323,7 @@ func (fs *FSObjects) MakeBucketWithLocation(ctx context.Context, bucket, locatio
 
 // GetBucketInfo - fetch bucket metadata info.
 func (fs *FSObjects) GetBucketInfo(ctx context.Context, bucket string) (bi BucketInfo, e error) {
+        fmt.Println(" GET BUCKET INFO", bucket)
 	bucketLock := fs.NewNSLock(ctx, bucket, "")
 	if e := bucketLock.GetRLock(globalObjectTimeout); e != nil {
 		return bi, e
@@ -481,7 +482,7 @@ func (fs *FSObjects) CopyObject(ctx context.Context, srcBucket, srcObject, dstBu
 // GetObjectNInfo - returns object info and a reader for object
 // content.
 func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
-
+	fmt.Println(" GET OBJECT N INFO")
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
 	}
@@ -576,6 +577,8 @@ func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, 
 // startOffset indicates the starting read location of the object.
 // length indicates the total length of the object.
 func (fs *FSObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
+        fmt.Println(" GET OBJECT")
+
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}
@@ -592,6 +595,8 @@ func (fs *FSObjects) GetObject(ctx context.Context, bucket, object string, offse
 
 // getObject - wrapper for GetObject
 func (fs *FSObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
+        fmt.Println(" gET OBJECT N INFO")
+
 	if _, err = fs.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
 	}

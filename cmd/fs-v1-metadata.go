@@ -109,6 +109,19 @@ func (c *FSChecksumInfoV1) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+//Kinetic
+type koMeta struct {
+        Version string `json:"version"`
+        // checksums of blocks on disk.
+        Checksum FSChecksumInfoV1 `json:"checksum,omitempty"`
+        // Metadata map for current object.
+        Meta map[string]string `json:"meta,omitempty"`
+        // parts info for current object - used in encryption.
+        Parts []ObjectPartInfo `json:"parts,omitempty"`
+	KoInfo  KOInfo `json:"koInfo,omitempty"`
+}
+
+
 // A fsMetaV1 represents a metadata header mapping keys to sets of values.
 type fsMetaV1 struct {
 	Version string `json:"version"`
@@ -118,6 +131,7 @@ type fsMetaV1 struct {
 	Meta map[string]string `json:"meta,omitempty"`
 	// parts info for current object - used in encryption.
 	Parts []ObjectPartInfo `json:"parts,omitempty"`
+        KoInfo  KOInfo `json:"koInfo,omitempty"`
 }
 
 // IsValid - tells if the format is sane by validating the version
