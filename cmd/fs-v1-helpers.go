@@ -17,15 +17,33 @@
 package cmd
 
 import (
+// #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
+// #cgo LDFLAGS: libkinetic.a kernel_mem_mgr.a libssl.a libcrypto.a libglog.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a lldp_kin.a  qual_kin.a libprotobuf.a libgflags.a  libgflags_nothreads.a libprotoc.a libksapi.a libpbkdf.a libapi.a libtransports.a  libseapubcmds.a libapi.a -lpthread -ldl -lrt 
+// #include "minio_skinny_waist.h"
+        "C"
+        "unsafe"
 	"context"
+	"encoding/json"
 	"io"
+	"log"
 	"os"
 	pathutil "path"
 	"runtime"
-
+        "github.com/minio/minio/pkg/kinetic"
+        "github.com/minio/minio/pkg/kinetic_proto"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/lock"
 )
+
+//This is for kinetic
+func readToBuffer(reader io.Reader, buf []byte) (int64, error) {
+
+        var bytesRead int
+        bytesRead, err := io.ReadFull(reader, buf)
+        return int64(bytesRead), err
+}
+
+
 
 // Removes only the file at given path does not remove
 // any parent directories, handles long paths for
@@ -226,6 +244,51 @@ func fsStatDir(ctx context.Context, statDir string) (os.FileInfo, error) {
 		return nil, errFileNotFound
 	}
 	return fi, nil
+}
+
+func koStat(key string) (KVInfo, error) {
+	var oi KVInfo
+	log.Println(" KO STAT")
+        kopts := kinetic.CmdOpts{
+                ClusterVersion:  0,
+                Force:           true,
+                Tag:             []byte{},
+                Algorithm:       kinetic_proto.Command_SHA1,
+                Synchronization: kinetic_proto.Command_WRITEBACK,
+                Timeout:         60000, //60 sec
+                Priority:        kinetic_proto.Command_NORMAL,
+        }
+        fsMeta := newFSMetaV1()
+        fsMeta.Meta = make(map[string]string)
+
+	metaKey := "meta." + key
+        kc := GetKineticConnection()
+        cvalue, ptr, size, err := kc.CGet(metaKey, kopts)
+        var value []byte
+        if (cvalue != nil) {
+            value = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+        }
+        ReleaseConnection(kc.Idx)
+        //kineticMutex.Unlock()
+        if err != nil {
+                err = errFileNotFound 
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                return oi, err
+        } else {
+                err = json.Unmarshal(value[:size], &fsMeta)
+                if err != nil {
+                        return oi, err
+		}
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+	}
+        fi := KVInfo{
+                name:    fsMeta.KoInfo.Name,
+                size:    fsMeta.KoInfo.Size,
+                modTime: fsMeta.KoInfo.CreatedTime,
+        }
+
+        log.Println(" END: KO STAT")
+        return fi, err
 }
 
 // Lookup if file exists, returns file attributes upon success.

@@ -433,7 +433,18 @@ func hasPattern(patterns []string, matchStr string) bool {
 	return false
 }
 
+func getPartKO(keys [][]byte, partNumber int, etag string) string {
+	for _, key := range keys {
+		if strings.HasPrefix(string(key), fmt.Sprintf("%.5d.%s.", partNumber, etag)) {
+			return string(key)
+		}
+	}
+	return ""
+}
+
+
 // Returns the part file name which matches the partNumber and etag.
+
 func getPartFile(entries []string, partNumber int, etag string) string {
 	for _, entry := range entries {
 		if strings.HasPrefix(entry, fmt.Sprintf("%.5d.%s.", partNumber, etag)) {

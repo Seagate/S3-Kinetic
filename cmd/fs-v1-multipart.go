@@ -30,7 +30,7 @@ import (
 	"github.com/minio/minio/pkg/kinetic"
         "github.com/minio/minio/pkg/kinetic_proto"
         "github.com/minio/minio/cmd/logger"
-        //"log"
+        "log"
 	jsoniter "github.com/json-iterator/go"
 	mioutil "github.com/minio/minio/pkg/ioutil"
 )
@@ -608,7 +608,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 return result, toObjectErr(err, bucket)
         }
 
-        //partsMap := make(map[int]string)
+        partsMap := make(map[int]string)
 
         for _, key := range keys {
 		k  := string(key[len("meta.") + len(bucket) + len(object) + 2:])
@@ -617,33 +617,32 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 			//log.Println("***** CONTINUE******")
                         continue
                 }
-                //partNumber, etag1, _, derr := fs.decodePartFile(k)
+                partNumber, etag1, _, derr := fs.decodePartFile(k)
                         //log.Println("***** PART******", partNumber)
 
-                //if derr != nil {
+                if derr != nil {
                         // Skip part files whose name don't match expected format. These could be backend filesystem specific files.
-                //        continue
-                //}
-                //etag2, ok := partsMap[partNumber]
-		//log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
-                //if !ok {
-                //      partsMap[partNumber] = etag1
-                //       continue
-                //}
-                ////log.Println("GET PART FILE 1 ",  getPartFile(string(entries), partNumber, etag1))
-                //stat1, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag1)))
-                //if serr != nil {
-                //        return result, toObjectErr(serr)
-                //}
-                ////log.Println("GET PART FILE 2",  getPartFile(string(entries), partNumber, etag2))
-
-                //stat2, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag2)))
-                //if serr != nil {
-                //        return result, toObjectErr(serr)
-                //}
-                //if stat1.ModTime().After(stat2.ModTime()) {
-                //        partsMap[partNumber] = etag1
-                //}
+                        continue
+                }
+                etag2, ok := partsMap[partNumber]
+		log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
+                if !ok {
+                      partsMap[partNumber] = etag1
+                       continue
+                }
+                log.Println("GET PART FILE 1 ",  getPartKO(keys, partNumber, etag1))
+		stat1, serr := koStat(getPartKO(keys, partNumber, etag1))
+                if serr != nil {
+                        return result, toObjectErr(serr)
+                }
+                log.Println("GET PART FILE 2",  getPartKO(keys, partNumber, etag2))
+                stat2, serr := koStat(getPartKO(keys, partNumber, etag2))
+                if serr != nil {
+                        return result, toObjectErr(serr)
+                }
+                if stat1.ModTime().After(stat2.ModTime()) {
+                        partsMap[partNumber] = etag1
+                }
 
 	}
 	return result, nil
@@ -657,7 +656,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 // ListPartsInfo structure is unmarshalled directly into XML and
 // replied back to the client.
 func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, uploadID string, partNumberMarker, maxParts int, opts ObjectOptions) (result ListPartsInfo, e error) {
-	//log.Println("1. ListObjectParts")
+	log.Println("1. ListObjectParts")
 
 	if err := checkListPartsArgs(ctx, bucket, object, fs); err != nil {
 		return result, toObjectErr(err)
@@ -680,9 +679,9 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 		}
 		return result, toObjectErr(err, bucket, object)
 	}
-	//log.Println(" UPLOADIDDIR", uploadIDDir)
+	log.Println(" UPLOADIDDIR", uploadIDDir)
 	entries, err := readDir(uploadIDDir)
-	//log.Println("1. UPLOADIDDIR", entries)
+	log.Println("1. UPLOADIDDIR", entries)
 	if err != nil {
 		logger.LogIf(ctx, err)
 		return result, toObjectErr(err, bucket)
@@ -690,7 +689,7 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 
 	partsMap := make(map[int]string)
 	for _, entry := range entries {
-		//log.Println("ENTRY: ", entry)
+		log.Println("ENTRY: ", entry)
 		if entry == fs.metaJSONFile {
 			continue
 		}
@@ -700,18 +699,18 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 			continue
 		}
 		etag2, ok := partsMap[partNumber]
-                //log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
+                log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
 
 		if !ok {
 			partsMap[partNumber] = etag1
 			continue
 		}
-		//log.Println("GET PART FILE 1 ",  getPartFile(entries, partNumber, etag1))
+		log.Println("GET PART FILE 1 ",  getPartFile(entries, partNumber, etag1))
 		stat1, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag1)))
 		if serr != nil {
 			return result, toObjectErr(serr)
 		}
-                //log.Println("GET PART FILE 2 ",  getPartFile(entries, partNumber, etag2))
+                log.Println("GET PART FILE 2 ",  getPartFile(entries, partNumber, etag2))
 
 		stat2, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag2)))
 		if serr != nil {
