@@ -17,6 +17,11 @@
 package cmd
 
 import (
+// #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
+// #cgo LDFLAGS: libkinetic.a kernel_mem_mgr.a libssl.a libcrypto.a libglog.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a lldp_kin.a  qual_kin.a libprotobuf.a libgflags.a  libgflags_nothreads.a libprotoc.a libksapi.a libpbkdf.a libapi.a libtransports.a  libseapubcmds.a libapi.a -lpthread -ldl -lrt 
+// #include "minio_skinny_waist.h"
+        "C"
+        "unsafe"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -598,7 +603,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 
 	startKey := "meta." + bucket + "/" + object
 	endKey := startKey +"0" 
-	println(" START/END KEY", startKey, endKey)
+	log.Println(" START/END KEY", startKey, endKey)
         kc := GetKineticConnection()
         keys, err := kc.GetKeyRange(startKey, endKey, true, true, 800, false, kopts)
         if err != nil {
@@ -609,34 +614,42 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         }
 
         partsMap := make(map[int]string)
-
+	//TODO: need to eliminate bucket, and object name
+	var Keys [][]byte
         for _, key := range keys {
-		k  := string(key[len("meta.") + len(bucket) + len(object) + 2:])
+                k  := key[len("meta.") + len(bucket) + len(object) + 2:]
+		Keys = append(Keys, k)
+	}	
+	
+        for _, key := range Keys {
+		//k  := string(key[len("meta.") + len(bucket) + len(object) + 2:])
+		k := string(key)
                 //log.Println("ENTRY: ", k)
 		if k == fs.metaJSONFile {
 			//log.Println("***** CONTINUE******")
                         continue
                 }
                 partNumber, etag1, _, derr := fs.decodePartFile(k)
-                        //log.Println("***** PART******", partNumber)
+                        //log.Println("***** PART******", partNumber, etag1)
 
                 if derr != nil {
                         // Skip part files whose name don't match expected format. These could be backend filesystem specific files.
                         continue
                 }
                 etag2, ok := partsMap[partNumber]
-		log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
+		//log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
                 if !ok {
-                      partsMap[partNumber] = etag1
-                       continue
+			//log.Println("NOT OK")
+                	partsMap[partNumber] = etag1
+                	continue
                 }
-                log.Println("GET PART FILE 1 ",  getPartKO(keys, partNumber, etag1))
+                log.Println("GET PART FILE 1 ",  getPartKO(Keys, partNumber, etag1))
 		stat1, serr := koStat(getPartKO(keys, partNumber, etag1))
                 if serr != nil {
                         return result, toObjectErr(serr)
                 }
-                log.Println("GET PART FILE 2",  getPartKO(keys, partNumber, etag2))
-                stat2, serr := koStat(getPartKO(keys, partNumber, etag2))
+                //log.Println("GET PART FILE 2",  getPartKO(keys, partNumber, etag2))
+                stat2, serr := koStat(getPartKO(Keys, partNumber, etag2))
                 if serr != nil {
                         return result, toObjectErr(serr)
                 }
@@ -645,6 +658,94 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 }
 
 	}
+        var parts []PartInfo
+        var actualSize int64
+        for partNumber, etag := range partsMap {
+                partFile := getPartKO(Keys, partNumber, etag)
+                if partFile == "" {
+                        return result, InvalidPart{}
+                }
+                // Read the actualSize from the pathFileName.
+                subParts := strings.Split(partFile, ".")
+                actualSize, err = strconv.ParseInt(subParts[len(subParts)-1], 10, 64)
+                if err != nil {
+                        return result, InvalidPart{}
+                }
+                parts = append(parts, PartInfo{PartNumber: partNumber, ETag: etag, ActualSize: actualSize})
+        }
+        sort.Slice(parts, func(i int, j int) bool {
+                return parts[i].PartNumber < parts[j].PartNumber
+        })
+        i := 0
+        if partNumberMarker != 0 {
+                // If the marker was set, skip the entries till the marker.
+                for _, part := range parts {
+                        i++
+                        if part.PartNumber == partNumberMarker {
+                                break
+                        }
+                }
+        }
+        partsCount := 0
+        for partsCount < maxParts && i < len(parts) {
+                result.Parts = append(result.Parts, parts[i])
+                i++
+                partsCount++
+        }
+
+        if i < len(parts) {
+                result.IsTruncated = true
+                if partsCount != 0 {
+                        result.NextPartNumberMarker = result.Parts[partsCount-1].PartNumber
+                }
+        }
+        for i, part := range result.Parts {
+                var stat KVInfo
+                stat, err = koStat(bucket+ "/" + object + "/" + fs.encodePartFile(part.PartNumber, part.ETag, part.ActualSize))
+                if err != nil {
+                        return result, toObjectErr(err)
+                }
+                result.Parts[i].LastModified = stat.ModTime()
+                result.Parts[i].Size = part.ActualSize
+        }
+/*
+        fsMetaBytes, err := ioutil.ReadFile(pathJoin(uploadIDDir, fs.metaJSONFile))
+        if err != nil {
+                logger.LogIf(ctx, err)
+                return result, err
+        }
+*/
+
+	metaKey := "meta." + bucket + "/" + object + "/" + fs.metaJSONFile
+	log.Println(" GET JSON FILE", metaKey)
+        //kineticMutex.Lock()
+        kc = GetKineticConnection()
+        //var ptr *C.char
+        //size, err := kc.Get(metakey, value, kopts)
+        cvalue, ptr, size, err := kc.CGet(metaKey, kopts)
+        var fsMetaBytes []byte
+        if (cvalue != nil) {
+            fsMetaBytes = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+        }
+        ReleaseConnection(kc.Idx)
+        //kineticMutex.Unlock()
+        if err != nil {
+                err = errFileNotFound 
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+		return result, err
+	}
+
+        var fsMeta fsMetaV1
+        var json = jsoniter.ConfigCompatibleWithStandardLibrary
+        if err = json.Unmarshal(fsMetaBytes, &fsMeta); err != nil {
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                return result, err
+        }
+        C.deallocate_gvalue_buffer((*C.char)(ptr))
+
+        result.UserDefined = fsMeta.Meta
+	log.Println("FSMETA", result.UserDefined)
+
 	return result, nil
 }
 
@@ -796,13 +897,146 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 //
 // Implements S3 compatible Complete multipart API.
 func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket string, object string, uploadID string, parts []CompletePart, opts ObjectOptions) (oi ObjectInfo, e error) {
-	//log.Println("CompleteMultipartUpload")
+	log.Println("CompleteMultipartUpload", parts)
+        var actualSize int64
 
+        s3MD5 := getCompleteMultipartMD5(parts)
+        log.Println("Complete MD5", s3MD5)
+        partSize := int64(-1) // Used later to ensure that all parts sizes are same.
+
+        fsMeta := fsMetaV1{}
+
+        // Allocate parts similar to incoming slice.
+        fsMeta.Parts = make([]ObjectPartInfo, len(parts))
+        kopts := kinetic.CmdOpts{
+                ClusterVersion:  0,
+                Force:           true,
+                Tag:             []byte{},
+                Algorithm:       kinetic_proto.Command_SHA1,
+                Synchronization: kinetic_proto.Command_WRITEBACK,
+                Timeout:         60000, //60 sec
+                Priority:        kinetic_proto.Command_NORMAL,
+        }
+
+        startKey := "meta." + bucket + "/" + object
+        endKey := startKey +"0" 
+        log.Println(" START/END KEY", startKey, endKey)
+        kc := GetKineticConnection()
+        keys, err := kc.GetKeyRange(startKey, endKey, true, true, 800, false, kopts)
+        if err != nil {
+                ReleaseConnection(kc.Idx)
+                return oi, toObjectErr(err, bucket)
+        }
+	var Keys [][]byte
+        for _, key := range keys {
+                k  := key[len("meta.") + len(bucket) + len(object) + 2:]
+                Keys = append(Keys, k)
+        }       
+
+        // Save consolidated actual size.
+        var objectActualSize int64
+        // Validate all parts and then commit to disk.
+        for i, part := range parts {
+                partFile := getPartKO(Keys, part.PartNumber, part.ETag)
+                if partFile == "" {
+                        return oi, InvalidPart{
+                                PartNumber: part.PartNumber,
+                                GotETag:    part.ETag,
+                        }
+                }
+
+                // Read the actualSize from the pathFileName.
+                subParts := strings.Split(partFile, ".")
+                actualSize, err = strconv.ParseInt(subParts[len(subParts)-1], 10, 64)
+                if err != nil {
+                        return oi, InvalidPart{
+                                PartNumber: part.PartNumber,
+                                GotETag:    part.ETag,
+                        }
+                }
+
+                var fi KVInfo
+                fi, err := koStat(bucket+ "/" + object + "/" + getPartKO(Keys, part.PartNumber, part.ETag))
+                if err != nil {
+                        if err == errFileNotFound || err == errFileAccessDenied {
+                                return oi, InvalidPart{}
+                        }
+                        return oi, err
+                }
+                if partSize == -1 {
+                        partSize = actualSize
+                }
+
+                fsMeta.Parts[i] = ObjectPartInfo{
+                        Number:     part.PartNumber,
+                        ETag:       part.ETag,
+                        Size:       fi.Size(),
+                        ActualSize: actualSize,
+                }
+
+                // Consolidate the actual size.
+                objectActualSize += actualSize
+                if i == len(parts)-1 {
+                        break
+                }
+
+                // All parts except the last part has to be atleast 5MB.
+                if !isMinAllowedPartSize(actualSize) {
+                        return oi, PartTooSmall{
+                                PartNumber: part.PartNumber,
+                                PartSize:   actualSize,
+                                PartETag:   part.ETag,
+                        }
+                }
+        }
+
+
+        metaKey := "meta." + bucket + "/" + object + "/" + fs.metaJSONFile
+        log.Println(" 1. GET JSON FILE", metaKey)
+        //kineticMutex.Lock()
+        kc = GetKineticConnection()
+        //var ptr *C.char
+        //size, err := kc.Get(metakey, value, kopts)
+        cvalue, ptr, size, err := kc.CGet(metaKey, kopts)
+        var fsMetaBytes []byte
+        if (cvalue != nil) {
+            fsMetaBytes = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+        }
+        ReleaseConnection(kc.Idx)
+
+        //kineticMutex.Unlock()
+        if err != nil {
+                err = errFileNotFound 
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                return oi, err
+        }
+        err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
+        // Save additional metadata.
+        if len(fsMeta.Meta) == 0 {
+                fsMeta.Meta = make(map[string]string)
+        }
+        fsMeta.Meta["etag"] = s3MD5
+        // Save consolidated actual size.
+        fsMeta.Meta[ReservedMetadataPrefix+"actual-size"] = strconv.FormatInt(objectActualSize, 10)
+        //if _, err = fsMeta.WriteTo(metaFile); err != nil {
+        //        logger.LogIf(ctx, err)
+        //        return oi, toObjectErr(err, bucket, object)
+        //}
+
+        metaKey = "meta." + bucket + "/" + object + "/" + fs.metaJSONFile
+        bytes, _ := json.Marshal(&fsMeta)
+        value := allocateValBuf(len(bytes))
+	copy(value, bytes)
+        kc = GetKineticConnection()
+        kc.Put(metaKey, value, len(value), kopts)
+        ReleaseConnection(kc.Idx)
+
+	log.Println("END: CompleteMultiParts", fsMeta)
 	return oi, nil
 }
 
 func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string, object string, uploadID string, parts []CompletePart, opts ObjectOptions) (oi ObjectInfo, e error) {
-	//log.Println("1. CompleteMultipartUpload")
+	log.Println("1. CompleteMultipartUpload", parts)
 	var actualSize int64
 
 	if err := checkCompleteMultipartArgs(ctx, bucket, object, fs); err != nil {
@@ -830,7 +1064,7 @@ func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string,
 
 	// Calculate s3 compatible md5sum for complete multipart.
 	s3MD5 := getCompleteMultipartMD5(parts)
-
+	log.Println(" COMPLETE MD5 ", s3MD5)
 	partSize := int64(-1) // Used later to ensure that all parts sizes are same.
 
 	fsMeta := fsMetaV1{}
