@@ -27,7 +27,7 @@ import (
 	pathutil "path"
 	"strconv"
 	"time"
-
+	"log"
 	jsoniter "github.com/json-iterator/go"
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
@@ -208,6 +208,58 @@ func (m fsMetaV1) ToKVObjectInfo(bucket, object string, fi *KVInfo) ObjectInfo {
 	// Success..
 	return objInfo
 }
+
+// Converts metadata to object info.
+func (m fsMetaV1) ToObjectKVInfo(bucket, object string, ko KVInfo) ObjectInfo {
+        if len(m.Meta) == 0 {
+                m.Meta = make(map[string]string)
+        }
+
+        // Guess content-type from the extension if possible.
+        if m.Meta["content-type"] == "" {
+                m.Meta["content-type"] = mimedb.TypeByExtension(pathutil.Ext(object))
+        }
+
+        if hasSuffix(object, SlashSeparator) {
+                m.Meta["etag"] = emptyETag // For directories etag is d41d8cd98f00b204e9800998ecf8427e
+                m.Meta["content-type"] = "application/octet-stream"
+        }
+
+        objInfo := ObjectInfo{
+                Bucket: bucket,
+                Name:   object,
+                Size:   ko.Size(),
+        }
+        objInfo.ETag = extractETag(m.Meta)
+        objInfo.ContentType = m.Meta["content-type"]
+        objInfo.ContentEncoding = m.Meta["content-encoding"]
+        if storageClass, ok := m.Meta[xhttp.AmzStorageClass]; ok {
+                objInfo.StorageClass = storageClass
+        } else {
+                objInfo.StorageClass = globalMinioDefaultStorageClass
+        }
+        var (
+                t time.Time
+                e error
+        )
+        if exp, ok := m.Meta["expires"]; ok {
+                if t, e = time.Parse(http.TimeFormat, exp); e == nil {
+                        objInfo.Expires = t.UTC()
+                }
+        }
+        // etag/md5Sum has already been extracted. We need to
+        // remove to avoid it from appearing as part of
+        // response headers. e.g, X-Minio-* or X-Amz-*.
+        objInfo.UserDefined = cleanMetadata(m.Meta)
+        // All the parts per object.
+        objInfo.Parts = m.Parts
+	log.Println( " M PARTS", m.Parts)
+
+        // Success..
+        return objInfo
+}
+
+
 
 // Converts metadata to object info.
 func (m fsMetaV1) ToObjectInfo(bucket, object string, fi os.FileInfo) ObjectInfo {

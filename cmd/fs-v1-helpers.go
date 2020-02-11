@@ -29,7 +29,7 @@ import (
 	"os"
 	pathutil "path"
 	"runtime"
-        "github.com/minio/minio/pkg/kinetic"
+//        "github.com/minio/minio/pkg/kinetic"
         "github.com/minio/minio/pkg/kinetic_proto"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/lock"
@@ -249,7 +249,7 @@ func fsStatDir(ctx context.Context, statDir string) (os.FileInfo, error) {
 func koStat(key string) (KVInfo, error) {
 	var oi KVInfo
 	log.Println(" KO STAT")
-        kopts := kinetic.CmdOpts{
+        kopts := CmdOpts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},

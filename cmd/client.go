@@ -1,4 +1,4 @@
-package kinetic
+package cmd
 
 import (
 // #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
@@ -10,6 +10,7 @@ import (
 	"crypto/sha1"
 	"crypto/tls"
 	"errors"
+	//"encoding/json"
 	//"fmt"
 	"sync"
 	//"time"
@@ -60,8 +61,22 @@ type Client struct {
 }
 
 func (c *Client) Read(value []byte) (int, error) {
-        //fmt.Println(" ****READ****")
-        //var cvalue =(*C.char)(unsafe.Pointer(&p[0]))
+        log.Println(" ****READ****", string(c.Key))
+/*
+	fsMeta := fsMetaV1{}
+        cvalue, ptr, size, err := c.CGetMeta(string(c.Key), c.Opts)
+        var fsMetaBytes []byte
+        if (cvalue != nil) {
+            fsMetaBytes = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+        }
+        if err != nil {
+                err = errFileNotFound 
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                return 0, err
+        }
+        err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
+	log.Println(" FSMETA ", fsMeta)
+*/
         cvalue, ptr1, size, err := c.CGet(string(c.Key), c.Opts)
         if err == nil {
 	        value1 := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]

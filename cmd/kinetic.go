@@ -31,7 +31,7 @@ import (
 	"path"
 	"time"
 	"sync"
-	"github.com/minio/minio/pkg/kinetic"
+	//"github.com/minio/minio/pkg/kinetic"
 	"github.com/minio/minio/pkg/kinetic_proto"
 	"github.com/minio/minio/pkg/mimedb"
 
@@ -53,7 +53,7 @@ var maxQueue int = 200
 
 type KConnsPool struct {
 	idx    int
-	kcs    map[int]*kinetic.Client
+	kcs    map[int]*Client
 	inUsed map[int]int
 	totalInUsed int
 	max    int
@@ -76,7 +76,7 @@ func InitKineticd(storePartition []byte) {
         time.Sleep(5 * time.Second)
 }
 
-func InitKineticConnection(IP string, tls bool, kc *kinetic.Client) error {
+func InitKineticConnection(IP string, tls bool, kc *Client) error {
         var err error = nil
 	kc.ConnectionID = 0
 	kc.Identity = identity
@@ -132,9 +132,9 @@ func ReleaseConnection(ix int) {
 	kConnsPool.Unlock()
 }
 
-func GetKineticConnection() *kinetic.Client {
+func GetKineticConnection() *Client {
 	kConnsPool.Lock()
-	var kc *kinetic.Client
+	var kc *Client
         //for true {
         //        if kConnsPool.inUsed[kConnsPool.idx] == 0 {
 	for true {
@@ -174,10 +174,10 @@ func allocateValBuf(bufSize int) []byte {
 	return goBuf
 }
 
-func initKineticMeta(kc *kinetic.Client) error {
+func initKineticMeta(kc *Client) error {
 	value := allocateValBuf(0)
 	bucketKey := "bucket." + minioMetaBucket
-	kopts := kinetic.CmdOpts{
+	kopts := CmdOpts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{},
@@ -228,7 +228,7 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	var err error = nil
 	//log.SetFlags(log.LstdFlags)
 	if IP[:6] == "skinny" {
-		kinetic.SkinnyWaistIF =  true
+		SkinnyWaistIF =  true
 		storePartition := []byte(IP[7:])
 		InitKineticd(storePartition)
 	}
@@ -239,16 +239,16 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	//ch = make(chan struct{})
 	//c = sync.NewCond(kcsMutex)
 	kConnsPool.idx = 0
-	kConnsPool.kcs = make(map[int]*kinetic.Client, numberOfKinConns)
+	kConnsPool.kcs = make(map[int]*Client, numberOfKinConns)
 	kConnsPool.inUsed = make(map[int]int)
         kConnsPool.max = maxQueue
 	kConnsPool.totalInUsed = 0
 	kConnsPool.cond = sync.NewCond(&kConnsPool)
 	for i := 0; i < numberOfKinConns; i++ {
-		kc := new(kinetic.Client)
+		kc := new(Client)
 		kConnsPool.kcs[i] = kc
 		kConnsPool.inUsed[i] = 0
-		if !kinetic.SkinnyWaistIF {
+		if !SkinnyWaistIF {
 			err = InitKineticConnection(IP, false, kConnsPool.kcs[i])
 		} else {
                         err = InitKineticConnection("127.0.0.1", false, kConnsPool.kcs[i])
@@ -328,7 +328,7 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 		return BucketNameInvalid{Bucket: bucket}
 	}
 	//TODO: Check if Bucket exist before create new one
-        kopts := kinetic.CmdOpts{
+        kopts := CmdOpts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -359,7 +359,6 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 	var bucketInfo BucketInfo
 	bucketInfo.Name = bucketKey
 	bucketInfo.Created = time.Now()
-	//metaKey = "meta." + bucketKey
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
@@ -381,7 +380,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
         }
         defer bucketLock.RUnlock()
 	err = nil;
-        kopts := kinetic.CmdOpts{
+        kopts := CmdOpts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -395,23 +394,20 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
         //kineticMutex.Lock()
         kc := GetKineticConnection()
         cvalue, ptr, size, err := kc.CGetMeta(key, kopts)
+        ReleaseConnection(kc.Idx)
+        if err != nil {
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                //kineticMutex.Unlock()
+                return bi, toObjectErr(errVolumeNotFound, bucket)
+        }
         var value []byte
-        if (cvalue != nil && err == nil) {
+        if (cvalue != nil) {
             value = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-        } else if err != nil {
-	        C.deallocate_gvalue_buffer((*C.char)(ptr))
-		ReleaseConnection(kc.Idx)
-		//kineticMutex.Unlock()
-		return bi, toObjectErr(errVolumeNotFound, bucket)
-	}
+        }
         buf := bytes.NewBuffer(value[:size])
         dec := gob.NewDecoder(buf)
         dec.Decode(&bi)
-
-        //name := []byte(bi.Name)
-        //log.Println(" BUCKET INFO NAME: ", bi.Created, string(name),  err)
         C.deallocate_gvalue_buffer((*C.char)(ptr))
-        ReleaseConnection(kc.Idx)
         //kineticMutex.Unlock()
 
 	return bi, nil
@@ -420,7 +416,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 //THAI:
 func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
 	//log.Println("LIST BUCKET")
-	kopts := kinetic.CmdOpts{
+	kopts := CmdOpts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{},
@@ -449,14 +445,16 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 		//var size uint32
 		if string(key[:12]) == "meta.bucket." && (string(key[:13]) != "meta.bucket..") {
 			cvalue, ptr, size, err := kc.CGet(string(key), kopts)
+                        if err != nil {
+	                        C.deallocate_gvalue_buffer((*C.char)(ptr))
+                                ReleaseConnection(kc.Idx)
+                                //kineticMutex.Unlock()
+                                return nil, err
+                        }
+
         		if (cvalue != nil) {
             			value = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         		}
-			if err != nil {
-				ReleaseConnection(kc.Idx)
-				//kineticMutex.Unlock()
-				return nil, err
-			}
 			buf := bytes.NewBuffer(value[:size])
 			dec := gob.NewDecoder(buf)
 			dec.Decode(&bucketInfo)
@@ -487,7 +485,7 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
 	defer bucketLock.Unlock()
 	bucketKey := string(make([]byte, 1024))
 	bucketKey = "bucket." + bucket
-	kopts := kinetic.CmdOpts{
+	kopts := CmdOpts{
 		ClusterVersion:  0,
 		Force:           false,
 		Tag:             []byte{}, //(fsMeta.Meta),
@@ -693,7 +691,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 	} else {
 		key = bucket + "/" + object
 	}
-	kopts := kinetic.CmdOpts{
+	kopts := CmdOpts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{}, //(fsMeta.Meta),
@@ -707,39 +705,30 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
         //var ptr *C.char
 	//size, err := kc.Get(metakey, value, kopts)
         cvalue, ptr, size, err := kc.CGetMeta(key, kopts)
+        ReleaseConnection(kc.Idx)
+        if err != nil {
+                err = errFileNotFound 
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+	        return oi, err
+	}
         var value []byte
         if (cvalue != nil) {
             value = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         }
-	ReleaseConnection(kc.Idx)
 	//kineticMutex.Unlock()
+	fsMeta.Meta = make(map[string]string)
+	err = json.Unmarshal(value[:size], &fsMeta)
 	if err != nil {
-		err = errFileNotFound 
-                C.deallocate_gvalue_buffer((*C.char)(ptr))
 		return oi, err
-	} else {
-		//fsMeta = newFSMetaV1()
-		fsMeta.Meta = make(map[string]string)
-		err = json.Unmarshal(value[:size], &fsMeta)
-		if err != nil {
-			return oi, err
-		}
-                C.deallocate_gvalue_buffer((*C.char)(ptr))
-		//n, err = strconv.ParseInt(fsMeta.Meta["size"], 10, 64)
-		//if err != nil {
-		//	return oi, err
-		//}
 	}
+        C.deallocate_gvalue_buffer((*C.char)(ptr))
         //log.Println(" SIZE ", fsMeta.KoInfo.Name, fsMeta.KoInfo.Size)
-
 	fi := &KVInfo{
 		name:    fsMeta.KoInfo.Name,
-		size:    fsMeta.KoInfo.Size, //int64(n),
-//		ModTime: time.Now(),
-                modTime: fsMeta.KoInfo.CreatedTime, //time.Now(),
+		size:    fsMeta.KoInfo.Size,
+                modTime: fsMeta.KoInfo.CreatedTime,
 
 	}
-
 	//log.Println(" END: getObjectInfo ", object)
 	return fsMeta.ToKVObjectInfo(bucket, object, fi), err
 }
@@ -835,7 +824,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 
 	key := bucket + "/" + object
 //	value := make([]byte, 1024*1024)
-	kopts := kinetic.CmdOpts{
+	kopts := CmdOpts{
 		ClusterVersion: 0,
 		Force:          true,
 		Tag:            []byte{},
@@ -955,7 +944,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 		key := bucket + ".bucket"
 		value := make([]byte, 1024*1024)
 
-		kopts = kinetic.CmdOpts{
+		kopts = CmdOpts{
 			ClusterVersion: 0,
 			Force:          true,
 			Tag:            []byte{},
@@ -1038,7 +1027,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	//wg.Add(1)
 	//go func() {
 	// Write to kinetic
-	kopts := kinetic.CmdOpts{
+	kopts := CmdOpts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{}, //(fsMeta.Meta),
@@ -1126,7 +1115,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 		}
 	*/
 	key := bucket + SlashSeparator + object
-	kopts := kinetic.CmdOpts{
+	kopts := CmdOpts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{},
@@ -1161,7 +1150,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	var objInfos []ObjectInfo
 	//var eof bool
 	//var nextMarker string
-	kopts := kinetic.CmdOpts{
+	kopts := CmdOpts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{},
