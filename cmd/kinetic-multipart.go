@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	//"log"
 	//"io/ioutil"
 	//"os"
 	//pathutil "path"
@@ -115,10 +116,8 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
         }
 	key := bucket + "/" + object + "." + fs.metaJSONFile
         // metadata file
-	//metaKey := "meta." + key
         buf := allocateValBuf(len(fsMetaBytes))
         //value := allocateValBuf(len(fsMetabytes)
-
         copy(buf, fsMetaBytes)
 	//copy(value, fsMetabytes)
 	//log.Println(" WRITE TO: ", metaKey)
@@ -241,8 +240,6 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         }
 
 	startKey := "meta." + bucket + "/" + object + "."
-        //startKey := bucket + "/" + object + "."
-
 	endKey := startKey + "z" 
 	//log.Println(" START/END KEY", startKey, endKey)
         kc := GetKineticConnection()
@@ -260,13 +257,10 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         for _, key := range keys {
 		//log.Println("LIST KEY", string(key))
                 k  := key[len("meta.") + len(bucket) + len(object) + 2:]
-                //k  := key[len(bucket) + len(object) + 2:]
-
 		Keys = append(Keys, k)
 	}	
 	
         for _, key := range Keys {
-		//k  := string(key[len("meta.") + len(bucket) + len(object) + 2:])
 		k := string(key)
                 //log.Println("ENTRY: ", k)
 		if k == fs.metaJSONFile {
@@ -288,11 +282,11 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 	continue
                 }
                 //log.Println("GET PART FILE 1 ",  getPartKO(Keys, partNumber, etag1))
-		stat1, serr := koStat(getPartKO(keys, partNumber, etag1))
+		stat1, serr := koStat(getPartKO(Keys, partNumber, etag1))
                 if serr != nil {
                         return result, toObjectErr(serr)
                 }
-                //log.Println("GET PART FILE 2",  getPartKO(keys, partNumber, etag2))
+                //log.Println("GET PART FILE 2",  getPartKO(Keys, partNumber, etag2))
                 stat2, serr := koStat(getPartKO(Keys, partNumber, etag2))
                 if serr != nil {
                         return result, toObjectErr(serr)
@@ -413,7 +407,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         }
 
         startKey := "meta." + bucket + "/" + object
-        endKey := startKey +"0" 
+        endKey := startKey +"z" 
         //log.Println(" START/END KEY", startKey, endKey)
         kc := GetKineticConnection()
         keys, err := kc.GetKeyRange(startKey, endKey, true, true, 800, false, kopts)
@@ -470,6 +464,23 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                         Size:       fi.Size(),
                         ActualSize: actualSize,
                 }
+
+                //DELETE meta data of PARTs so that it will not show up on client "ls" command
+                kopts := CmdOpts{
+                        ClusterVersion:  0,
+                        Force:           true,
+                        Tag:             []byte{},
+                        Algorithm:       kinetic_proto.Command_SHA1,
+                        Synchronization: kinetic_proto.Command_WRITEBACK,
+                        Timeout:         60000, //60 sec
+                        Priority:        kinetic_proto.Command_NORMAL,
+                }
+                //kineticMutex.Lock()
+                metaKey := "meta." + bucket + "/" + object + "." + getPartKO(Keys, part.PartNumber, part.ETag) 
+                //log.Print("DELETE ", metaKey)
+                kc := GetKineticConnection()
+                kc.Delete(metaKey, kopts)
+                ReleaseConnection(kc.Idx)
 
                 // Consolidate the actual size.
                 objectActualSize += actualSize

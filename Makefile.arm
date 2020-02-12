@@ -91,5 +91,4 @@ clean:
 	@rm -rvf release
 	@rm *.a
 	@rm cmd/*.a
-	@rm pkg/kinetic/*.a
 
