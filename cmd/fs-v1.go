@@ -19,7 +19,8 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"fmt"
+	//"fmt"
+	//"log"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -297,7 +298,7 @@ func (fs *FSObjects) statBucketDir(ctx context.Context, bucket string) (os.FileI
 // MakeBucketWithLocation - create a new bucket, returns if it
 // already exists.
 func (fs *FSObjects) MakeBucketWithLocation(ctx context.Context, bucket, location string) error {
-        fmt.Printf(" CREATE NEW BUCKET %s LOCATION %s\n", bucket, location)
+        //fmt.Printf(" CREATE NEW BUCKET %s LOCATION %s\n", bucket, location)
 
 	bucketLock := fs.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
@@ -312,9 +313,9 @@ func (fs *FSObjects) MakeBucketWithLocation(ctx context.Context, bucket, locatio
 	if err != nil {
 		return toObjectErr(err, bucket)
 	}
-        fmt.Println(" CREATE DIR", bucketDir)
+        //fmt.Println(" CREATE DIR", bucketDir)
 	if err = fsMkdir(ctx, bucketDir); err != nil {
-		fmt.Println(" FAILED ", err)
+		//fmt.Println(" FAILED ", err)
 		return toObjectErr(err, bucket)
 	}
 
@@ -323,7 +324,7 @@ func (fs *FSObjects) MakeBucketWithLocation(ctx context.Context, bucket, locatio
 
 // GetBucketInfo - fetch bucket metadata info.
 func (fs *FSObjects) GetBucketInfo(ctx context.Context, bucket string) (bi BucketInfo, e error) {
-        fmt.Println(" GET BUCKET INFO", bucket)
+        //fmt.Println(" GET BUCKET INFO", bucket)
 	bucketLock := fs.NewNSLock(ctx, bucket, "")
 	if e := bucketLock.GetRLock(globalObjectTimeout); e != nil {
 		return bi, e
@@ -482,7 +483,7 @@ func (fs *FSObjects) CopyObject(ctx context.Context, srcBucket, srcObject, dstBu
 // GetObjectNInfo - returns object info and a reader for object
 // content.
 func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
-	fmt.Println(" GET OBJECT N INFO")
+	//fmt.Println(" GET OBJECT N INFO")
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
 	}
@@ -524,9 +525,11 @@ func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, 
 		// objReader.Close() is called by the caller.
 		return NewGetObjectReaderFromReader(bytes.NewBuffer(nil), objInfo, opts.CheckCopyPrecondFn, nsUnlocker)
 	}
+
 	// Take a rwPool lock for NFS gateway type deployment
 	rwPoolUnlocker := func() {}
 	if bucket != minioMetaBucket && lockType != noLock {
+
 		fsMetaPath := pathJoin(fs.fsPath, minioMetaBucket, bucketMetaPrefix, bucket, object, fs.metaJSONFile)
 		_, err = fs.rwPool.Open(fsMetaPath)
 		if err != nil && err != errFileNotFound {
@@ -547,6 +550,7 @@ func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, 
 	// Read the object, doesn't exist returns an s3 compatible error.
 	fsObjPath := pathJoin(fs.fsPath, bucket, object)
 	readCloser, size, err := fsOpenFile(ctx, fsObjPath, off)
+
 	if err != nil {
 		rwPoolUnlocker()
 		nsUnlocker()
@@ -566,7 +570,6 @@ func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, 
 		nsUnlocker()
 		return nil, err
 	}
-
 	return objReaderFn(reader, h, opts.CheckCopyPrecondFn, closeFn)
 }
 
@@ -577,7 +580,7 @@ func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, 
 // startOffset indicates the starting read location of the object.
 // length indicates the total length of the object.
 func (fs *FSObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
-        fmt.Println(" GET OBJECT")
+        //fmt.Println(" GET OBJECT")
 
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
@@ -595,8 +598,6 @@ func (fs *FSObjects) GetObject(ctx context.Context, bucket, object string, offse
 
 // getObject - wrapper for GetObject
 func (fs *FSObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
-        fmt.Println(" gET OBJECT N INFO")
-
 	if _, err = fs.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
 	}

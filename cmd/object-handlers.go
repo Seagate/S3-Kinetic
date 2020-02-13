@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	//"bytes"
 	"context"
 	"crypto/hmac"
 	"encoding/binary"
@@ -24,6 +25,7 @@ import (
 	"encoding/xml"
 	//"fmt"
 	"io"
+	//"log"
 	goioutil "io/ioutil"
 	"net/http"
 	"net/url"
@@ -82,6 +84,7 @@ func setHeadGetRespHeaders(w http.ResponseWriter, reqParams url.Values) {
 // on an SQL expression. In the request, along with the sql expression, you must
 // also specify a data serialization format (JSON, CSV) of the object.
 func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r *http.Request) {
+	//log.Println("SelectObjectContentHandler")
 	ctx := newContext(r, w, "SelectObject")
 
 	defer logger.AuditLog(w, r, "SelectObject", mustGetClaimsFromToken(r))
@@ -110,8 +113,11 @@ func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 		writeErrorResponseHeadersOnly(w, toAPIError(ctx, err))
 		return
 	}
+        //log.Println("1. ectObjectContentHandler")
 
 	getObjectInfo := objectAPI.GetObjectInfo
+        //log.Println("2. ectObjectContentHandler")
+
 	if api.CacheAPI() != nil {
 		getObjectInfo = api.CacheAPI().GetObjectInfo
 	}
@@ -179,6 +185,7 @@ func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 		}
 		return
 	}
+        //log.Println("3. SectObjectContentHandler")
 
 	getObjectNInfo := objectAPI.GetObjectNInfo
 	if api.CacheAPI() != nil {
@@ -197,8 +204,11 @@ func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 
 		return getObjectNInfo(ctx, bucket, object, rs, r.Header, readLock, ObjectOptions{})
 	}
+        //log.Println("4. SelectObjectContentHandler")
 
 	objInfo, err := getObjectInfo(ctx, bucket, object, opts)
+        //log.Println("5. SelectObjectContentHandler")
+
 	if err != nil {
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
@@ -245,7 +255,7 @@ func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 // This implementation of the GET operation retrieves object. To use GET,
 // you must have READ access to the object.
 func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println(" GET OBJECT HANDLER")
+	//log.Println(" GET OBJECT HANDLER")
 	ctx := newContext(r, w, "GetObject")
 
 	defer logger.AuditLog(w, r, "GetObject", mustGetClaimsFromToken(r))
@@ -316,8 +326,11 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
+        //log.Println("1. GET OBJECT HANDLER")
 
 	getObjectNInfo := objectAPI.GetObjectNInfo
+        //log.Println("2.  GET OBJECT HANDLER")
+
 	if api.CacheAPI() != nil {
 		getObjectNInfo = api.CacheAPI().GetObjectNInfo
 	}
@@ -338,8 +351,11 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 			logger.LogIf(ctx, err, logger.Application)
 		}
 	}
+        //log.Println("3.  GET OBJECT HANDLER")
 
 	gr, err := getObjectNInfo(ctx, bucket, object, rs, r.Header, readLock, opts)
+        //log.Println("4.  GET OBJECT HANDLER")
+
 	if err != nil {
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
@@ -385,20 +401,27 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 	setHeadGetRespHeaders(w, r.URL.Query())
 
 	statusCodeWritten := false
+        //log.Println("5. GET OBJECT HANDLER")
+
 	httpWriter := ioutil.WriteOnClose(w)
 	if rs != nil {
 		statusCodeWritten = true
 		w.WriteHeader(http.StatusPartialContent)
 	}
-	buf := make([]byte, objInfo.Size)
+	//objInfo.Size = 1024*1024
+	buf := make([]byte, 1024*1024) //objInfo.Size)
+	//var buf bytes.Buffer
+        //log.Println("6. GET OBJECT HANDLER SIZE")
 	if _, err = io.CopyBuffer(httpWriter, gr, buf); err != nil {
-		// Write object content to response body
-		//if _, err = io.Copy(httpWriter, gr); err != nil {
+	// Write object content to response body
+	//if _, err = io.Copy(httpWriter, gr); err != nil {
 		if !httpWriter.HasWritten() && !statusCodeWritten { // write error response only if no data or headers has been written to client yet
 			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		}
 		return
 	}
+	currentPart = 0
+        //log.Println(" 7. GET OBJECT HANDLER")
 
 	if err = httpWriter.Close(); err != nil {
 		if !httpWriter.HasWritten() && !statusCodeWritten { // write error response only if no data or headers has been written to client yet
@@ -417,13 +440,15 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		UserAgent:    r.UserAgent(),
 		Host:         handlers.GetSourceIP(r),
 	})
+        //log.Println(" 8. GET OBJECT HANDLER")
+
 }
 
 // HeadObjectHandler - HEAD Object
 // -----------
 // The HEAD operation retrieves metadata from an object without returning the object itself.
 func (api objectAPIHandlers) HeadObjectHandler(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println(" HEAD OBJECT HANDLER")
+	//log.Println(" HEAD OBJECT HANDLER")
 	ctx := newContext(r, w, "HeadObject")
 
 	defer logger.AuditLog(w, r, "HeadObject", mustGetClaimsFromToken(r))

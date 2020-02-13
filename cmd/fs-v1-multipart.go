@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
         "github.com/minio/minio/cmd/logger"
-        "log"
+        //"log"
 	jsoniter "github.com/json-iterator/go"
 	mioutil "github.com/minio/minio/pkg/ioutil"
 )
@@ -368,7 +368,7 @@ func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID
 // ListPartsInfo structure is unmarshalled directly into XML and
 // replied back to the client.
 func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, uploadID string, partNumberMarker, maxParts int, opts ObjectOptions) (result ListPartsInfo, e error) {
-	log.Println("1. ListObjectParts")
+	//log.Println("1. ListObjectParts")
 
 	if err := checkListPartsArgs(ctx, bucket, object, fs); err != nil {
 		return result, toObjectErr(err)
@@ -391,9 +391,9 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 		}
 		return result, toObjectErr(err, bucket, object)
 	}
-	log.Println(" UPLOADIDDIR", uploadIDDir)
+	//log.Println(" UPLOADIDDIR", uploadIDDir)
 	entries, err := readDir(uploadIDDir)
-	log.Println("1. UPLOADIDDIR", entries)
+	//log.Println("1. UPLOADIDDIR", entries)
 	if err != nil {
 		logger.LogIf(ctx, err)
 		return result, toObjectErr(err, bucket)
@@ -401,7 +401,7 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 
 	partsMap := make(map[int]string)
 	for _, entry := range entries {
-		log.Println("ENTRY: ", entry)
+		//log.Println("ENTRY: ", entry)
 		if entry == fs.metaJSONFile {
 			continue
 		}
@@ -411,18 +411,18 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 			continue
 		}
 		etag2, ok := partsMap[partNumber]
-                log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
+                //log.Println(" ETAG1 ETAG2", partNumber, etag1, etag2)
 
 		if !ok {
 			partsMap[partNumber] = etag1
 			continue
 		}
-		log.Println("GET PART FILE 1 ",  getPartFile(entries, partNumber, etag1))
+		//log.Println("GET PART FILE 1 ",  getPartFile(entries, partNumber, etag1))
 		stat1, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag1)))
 		if serr != nil {
 			return result, toObjectErr(serr)
 		}
-                log.Println("GET PART FILE 2 ",  getPartFile(entries, partNumber, etag2))
+                //log.Println("GET PART FILE 2 ",  getPartFile(entries, partNumber, etag2))
 
 		stat2, serr := fsStatFile(ctx, pathJoin(uploadIDDir, getPartFile(entries, partNumber, etag2)))
 		if serr != nil {
@@ -502,7 +502,7 @@ func (fs *FSObjects) ListObjectParts(ctx context.Context, bucket, object, upload
 }
 
 func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string, object string, uploadID string, parts []CompletePart, opts ObjectOptions) (oi ObjectInfo, e error) {
-	log.Println("1. CompleteMultipartUpload", parts)
+	//log.Println("1. CompleteMultipartUpload", parts)
 	var actualSize int64
 
 	if err := checkCompleteMultipartArgs(ctx, bucket, object, fs); err != nil {
@@ -530,7 +530,7 @@ func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string,
 
 	// Calculate s3 compatible md5sum for complete multipart.
 	s3MD5 := getCompleteMultipartMD5(parts)
-	log.Println(" COMPLETE MD5 ", s3MD5)
+	//log.Println(" COMPLETE MD5 ", s3MD5)
 	partSize := int64(-1) // Used later to ensure that all parts sizes are same.
 
 	fsMeta := fsMetaV1{}

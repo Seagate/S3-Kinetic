@@ -10,8 +10,8 @@ import (
 	"crypto/sha1"
 	"crypto/tls"
 	"errors"
-	//"encoding/json"
-	//"fmt"
+	"encoding/json"
+	"fmt"
 	"sync"
 	//"time"
 	//"crypto/x509"
@@ -60,31 +60,83 @@ type Client struct {
 	ReleaseConn  func(int)
 }
 
+var  currentPart  = 0
+
+
 func (c *Client) Read(value []byte) (int, error) {
-        log.Println(" ****READ****", string(c.Key))
-/*
+        //log.Println(" ****READ****", string(c.Key), len(value))
+	//Key :=  string(value)
+        ////log.Println(" ***KEY***", Key)
+
 	fsMeta := fsMetaV1{}
         cvalue, ptr, size, err := c.CGetMeta(string(c.Key), c.Opts)
+        if err != nil {
+                err = errFileNotFound 
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                c.ReleaseConn(c.Idx)
+                return 0, err
+        }
         var fsMetaBytes []byte
         if (cvalue != nil) {
             fsMetaBytes = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         }
-        if err != nil {
-                err = errFileNotFound 
-                C.deallocate_gvalue_buffer((*C.char)(ptr))
-                return 0, err
-        }
         err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-	log.Println(" FSMETA ", fsMeta)
-*/
-        cvalue, ptr1, size, err := c.CGet(string(c.Key), c.Opts)
-        if err == nil {
+        C.deallocate_gvalue_buffer((*C.char)(ptr))
+//	//log.Println(" FSMETA ", fsMeta)
+	if len(fsMeta.Parts) == 0 {
+		cvalue, ptr, size, err := c.CGet(string(c.Key), c.Opts)
+                if err != nil {
+                        //log.Println(" 1. NOT FOUND")
+                        C.deallocate_gvalue_buffer((*C.char)(ptr))
+                        c.ReleaseConn(c.Idx)
+                        return 0, err
+                }
+		if cvalue  != nil {
+                	value1 := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+			copy(value, value1)
+	                //log.Println("1. VAL SIZE", len(value))
+
+	                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                        c.ReleaseConn(c.Idx)
+                        return int(size), err
+                }
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                c.ReleaseConn(c.Idx)
+		return 0, err
+	}
+
+	//currentPart := 0;
+
+	//readPart = func () {
+	var totalSize uint32 = 0
+	
+	for i, part := range  fsMeta.Parts {
+	    if i == currentPart {
+		//log.Println(" PART: ", i, part)
+		key := string(c.Key)+ "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
+                //log.Println(" KEY: ", key)
+        	cvalue, ptr1, size, err := c.CGet(key, c.Opts)
+     		if err != nil {
+			//log.Println(" NOT FOUND")
+	                C.deallocate_gvalue_buffer((*C.char)(ptr1))
+		        c.ReleaseConn(c.Idx)
+			return 0, err
+		}
 	        value1 := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-	        copy(value, value1)
+		copy(value, value1)
+		//log.Println(" VAL SIZE", len(value))
 		C.deallocate_gvalue_buffer((*C.char)(ptr1))
-        }
+		totalSize += size
+		currentPart += 1
+		return int(size), err
+	    }
+	}
+	//}
+	//readPart()
         c.ReleaseConn(c.Idx)
-        return int(size), err
+        //log.Println(" TOTALSIZE", totalSize)
+        return int(totalSize), err
+
 }
 
 
@@ -144,7 +196,7 @@ func Read(socket net.Conn, buffer []byte, size uint32) error {
 		if err != nil {
 			//Connection may be closed by Peer
 			socket.Close()
-			log.Println(" Connection Closed by Peer ", err)
+			//log.Println(" Connection Closed by Peer ", err)
 			return err
 		}
 		if n > 0 {
@@ -160,7 +212,7 @@ func Write(socket net.Conn, buffer []byte, size uint32) error {
 	for bytesWritten < size {
 		n, err := socket.Write(buffer)
 		if err != nil {
-			log.Println(" TX Error: ", err)
+			//log.Println(" TX Error: ", err)
 			return err
 		}
 		if n > 0 {
@@ -177,7 +229,7 @@ func (c *Client) Connect(address string) error {
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		log.Trace("FAILED TO CONNECT")
-		log.Println(err)
+		//log.Println(err)
 		return err
 	}
 	c.socket = conn
@@ -493,7 +545,7 @@ func (c *Client) CGetMeta(key string, acmd CmdOpts) (*C.char, *C.char, uint32, e
 
 func (c *Client) CGet(key string, acmd CmdOpts) (*C.char, *C.char, uint32, error) {
 	mutex.Lock()
-        //log.Println(" CALL CGET ", key)
+        ////log.Println(" CALL CGET ", key)
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
         psv.tag = C.CString(string(acmd.Tag))
@@ -508,7 +560,7 @@ func (c *Client) CGet(key string, acmd CmdOpts) (*C.char, *C.char, uint32, error
 	if status != 0 || cvalue == nil {
 		err =  errors.New("NOT FOUND")
 	}
-        //log.Println(" CGET DONE ", err, cvalue, *ptr)
+        ////log.Println(" CGET DONE ", err, cvalue, *ptr)
         return cvalue, *ptr, uint32(size), err                   
 }
 
@@ -519,7 +571,7 @@ func (c *Client) Get(key string, value []byte, cmd CmdOpts) (uint32, error) {
 	//	return c.CGet(key, value, cmd)
 	//}
 	mutex.Lock()
-        //log.Println(" NORMAL GET")
+        ////log.Println(" NORMAL GET")
 	auth_type := kinetic_proto.Message_HMACAUTH
 	cmd_header := &kinetic_proto.Command_Header{}
 	err := SetCmdInHeader(c, cmd_header, kinetic_proto.Command_GET, cmd)
@@ -577,7 +629,7 @@ func (c *Client) Delete(key string, cmd CmdOpts) error {
         }
 
 	mutex.Lock()
-	//log.Println("CMD DELETE: ", key)
+	////log.Println("CMD DELETE: ", key)
 	auth_type := kinetic_proto.Message_HMACAUTH
 	cmd_header := &kinetic_proto.Command_Header{}
 	err := SetCmdInHeader(c, cmd_header, kinetic_proto.Command_DELETE, cmd)

@@ -41,6 +41,8 @@ import (
 	//mioutil "github.com/minio/minio/pkg/ioutil"
 )
 
+var hiddenMultiParts = true
+
 func (fs *KineticObjects) encodePartFile(partNumber int, etag string, actualSize int64) string {
         //log.Println("encodePartFile", partNumber, etag, actualSize)
         return fmt.Sprintf("%.5d.%s.%d", partNumber, etag, actualSize)
@@ -389,7 +391,6 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         var actualSize int64
 
         s3MD5 := getCompleteMultipartMD5(parts)
-        //log.Println("Complete MD5", s3MD5)
         partSize := int64(-1) // Used later to ensure that all parts sizes are same.
 
         fsMeta := fsMetaV1{}
@@ -464,7 +465,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                         Size:       fi.Size(),
                         ActualSize: actualSize,
                 }
-
+		if hiddenMultiParts {
                 //DELETE meta data of PARTs so that it will not show up on client "ls" command
                 kopts := CmdOpts{
                         ClusterVersion:  0,
@@ -481,7 +482,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                 kc := GetKineticConnection()
                 kc.Delete(metaKey, kopts)
                 ReleaseConnection(kc.Idx)
-
+		}
                 // Consolidate the actual size.
                 objectActualSize += actualSize
                 if i == len(parts)-1 {

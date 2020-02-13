@@ -27,7 +27,7 @@ import (
 	pathutil "path"
 	"strconv"
 	"time"
-	"log"
+	//"log"
 	jsoniter "github.com/json-iterator/go"
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
@@ -253,7 +253,6 @@ func (m fsMetaV1) ToObjectKVInfo(bucket, object string, ko KVInfo) ObjectInfo {
         objInfo.UserDefined = cleanMetadata(m.Meta)
         // All the parts per object.
         objInfo.Parts = m.Parts
-	log.Println( " M PARTS", m.Parts)
 
         // Success..
         return objInfo
