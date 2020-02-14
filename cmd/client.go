@@ -58,15 +58,14 @@ type Client struct {
 	Key          []byte
 	Opts         CmdOpts
 	ReleaseConn  func(int)
+	NextPartNumber *int
+	LastPartNumber int
 }
 
-var  currentPart  = 0
-
-
 func (c *Client) Read(value []byte) (int, error) {
-        //log.Println(" ****READ****", string(c.Key), len(value))
+        //log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
 	//Key :=  string(value)
-        ////log.Println(" ***KEY***", Key)
+        //log.Println(" ***KEY***", *(c.NextPartNumber))
 
 	fsMeta := fsMetaV1{}
         cvalue, ptr, size, err := c.CGetMeta(string(c.Key), c.Opts)
@@ -82,7 +81,7 @@ func (c *Client) Read(value []byte) (int, error) {
         }
         err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
         C.deallocate_gvalue_buffer((*C.char)(ptr))
-//	//log.Println(" FSMETA ", fsMeta)
+	log.Println(" PARTS LEN ", len(fsMeta.Parts))
 	if len(fsMeta.Parts) == 0 {
 		cvalue, ptr, size, err := c.CGet(string(c.Key), c.Opts)
                 if err != nil {
@@ -92,10 +91,8 @@ func (c *Client) Read(value []byte) (int, error) {
                         return 0, err
                 }
 		if cvalue  != nil {
-                	value1 := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+			value1 := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 			copy(value, value1)
-	                //log.Println("1. VAL SIZE", len(value))
-
 	                C.deallocate_gvalue_buffer((*C.char)(ptr))
                         c.ReleaseConn(c.Idx)
                         return int(size), err
@@ -105,19 +102,16 @@ func (c *Client) Read(value []byte) (int, error) {
 		return 0, err
 	}
 
-	//currentPart := 0;
-
 	//readPart = func () {
 	var totalSize uint32 = 0
-	
 	for i, part := range  fsMeta.Parts {
-	    if i == currentPart {
+	    if i == *(c.NextPartNumber) {
 		//log.Println(" PART: ", i, part)
 		key := string(c.Key)+ "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
-                //log.Println(" KEY: ", key)
-        	cvalue, ptr1, size, err := c.CGet(key, c.Opts)
-     		if err != nil {
-			//log.Println(" NOT FOUND")
+                log.Println(" KEY: ", key)
+		cvalue, ptr1, size, err := c.CGet(key, c.Opts)
+		if err != nil {
+			log.Println(" NOT FOUND")
 	                C.deallocate_gvalue_buffer((*C.char)(ptr1))
 		        c.ReleaseConn(c.Idx)
 			return 0, err
@@ -127,15 +121,18 @@ func (c *Client) Read(value []byte) (int, error) {
 		//log.Println(" VAL SIZE", len(value))
 		C.deallocate_gvalue_buffer((*C.char)(ptr1))
 		totalSize += size
-		currentPart += 1
+	        if i ==  len(fsMeta.Parts) -1 {
+                       log.Println(" Release Connection")
+			*(c.NextPartNumber) = 0
+		        c.ReleaseConn(c.Idx)
+		} else {
+	                *(c.NextPartNumber) += 1
+		}
 		return int(size), err
 	    }
 	}
-	//}
-	//readPart()
-        c.ReleaseConn(c.Idx)
-        //log.Println(" TOTALSIZE", totalSize)
-        return int(totalSize), err
+        log.Println(" TOTALSIZE", totalSize)
+	return 0, err
 
 }
 

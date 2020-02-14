@@ -38,7 +38,7 @@ import (
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/cmd/logger"
 
-	//"log"
+	"log"
 	"github.com/minio/minio/pkg/lock"
 	"github.com/minio/minio/pkg/madmin"
 
@@ -152,7 +152,10 @@ func GetKineticConnection() *Client {
                         }
                         break;
                 }
+		log.Println("WAIT CONN")
 		kConnsPool.cond.Wait()
+                log.Println("GOT SIG")
+
         }
 	kConnsPool.Unlock()
 	return kc
@@ -246,6 +249,7 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	kConnsPool.cond = sync.NewCond(&kConnsPool)
 	for i := 0; i < numberOfKinConns; i++ {
 		kc := new(Client)
+		kc.NextPartNumber = new(int)
 		kConnsPool.kcs[i] = kc
 		kConnsPool.inUsed[i] = 0
 		if !SkinnyWaistIF {
@@ -341,6 +345,7 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
         key := "bucket." + bucket
         //kineticMutex.Lock()
         kc := GetKineticConnection()
+	kc.Key = []byte(key)
         _, ptr, _, err := kc.CGetMeta(key, kopts)
         ReleaseConnection(kc.Idx)
         C.deallocate_gvalue_buffer((*C.char)(ptr))
@@ -393,6 +398,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
         key := "bucket." + bucket
         //kineticMutex.Lock()
         kc := GetKineticConnection()
+	kc.Key = []byte(key)
         cvalue, ptr, size, err := kc.CGetMeta(key, kopts)
         ReleaseConnection(kc.Idx)
         if err != nil {
@@ -703,6 +709,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 	}
 	//kineticMutex.Lock()
 	kc := GetKineticConnection()
+	kc.Key = []byte(key)
         //var ptr *C.char
 	//size, err := kc.Get(metakey, value, kopts)
         cvalue, ptr, size, err := kc.CGetMeta(key, kopts)
@@ -835,6 +842,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 	}
 	//kineticMutex.Lock()
 	kc := GetKineticConnection()
+	kc.Key = []byte(key)
         cvalue, ptr, size, err := kc.CGet(key, kopts)
 	ReleaseConnection(kc.Idx)
 	//kineticMutex.Unlock()

@@ -246,9 +246,11 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 	//log.Println(" START/END KEY", startKey, endKey)
         kc := GetKineticConnection()
         keys, err := kc.GetKeyRange(startKey, endKey, true, true, 800, false, kopts)
+        ReleaseConnection(kc.Idx)
+
         if err != nil {
 		//log.Println("ERROR", err)
-                ReleaseConnection(kc.Idx)
+                //ReleaseConnection(kc.Idx)
                 //kineticMutex.Unlock()
                 return result, toObjectErr(err, bucket)
         }
@@ -412,8 +414,10 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         //log.Println(" START/END KEY", startKey, endKey)
         kc := GetKineticConnection()
         keys, err := kc.GetKeyRange(startKey, endKey, true, true, 800, false, kopts)
+        ReleaseConnection(kc.Idx)
+
         if err != nil {
-                ReleaseConnection(kc.Idx)
+//                ReleaseConnection(kc.Idx)
                 return oi, toObjectErr(err, bucket)
         }
 	var Keys [][]byte
@@ -498,9 +502,8 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                         }
                 }
         }
-
+	
         key := bucket + "/" + object + "." + fs.metaJSONFile
-        //log.Println(" 1. GET JSON FILE", key)
         //kineticMutex.Lock()
         kc = GetKineticConnection()
         cvalue, ptr, size, err := kc.CGet(key, kopts)

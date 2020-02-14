@@ -420,7 +420,7 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		}
 		return
 	}
-	currentPart = 0
+	//currentPart = 0
         //log.Println(" 7. GET OBJECT HANDLER")
 
 	if err = httpWriter.Close(); err != nil {
