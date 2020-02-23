@@ -443,7 +443,6 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         if err != nil {
 		log.Println("ERROR", err)
                 ReleaseConnection(kc.Idx)
-                kineticMutex.Unlock()
                 return result, toObjectErr(err, bucket)
         }
 
