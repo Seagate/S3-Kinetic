@@ -65,9 +65,6 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         ///log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
-	//Key :=  string(value)
-        ///log.Println(" ***KEY***", *(c.NextPartNumber))
-
 	fsMeta := fsMetaV1{}
         cvalue, ptr, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
@@ -78,7 +75,6 @@ func (c *Client) Read(value []byte) (int, error) {
                 c.ReleaseConn(c.Idx)
                 return 0, err
         }
-        //var fsMetaBytes []byte
         if (cvalue != nil) {
 		fsMetaBytes := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
@@ -86,8 +82,6 @@ func (c *Client) Read(value []byte) (int, error) {
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
-        //log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
-
 		cvalue, ptr, size, err := c.CGet(string(c.Key), c.Opts)
                 if err != nil {
                         if ptr != nil {

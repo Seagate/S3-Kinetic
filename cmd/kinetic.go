@@ -39,7 +39,7 @@ import (
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/cmd/logger"
 
-	//"log"
+	"log"
 	"github.com/minio/minio/pkg/lock"
 	"github.com/minio/minio/pkg/madmin"
 
@@ -50,7 +50,7 @@ import (
 )
 
 var numberOfKinConns int = 20 
-var maxQueue int = 200
+var maxQueue int = 20
 
 type KConnsPool struct {
 	//idx    int
@@ -127,7 +127,6 @@ type KVInfo struct {
 
 func ReleaseConnection(ix int) {
 	kConnsPool.Lock()
-	//log.Println(" FREE CONN ", ix)
 	kConnsPool.inUsed[ix] = false
 	kConnsPool.totalInUsed--
 	if  kConnsPool.totalInUsed < 0 {
@@ -156,9 +155,7 @@ func GetKineticConnection() *Client {
 			}
 		}
 		if kc == nil {
-			//log.Println("WAIT CONN",  kConnsPool.totalInUsed)
 			kConnsPool.cond.Wait()
-			//log.Println("GOT SIG CONN",  kConnsPool.totalInUsed)
 		} else {
 			break;
 		}
@@ -203,9 +200,7 @@ func initKineticMeta(kc *Client) error {
 	var bucketInfo BucketInfo
 	bucketInfo.Name = bucketKey
 	bucketInfo.Created = time.Now()
-	//metaKey := "meta." + bucketKey
 	var buf bytes.Buffer
-	//buf :=  bytes.NewBuffer(gbuf)
 	enc := gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
         gbuf := allocateValBuf(buf.Len())
@@ -245,7 +240,6 @@ func initKineticMeta(kc *Client) error {
 
 func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	var err error = nil
-	//log.SetFlags(log.LstdFlags)
 	if IP[:6] == "skinny" {
 		SkinnyWaistIF =  true
 		storePartition := []byte(IP[7:])
@@ -254,10 +248,8 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	if err != nil {
 		return nil, err
 	}
-	//kConnsPool.idx = 0
 	kConnsPool.kcs = make(map[int]*Client, maxQueue) //numberOfKinConns)
 	kConnsPool.inUsed = make(map[int]bool)
-        //kConnsPool.max = maxQueue
 	kConnsPool.totalInUsed = 0
 	kConnsPool.cond = sync.NewCond(&kConnsPool)
 	for i := 0; i < maxQueue; i++ { // numberOfKinConns; i++ {
@@ -268,9 +260,9 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 		if i < numberOfKinConns {
 			if !SkinnyWaistIF {
 				err = InitKineticConnection(IP, false, kConnsPool.kcs[i])
-			} else {
-				err = InitKineticConnection("127.0.0.1", false, kConnsPool.kcs[i])
-			}
+			}  //else {
+			//	err = InitKineticConnection("127.0.0.1", false, kConnsPool.kcs[i])
+			//}
 		}
 		if err != nil {
 			return nil, err
@@ -306,7 +298,7 @@ func (ko *KineticObjects) StorageInfo(ctx context.Context) StorageInfo {
 // corresponding valid bucket names on the backend in a platform
 // compatible way for all operating systems.
 func (ko *KineticObjects) getBucketDir(ctx context.Context, bucket string) (string, error) {
-	////////log.Println(" GET BUCKET DIR ", bucket)
+	//log.Println(" GET BUCKET DIR ", bucket)
 	if bucket == "" || bucket == "." || bucket == ".." {
 		return "", errVolumeNotFound
 	}
@@ -315,24 +307,51 @@ func (ko *KineticObjects) getBucketDir(ctx context.Context, bucket string) (stri
 }
 
 func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KVInfo, error) {
-	////////log.Println(" statBucketDir: ", bucket)
-
-	//bucketDir, err := ko.getBucketDir(ctx, bucket)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//st, err := fsStatVolume(ctx, bucketDir)
-	st := &KVInfo{}
-	//	if err != nil {
-	//		return nil, err
-	//	}
+	//log.Println(" STAT BUCKET DIR: ", bucket)
+        kopts := CmdOpts{
+                ClusterVersion:  0,
+                Force:           true,
+                Tag:             []byte{},
+                Algorithm:       kinetic_proto.Command_SHA1,
+                Synchronization: kinetic_proto.Command_WRITEBACK,
+                Timeout:         60000, //60 sec
+                Priority:        kinetic_proto.Command_NORMAL,
+        }
+        key := "bucket." + bucket
+        //kineticMutex.Lock()
+        kc := GetKineticConnection()
+        cvalue, ptr, size, err := kc.CGetMeta(key, kopts)
+        ReleaseConnection(kc.Idx)
+        if err != nil {
+                err = errFileNotFound
+                if ptr != nil {
+                        C.deallocate_gvalue_buffer((*C.char)(ptr))
+                }
+                //kineticMutex.Unlock()
+                return &KVInfo{}, err
+        }
+	bi := BucketInfo{}
+        if (cvalue != nil) {
+                value := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+                buf := bytes.NewBuffer(value[:size])
+                dec := gob.NewDecoder(buf)
+                dec.Decode(&bi)
+                C.deallocate_gvalue_buffer((*C.char)(ptr))
+        }
+        //kineticMutex.Unlock()
+        st := &KVInfo{
+                name:    bi.Name,
+                size:    0,
+                modTime: bi.Created,
+	}
+	//log.Println("STAT BUCK: ", st)
 	return st, nil
 }
 
 //MakeBucketWithLocation - create a new bucket, returns if it
 // already exists.
 func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, location string) error {
-	////////log.Printf(" CREATE NEW BUCKET %s LOCATION %s\n", bucket, location)
+	//log.Printf(" CREATE NEW BUCKET %s LOCATION %s\n", bucket, location)
 	bucketLock := ko.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
 		return err
@@ -424,10 +443,6 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 
 func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
 	//log.Println("LIST BUCKET")
-        //var bucketInfos []BucketInfo
-
-        //return bucketInfos, nil
-
 	kopts := CmdOpts{
 		ClusterVersion:  0,
 		Force:           true,
@@ -440,9 +455,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 
 	startKey := "meta.bucket."
 	endKey := "meta.bucket/"
-	//log.Println("BUCKET: GET CONN")
 	kc := GetKineticConnection()
-	//log.Println("1. BUCKET: GET CONN", kc)
 	keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
 	if err != nil {
 		ReleaseConnection(kc.Idx)
@@ -453,7 +466,6 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 	for _, key := range keys {
 		var bucketInfo BucketInfo
 		if string(key[:12]) == "meta.bucket." && (string(key[:13]) != "meta.bucket..") {
-			//log.Println(" GET ", string(key))
 			cvalue, ptr, size, err := kc.CGet(string(key), kopts)
                         if err != nil {
 				if ptr != nil {
@@ -483,7 +495,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 // DeleteBucket - delete a bucket and all the metadata associated
 // with the bucket including pending multipart, object metadata.
 func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error {
-	////log.Println("*** DELETE BUCKET *** ", bucket)
+	//log.Println("*** DELETE BUCKET *** ", bucket)
 	bucketLock := ko.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
 		logger.LogIf(ctx, err)
@@ -519,7 +531,7 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
 // if source object and destination object are same we only
 // update metadata.
 func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (oi ObjectInfo, e error) {
-	//////////log.Println(" COPY OBJECTS")
+	log.Println(" COPY OBJECTS")
 	return oi, nil
 }
 
@@ -557,7 +569,6 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 		nsUnlocker()
 		return nil, toObjectErr(err, bucket, object)
 	}
-        ////////log.Println(" OBJINFO:", objInfo)
 
 	// For a directory, we need to send an reader that returns no bytes.
 	if hasSuffix(object, SlashSeparator) {
@@ -597,16 +608,12 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 		//nsUnlocer()
 		return nil, err
 	}
-	//kc := kinetic.Client{}
-	//kineticMutex.Lock()
 	kc := GetKineticConnection()
+        //kineticMutex.Lock()
 	kc.Key = []byte(bucket + "/" + object)
 	var reader1 io.Reader = kc
-        //kineticMutex.Unlock()
-        ////log.Println("IO LIMIT READER")
 	reader := io.LimitReader(reader1, length)
         //kineticMutex.Unlock()
-        ////log.Println("***END: GetObjectNInfo***", object)
 	return objReaderFn(reader, h, opts.CheckCopyPrecondFn, closeFn)
 }
 
@@ -717,7 +724,6 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		if ptr != nil {
 			C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
-                //log.Println(" GETOBJECTINFO META: NOT FOUND", object, ptr )
 		//kineticMutex.Unlock()
 	        return oi, err
 	}
@@ -738,13 +744,12 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
                 modTime: fsMeta.KoInfo.CreatedTime,
 
 	}
-        //log.Println("END: GETOBJECTINFO META", bucket, " ", object)
 	return fsMeta.ToKVObjectInfo(bucket, object, fi), err
 }
 
 // getObjectInfoWithLock - reads object metadata and replies back ObjectInfo.
 func (ko *KineticObjects) getObjectInfoWithLock(ctx context.Context, bucket, object string) (oi ObjectInfo, e error) {
-	//////log.Println(" GET OBJ INFO WITH LOCK ", object)
+	//log.Println(" GET OBJ INFO WITH LOCK ", object)
 	// Lock the object before reading.
 	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetRLock(globalObjectTimeout); err != nil {
@@ -759,14 +764,12 @@ func (ko *KineticObjects) getObjectInfoWithLock(ctx context.Context, bucket, obj
 	if _, err := ko.statBucketDir(ctx, bucket); err != nil {
 		return oi, err
 	}
-        ////////log.Println(" END GET OBJ INFO WITH LOCK ", object)
-
 	return ko.getObjectInfo(ctx, bucket, object)
 }
 
 // GetObjectInfo - reads object metadata and replies back ObjectInfo.
 func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object string, opts ObjectOptions) (oi ObjectInfo, e error) {
-	//////log.Println(" GET OBJ INFO: bucket ", bucket, " object ",object)
+	//log.Println(" GET OBJ INFO: bucket ", bucket, " object ",object)
 	oi, err := ko.getObjectInfoWithLock(ctx, bucket, object)
 	if err == errCorruptedFormat || err == io.EOF {
 		objectLock := ko.NewNSLock(ctx, bucket, object)
@@ -783,15 +786,14 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 
 		oi, err = ko.getObjectInfoWithLock(ctx, bucket, object)
 	}
-        ////////log.Println(" END: GET OBJ INFO: bucket ", bucket, " object ",object)
-
+        //log.Println(" END: GET OBJ INFO: bucket ", bucket, " object ",object)
 	return oi, toObjectErr(err, bucket, object)
 }
 
 
 //THAI:
 func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
-	////log.Println(" GET OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
+	//log.Println(" GET OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}
@@ -801,7 +803,7 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 		return err
 	}
 	defer objectLock.RUnlock()
-        //////log.Println(" END: GET KINETIC OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
+        //log.Println(" END: GET KINETIC OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
 
 	return ko.getObject(ctx, bucket, object, offset, length, writer, etag, true)
 }
@@ -920,7 +922,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 // Additionally writes `ko.json` which carries the necessary metadata
 // for future object operations.
 func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
-	////////log.Printf(" PutObject %s in Bucket %s\n", object, bucket)
+	//log.Printf(" PutObject %s in Bucket %s\n", object, bucket)
 	if err := checkPutObjectArgs(ctx, bucket, object, ko, r.Size()); err != nil {
 		return ObjectInfo{}, err
 	}
@@ -952,7 +954,6 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 		Timeout:        60000, //60 sec
 		Priority:       kinetic_proto.Command_NORMAL,
 	}
-	////log.Println("CHECK BUCKET", key)
         kc := GetKineticConnection()
         _, ptr, _, err := kc.CGetMeta(key, kopts)
         ReleaseConnection(kc.Idx)
@@ -1057,19 +1058,10 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 		ETag:    r.MD5CurrentHexString(),
 	}
 
-	// Stat the file to fetch timestamp, size.
-	//fi, err := fsStatFile(ctx, pathJoin(ko.fsPath, bucket, object))
-	//if err != nil {
-	//	return ObjectInfo{}, toObjectErr(err, bucket, object)
-	//}
-
 	// Success.
 	return objectInfo, nil
-	//return ObjectInfo{}, toObjectErr(err, bucket, object)
-
 }
 
-//THAI:
 // DeleteObjects - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (ko *KineticObjects) DeleteObjects(ctx context.Context, bucket string, objects []string) ([]error, error) {
@@ -1080,12 +1072,10 @@ func (ko *KineticObjects) DeleteObjects(ctx context.Context, bucket string, obje
 	return errs, nil
 }
 
-//THAI:
 // DeleteObject - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object string) error {
 	// Acquire a write lock before deleting the object.
-	//////log.Println(" DELETE", bucket, object)
 	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetLock(globalOperationTimeout); err != nil {
 		return err
@@ -1136,7 +1126,6 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         kc = GetKineticConnection()
         for _, part := range  fsMeta.Parts {
                 key =  bucket + SlashSeparator + object + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
-                //////log.Println(" KEY: ", key)
                 kc.Delete(key, kopts)
 	}
         key = bucket + SlashSeparator + object
@@ -1147,7 +1136,6 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 	return nil
 }
 
-//THAI
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
 	//log.Println("LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
 	var objInfos []ObjectInfo
@@ -1165,11 +1153,8 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 
 	startKey := "meta." + bucket + "/" + prefix
 	endKey := "meta." + bucket + "0"
-	//log.Println(" LIST OBJ: GET CONN" )
 	//kineticMutex.Lock() 
 	kc := GetKineticConnection()
-        //log.Println(" LIST OBJ: GET CONN", kc )
-
 	keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
         ReleaseConnection(kc.Idx)
 	//kineticMutex.Unlock()
@@ -1181,16 +1166,13 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		if string(key[:5]) == "meta." {
 			//log.Println("KEY ", string(key[5:]))
 			objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(5+len(bucket)+1):]))
-                        ////////log.Println("1. KEY ", string(key[5:]), len(bucket))
-
 			//nextMarker = objInfo.Name
 			if err != nil {
 				return loi, err
 			}
 			//objInfo.Name = string([]byte(objInfo.Name)[len(bucket)+1:])
 			objInfos = append(objInfos, objInfo)
-                        ////////log.Println("2. KEY ", objInfo.Name)
-
+                        //log.Println("2. KEY ", objInfo.Name)
 		}
 	}
 	result := ListObjectsInfo{}
@@ -1202,11 +1184,9 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		result.Objects = append(result.Objects, objInfo)
 	}
         //log.Println("END: LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
-
 	return result, nil
 }
 
-//THAI:
 func (ko *KineticObjects) ReloadFormat(ctx context.Context, dryRun bool) error {
 	logger.LogIf(ctx, NotImplemented{})
 	return NotImplemented{}
@@ -1278,9 +1258,8 @@ func (ko *KineticObjects) DeleteBucketLifecycle(ctx context.Context, bucket stri
 	return removeLifecycleConfig(ctx, ko, bucket)
 }
 
-//THAI:
 func (ko *KineticObjects) ListObjectsV2(ctx context.Context, bucket, prefix, continuationToken, delimiter string, maxKeys int, fetchOwner bool, startAfter string) (result ListObjectsV2Info, err error) {
-	////////log.Println(" KINETIC: LIST OBJS V2 ", continuationToken, " ", startAfter)
+	//log.Println(" KINETIC: LIST OBJS V2 ", continuationToken, " ", startAfter)
 	marker := continuationToken
 	if marker == "" {
 		marker = startAfter

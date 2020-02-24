@@ -253,7 +253,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 	endKey := startKey + "z"
 	//log.Println(" START/END KEY", startKey, endKey)
         kc := GetKineticConnection()
-        keys, err := kc.GetKeyRange(startKey, endKey, true, true, 800, false, kopts)
+        keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
         ReleaseConnection(kc.Idx)
 
         if err != nil {
@@ -421,7 +421,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         endKey := startKey +"z" 
         //log.Println(" START/END KEY", startKey, endKey)
         kc := GetKineticConnection()
-        keys, err := kc.GetKeyRange(startKey, endKey, true, true, 800, false, kopts)
+        keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
         ReleaseConnection(kc.Idx)
 
         if err != nil {

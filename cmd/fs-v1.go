@@ -19,7 +19,7 @@ package cmd
 import (
 	"bytes"
 	"context"
-	//"fmt"
+	"fmt"
 	//"log"
 	"io"
 	"io/ioutil"
@@ -292,6 +292,7 @@ func (fs *FSObjects) statBucketDir(ctx context.Context, bucket string) (os.FileI
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(" STAT BUCKET DIR", st)
 	return st, nil
 }
 
