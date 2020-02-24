@@ -613,12 +613,12 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 		//nsUnlocer()
 		return nil, err
 	}
-        kineticMutex.Lock()
+        //kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(bucket + "/" + object)
 	var reader1 io.Reader = kc
 	reader := io.LimitReader(reader1, length)
-        kineticMutex.Unlock()
+        //kineticMutex.Unlock()
 	return objReaderFn(reader, h, opts.CheckCopyPrecondFn, closeFn)
 }
 
