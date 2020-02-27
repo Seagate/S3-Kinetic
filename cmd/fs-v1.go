@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	//"log"
+	"log"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -468,7 +468,7 @@ func (fs *FSObjects) CopyObject(ctx context.Context, srcBucket, srcObject, dstBu
 		// Return the new object info.
 		return fsMeta.ToObjectInfo(srcBucket, srcObject, fi), nil
 	}
-
+	log.Println("SRCDST NOT SAME", srcInfo.PutObjReader.Size(), srcInfo.PutObjReader)
 	if err := checkPutObjectArgs(ctx, dstBucket, dstObject, fs, srcInfo.PutObjReader.Size()); err != nil {
 		return ObjectInfo{}, err
 	}

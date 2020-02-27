@@ -25,7 +25,7 @@ import (
 	"encoding/xml"
 	//"fmt"
 	"io"
-	//"log"
+	"log"
 	goioutil "io/ioutil"
 	"net/http"
 	"net/url"
@@ -678,7 +678,7 @@ func isRemoteCallRequired(ctx context.Context, bucket string, objAPI ObjectLayer
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
 func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println(" COPY OBJECT HANDLER")
+	log.Println(" COPY OBJECT HANDLER")
 	ctx := newContext(r, w, "CopyObject")
 
 	defer logger.AuditLog(w, r, "CopyObject", mustGetClaimsFromToken(r))
@@ -796,6 +796,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	getOpts.CheckCopyPrecondFn = checkCopyPrecondFn
 	srcOpts.CheckCopyPrecondFn = checkCopyPrecondFn
 	var rs *HTTPRangeSpec
+	log.Println("GETOBJECTNINFO IN HANDLER")
 	gr, err := getObjectNInfo(ctx, srcBucket, srcObject, rs, r.Header, lock, getOpts)
 	if err != nil {
 		if isErrPreconditionFailed(err) {
@@ -1026,6 +1027,8 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	var objInfo ObjectInfo
 
 	if isRemoteCopyRequired(ctx, srcBucket, dstBucket, objectAPI) {
+                log.Println(" REMOTE COPY HANDLER", srcInfo.Reader)
+
 		var dstRecords []dns.SrvRecord
 		dstRecords, err = globalDNSConfig.Get(dstBucket)
 		if err != nil {
@@ -1039,6 +1042,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 			writeErrorResponse(ctx, w, toAPIError(ctx, rerr), r.URL, guessIsBrowserReq(r))
 			return
 		}
+		log.Println(" COPY HANDLER", srcInfo.Reader)
 		remoteObjInfo, rerr := client.PutObject(dstBucket, dstObject, srcInfo.Reader,
 			srcInfo.Size, "", "", srcInfo.UserDefined, dstOpts.ServerSideEncryption)
 		if rerr != nil {
@@ -1050,6 +1054,8 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	} else {
 		// Copy source object to destination, if source and destination
 		// object is same then only metadata is updated.
+                log.Println(" 1. COPY HANDLER SAME ", srcInfo.Reader)
+
 		objInfo, err = objectAPI.CopyObject(ctx, srcBucket, srcObject, dstBucket, dstObject, srcInfo, srcOpts, dstOpts)
 		if err != nil {
 			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))

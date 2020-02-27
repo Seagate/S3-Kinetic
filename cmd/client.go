@@ -64,7 +64,7 @@ type Client struct {
 }
 
 func (c *Client) Read(value []byte) (int, error) {
-        ///log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
+        //log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
 	fsMeta := fsMetaV1{}
         cvalue, ptr, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
@@ -563,7 +563,7 @@ func (c *Client) CGet(key string, acmd CmdOpts) (*C.char, *C.char, uint32, error
 	mutexCmd.Unlock()
 	var err error = nil
 	if status != 0 || cvalue == nil {
-		err =  errors.New("NOT FOUND")
+		err =  errKineticNotFound //errors.New("NOT FOUND")
 	}
         //log.Println(" CGET DONE ", err, cvalue, *ptr)
         return cvalue, *ptr, uint32(size), err                   
@@ -696,9 +696,9 @@ func (c *Client) CPut(key string, value []byte, size int, cmd CmdOpts) (uint32, 
 		c_value  = (*C.char)(nil)
 	}
 	var status C.int 
-	status = C.Put(1, c_key, C.CString(current_version), &psv, c_value, C.size_t(size), false, 1, 1) //, (*C.int)(unsafe.Pointer(&status)))
+	status = C.Put(1, c_key, C.CString(current_version), &psv, c_value, C.size_t(size), false, 1, 1)
 	mutexCmd.Unlock()
-        //log.Println("MINIO CPUT DONE ", toKineticError(KineticError(int(status)))) //time.Since(start))
+        //log.Println("MINIO CPUT DONE ", toKineticError(KineticError(int(status))), time.Since(start))
         return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
