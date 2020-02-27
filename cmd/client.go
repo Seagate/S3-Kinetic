@@ -69,7 +69,7 @@ func (c *Client) Read(value []byte) (int, error) {
         cvalue, ptr, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
                 err = errFileNotFound
-		if ptr != nil { 
+		if ptr != nil {
 			C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
                 c.ReleaseConn(c.Idx)
@@ -550,7 +550,7 @@ func (c *Client) CGetMeta(key string, acmd CmdOpts) (*C.char, *C.char, uint32, e
 // Use this for Skinny Waist interface
 func (c *Client) CGet(key string, acmd CmdOpts) (*C.char, *C.char, uint32, error) {
 	mutexCmd.Lock()
-        /////log.Println(" CALL CGET ", key)
+        //log.Println(" CALL CGET ", key)
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
         psv.tag = C.CString(string(acmd.Tag))
@@ -565,7 +565,7 @@ func (c *Client) CGet(key string, acmd CmdOpts) (*C.char, *C.char, uint32, error
 	if status != 0 || cvalue == nil {
 		err =  errors.New("NOT FOUND")
 	}
-        /////log.Println(" CGET DONE ", err, cvalue, *ptr)
+        //log.Println(" CGET DONE ", err, cvalue, *ptr)
         return cvalue, *ptr, uint32(size), err                   
 }
 
@@ -620,9 +620,11 @@ func (c *Client) CDelete(key string, cmd CmdOpts)  error {
         mutexCmd.Lock()
         current_version := "1"
         c_key := C.CString(key)
-        C.Delete(1, c_key, C.CString(current_version), false, 1, 1)
+	var status C.int 
+        status = C.Delete(1, c_key, C.CString(current_version), false, 1, 1)
+	//log.Println(" STATUS DEL ", int(status))
         mutexCmd.Unlock()
-        return  nil
+        return  toKineticError(KineticError(int(status)))
 }
 
 func (c *Client) Delete(key string, cmd CmdOpts) error {
@@ -693,10 +695,11 @@ func (c *Client) CPut(key string, value []byte, size int, cmd CmdOpts) (uint32, 
 	} else {
 		c_value  = (*C.char)(nil)
 	}
-	C.Put(1, c_key, C.CString(current_version), &psv, c_value, C.size_t(size), false, 1, 1)
+	var status C.int 
+	status = C.Put(1, c_key, C.CString(current_version), &psv, c_value, C.size_t(size), false, 1, 1) //, (*C.int)(unsafe.Pointer(&status)))
 	mutexCmd.Unlock()
-        ///log.Println("MINIO CPUT DONE ", time.Since(start))
-        return uint32(size), nil
+        //log.Println("MINIO CPUT DONE ", toKineticError(KineticError(int(status)))) //time.Since(start))
+        return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
 

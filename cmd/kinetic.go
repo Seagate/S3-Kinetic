@@ -672,7 +672,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
         	////log.Println(" 2. KineticObject getObjectInfo ", bucket, " ", object)
 
 		kc := GetKineticConnection()
-		//_, err := kc.Get(metakey, value, kopts)
+		//_, err := kc.CGet(metakey, value, kopts)
                 cvalue, size, err := kc.CGet(metakey, kopts)
                 value := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 
@@ -814,7 +814,7 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 
 //getObject - wrapper for GetObject
 func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
-	////log.Printf(" gET OBJ %s %s %d\n", bucket, object, length)
+	//log.Println(" GETOBJECT ", bucket, object, length)
 	if _, err = ko.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
 	}
@@ -926,7 +926,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 // Additionally writes `ko.json` which carries the necessary metadata
 // for future object operations.
 func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
-	//log.Printf(" PutObject %s in Bucket %s\n", object, bucket)
+	//log.Println(" PutObject ", object, bucket)
 	if err := checkPutObjectArgs(ctx, bucket, object, ko, r.Size()); err != nil {
 		return ObjectInfo{}, err
 	}
@@ -943,7 +943,7 @@ func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object s
 
 // putObject - wrapper for PutObject
 func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
-	//log.Printf(" putObject  %s in %s\n", object, bucket)
+	//log.Println(" putObject ", object, bucket)
 	data := r.Reader
 	var err error
 
@@ -973,7 +973,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         // No metadata is set, allocate a new one.
         //var metaBytes []byte
         meta := make(map[string]string)
-        //log.Printf("    OPTS USERDEFINED %+v\n", opts.UserDefined)
+        //log.Println("    OPTS USERDEFINED %+v\n", opts.UserDefined)
         for k, v := range opts.UserDefined {
                 meta[k] = v
         }

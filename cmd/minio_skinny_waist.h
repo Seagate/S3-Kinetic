@@ -35,9 +35,10 @@ void deallocate_gvalue_buffer(char* buff);
 
 char* Get(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, char*** ptr, int* size, int* status);
 
-void Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size, _Bool sync, int64_t sequence, int64_t connID);
+int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size,
+          _Bool sync, int64_t sequence, int64_t connID);
 
-void Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64_t sequence, int64_t connID);
+int Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64_t sequence, int64_t connID);
 
 void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32_t maxReturned, bool reverse, char* results, int* size);
 
