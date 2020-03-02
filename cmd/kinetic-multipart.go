@@ -25,7 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	//"log"
 	//"io/ioutil"
 	//"os"
 	//pathutil "path"
@@ -163,7 +163,7 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
         }
 
         bufSize := int64(blockSizeV1)
-	log.Println(" BLOCKSIZEV1 ", bufSize, data.Size())
+	//log.Println(" BLOCKSIZEV1 ", bufSize, data.Size())
         if size := data.Size(); size > 0 && bufSize > size {
                 bufSize = size
         }
@@ -369,7 +369,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         if err != nil {
                 err = errFileNotFound
 		if ptr != nil {
-			C.deallocate_gvalue_buffer((*C.char)(ptr))
+			//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
                 return result, err
         }
@@ -380,7 +380,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 		//kineticMutex.Unlock()
 	        var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	        err = json.Unmarshal(fsMetaBytes, &fsMeta);
-	        C.deallocate_gvalue_buffer((*C.char)(ptr))
+	        //C.deallocate_gvalue_buffer((*C.char)(ptr))
 		if err != nil {
 			return result, err
 		}
@@ -520,7 +520,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         if err != nil {
                 err = errFileNotFound
 		if ptr != nil {
-			C.deallocate_gvalue_buffer((*C.char)(ptr))
+			//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
                 return oi, err
         }
@@ -529,7 +529,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
 		fsMetaBytes = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		//kineticMutex.Unlock()
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-		C.deallocate_gvalue_buffer((*C.char)(ptr))
+		//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		if err != nil {
 			return oi, err
 		}

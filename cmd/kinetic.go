@@ -311,7 +311,7 @@ func (ko *KineticObjects) getBucketDir(ctx context.Context, bucket string) (stri
 }
 
 func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KVInfo, error) {
-	log.Println(" STAT BUCKET DIR: ", bucket)
+	//log.Println(" STAT BUCKET DIR: ", bucket)
         kopts := CmdOpts{
                 ClusterVersion:  0,
                 Force:           true,
@@ -348,7 +348,7 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
                 size:    0,
                 modTime: bi.Created,
 	}
-	log.Println("STAT BUCK: ", st)
+	//log.Println("STAT BUCK: ", st)
 	return st, nil
 }
 
@@ -643,9 +643,8 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
         return objInfo, nil
 }
 
-//THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
-        log.Println("***GetObjectNInfo***", object)
+        //log.Println("***GetObjectNInfo***", object)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
 	}
@@ -705,7 +704,7 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	}
 	// Read the object, doesn't exist returns an s3 compatible error.
 	size := length
-        log.Println("***1. GetObjectNInfo***", object, length)
+        //log.Println("***1. GetObjectNInfo***", object, length)
 
 	closeFn := func() {
 	}
@@ -723,7 +722,7 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	kc.Key = []byte(bucket + "/" + object)
 	var reader1 io.Reader = kc
 	reader := io.LimitReader(reader1, length)
-	log.Println("END: GetObjectNInfo", bucket, object)
+	//log.Println("END: GetObjectNInfo", bucket, object)
         //kineticMutex.Unlock()
 	return objReaderFn(reader, h, opts.CheckCopyPrecondFn, closeFn)
 }
@@ -920,7 +919,7 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 
 //getObject - wrapper for GetObject
 func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
-	log.Println(" GETOBJECT ", bucket, object, length)
+	//log.Println(" GETOBJECT ", bucket, object, length)
 	if _, err = ko.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
 	}

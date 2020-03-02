@@ -25,7 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
+	//"log"
 	"os"
 	pathutil "path"
 	"runtime"
@@ -248,7 +248,7 @@ func fsStatDir(ctx context.Context, statDir string) (os.FileInfo, error) {
 
 func koStat(key string) (KVInfo, error) {
 	var oi KVInfo
-	log.Println(" KO STAT")
+	//log.Println(" KO STAT")
         kopts := CmdOpts{
                 ClusterVersion:  0,
                 Force:           true,
@@ -263,18 +263,18 @@ func koStat(key string) (KVInfo, error) {
 
 	metaKey := "meta." + key
         kc := GetKineticConnection()
-        cvalue, ptr, size, err := kc.CGet(metaKey, kopts)
+        cvalue, _, size, err := kc.CGet(metaKey, kopts)
         ReleaseConnection(kc.Idx)
         if err != nil {
                 err = errFileNotFound 
-                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                //C.deallocate_gvalue_buffer((*C.char)(ptr))
                 return oi, err
 	}
         var value []byte
         if (cvalue != nil) {
             value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         }
-        C.deallocate_gvalue_buffer((*C.char)(ptr))
+        //C.deallocate_gvalue_buffer((*C.char)(ptr))
         //kineticMutex.Unlock()
         err = json.Unmarshal(value[:size], &fsMeta)
         if err != nil {
@@ -286,7 +286,7 @@ func koStat(key string) (KVInfo, error) {
                 size:    fsMeta.KoInfo.Size,
                 modTime: fsMeta.KoInfo.CreatedTime,
         }
-        log.Println(" END: KO STAT")
+        //log.Println(" END: KO STAT")
         return fi, err
 }
 
