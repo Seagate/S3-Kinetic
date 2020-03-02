@@ -137,14 +137,14 @@ const (
 	globalMaxObjectSize = 5 * humanize.TiByte
 
 	// Minimum Part size for multipart upload is 5MiB
-	globalMinPartSize = 1 * humanize.MiByte     //Thai
+	globalMinPartSize = 5 * humanize.MiByte     //Thai
 
 	// Maximum Part size for multipart upload is 5GiB
-	globalMaxPartSize = 1 * humanize.GiByte
+	globalMaxPartSize = 5 * humanize.GiByte
 
 	// Maximum Part ID for multipart upload is 10000
 	// (Acceptable values range from 1 to 5,000,000 (Thai) inclusive)
-	globalMaxPartID = 5000000  // Thai 10000
+	globalMaxPartID = 10000 // Thai 10000
 
 	// Default values used while communicating with the cloud backends
 	defaultDialTimeout   = 30 * time.Second

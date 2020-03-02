@@ -179,7 +179,7 @@ func (ki KVInfo) Sys() interface{}   { return nil }
 
 func allocateValBuf(bufSize int) []byte {
 	buf := C.allocate_pvalue_buffer(C.int(bufSize))
-        goBuf := (*[1 << 20 ]byte)(unsafe.Pointer(buf))[:bufSize:bufSize]
+        goBuf := (*[1 << 30 ]byte)(unsafe.Pointer(buf))[:bufSize:bufSize]
 	return goBuf
 }
 
@@ -311,7 +311,7 @@ func (ko *KineticObjects) getBucketDir(ctx context.Context, bucket string) (stri
 }
 
 func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KVInfo, error) {
-	//log.Println(" STAT BUCKET DIR: ", bucket)
+	log.Println(" STAT BUCKET DIR: ", bucket)
         kopts := CmdOpts{
                 ClusterVersion:  0,
                 Force:           true,
@@ -329,18 +329,18 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
         if err != nil {
                 err = errFileNotFound
                 if ptr != nil {
-                        C.deallocate_gvalue_buffer((*C.char)(ptr))
+                        //C.deallocate_gvalue_buffer((*C.char)(ptr))
                 }
                 kineticMutex.Unlock()
                 return &KVInfo{}, err
         }
 	bi := BucketInfo{}
         if (cvalue != nil) {
-                value := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+                value := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
                 buf := bytes.NewBuffer(value[:size])
                 dec := gob.NewDecoder(buf)
                 dec.Decode(&bi)
-                C.deallocate_gvalue_buffer((*C.char)(ptr))
+                //C.deallocate_gvalue_buffer((*C.char)(ptr))
         }
         kineticMutex.Unlock()
         st := &KVInfo{
@@ -348,7 +348,7 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
                 size:    0,
                 modTime: bi.Created,
 	}
-	//log.Println("STAT BUCK: ", st)
+	log.Println("STAT BUCK: ", st)
 	return st, nil
 }
 
@@ -381,7 +381,7 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
         _, ptr, _, err := kc.CGetMeta(key, kopts)
         ReleaseConnection(kc.Idx)
 	if ptr != nil {
-        	C.deallocate_gvalue_buffer((*C.char)(ptr))
+        	//C.deallocate_gvalue_buffer((*C.char)(ptr))
 	}
 	if err == nil {
 	        kineticMutex.Unlock()
@@ -428,17 +428,17 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
         ReleaseConnection(kc.Idx)
         if err != nil {
 		if ptr != nil {
-			C.deallocate_gvalue_buffer((*C.char)(ptr))
+			//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
                 kineticMutex.Unlock()
                 return bi, toObjectErr(errVolumeNotFound, bucket)
         }
         if (cvalue != nil) {
-		value := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+		value := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		buf := bytes.NewBuffer(value[:size])
 		dec := gob.NewDecoder(buf)
 		dec.Decode(&bi)
-		C.deallocate_gvalue_buffer((*C.char)(ptr))
+		//C.deallocate_gvalue_buffer((*C.char)(ptr))
 	}
         kineticMutex.Unlock()
 	return bi, nil
@@ -474,21 +474,21 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			cvalue, ptr, size, err := kc.CGet(string(key), kopts)
                         if err != nil {
 				if ptr != nil {
-					C.deallocate_gvalue_buffer((*C.char)(ptr))
+					//C.deallocate_gvalue_buffer((*C.char)(ptr))
 				}
                                 ReleaseConnection(kc.Idx)
 			        kineticMutex.Unlock()
                                 return nil, err
                         }
 			if (cvalue != nil) {
-				value = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+				value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 				buf := bytes.NewBuffer(value[:size])
 				dec := gob.NewDecoder(buf)
 				dec.Decode(&bucketInfo)
 				name := []byte(bucketInfo.Name)
 				bucketInfo.Name = string(name[7:])
 				bucketInfos = append(bucketInfos, bucketInfo)
-				C.deallocate_gvalue_buffer((*C.char)(ptr))
+				//C.deallocate_gvalue_buffer((*C.char)(ptr))
 			}
 		}
 	}
@@ -585,16 +585,16 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 		if err != nil {
 			err = errFileNotFound
 			if ptr != nil {
-				C.deallocate_gvalue_buffer((*C.char)(ptr))
+				//C.deallocate_gvalue_buffer((*C.char)(ptr))
 			}
                         // For any error to read fsMeta, set default ETag and proceed.
                         fsMeta = ko.defaultFsJSON(srcObject)
 		}
 		if (cvalue != nil) {
-			value := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+			value := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 			fsMeta.Meta = make(map[string]string)
 			err = json.Unmarshal(value[:size], &fsMeta)
-			C.deallocate_gvalue_buffer((*C.char)(ptr))
+			//C.deallocate_gvalue_buffer((*C.char)(ptr))
 			if err != nil {
 	                        // For any error to read fsMeta, set default ETag and proceed.
 	                        fsMeta = ko.defaultFsJSON(srcObject)
@@ -645,7 +645,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 
 //THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
-        //log.Println("***GetObjectNInfo***", object)
+        log.Println("***GetObjectNInfo***", object)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
 	}
@@ -705,6 +705,8 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	}
 	// Read the object, doesn't exist returns an s3 compatible error.
 	size := length
+        log.Println("***1. GetObjectNInfo***", object, length)
+
 	closeFn := func() {
 	}
 	// Check if range is valid
@@ -721,7 +723,7 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	kc.Key = []byte(bucket + "/" + object)
 	var reader1 io.Reader = kc
 	reader := io.LimitReader(reader1, length)
-	//log.Println("END: GetObjectNInfo", bucket, object)
+	log.Println("END: GetObjectNInfo", bucket, object)
         //kineticMutex.Unlock()
 	return objReaderFn(reader, h, opts.CheckCopyPrecondFn, closeFn)
 }
@@ -778,7 +780,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		kc := GetKineticConnection()
 		//_, err := kc.CGet(metakey, value, kopts)
                 cvalue, size, err := kc.CGet(metakey, kopts)
-                value := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+                value := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 
 		ReleaseConnection(kc.Idx)
 		//kineticMutex.Unlock()
@@ -830,16 +832,16 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
         if err != nil {
                 err = errFileNotFound
 		if ptr != nil {
-			C.deallocate_gvalue_buffer((*C.char)(ptr))
+			//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
 		kineticMutex.Unlock()
 	        return oi, err
 	}
         if (cvalue != nil) {
-		value := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+		value := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		fsMeta.Meta = make(map[string]string)
 		err = json.Unmarshal(value[:size], &fsMeta)
-		C.deallocate_gvalue_buffer((*C.char)(ptr))
+		//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		if err != nil {
 			kineticMutex.Unlock()
 			return oi, err
@@ -918,7 +920,7 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 
 //getObject - wrapper for GetObject
 func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
-	//log.Println(" GETOBJECT ", bucket, object, length)
+	log.Println(" GETOBJECT ", bucket, object, length)
 	if _, err = ko.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
 	}
@@ -958,7 +960,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 	if err != nil {
 		err = errFileNotFound
 		if ptr != nil {
-			C.deallocate_gvalue_buffer((*C.char)(ptr))
+			//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
 		kineticMutex.Unlock()
 		return toObjectErr(err, bucket, object)
@@ -1002,15 +1004,15 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 		err = InvalidRange{offset, length, int64(size)}
 		logger.LogIf(ctx, err)
 		if ptr != nil {
-			C.deallocate_gvalue_buffer((*C.char)(ptr))
+			//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
 		kineticMutex.Unlock()
 		return err
 	}
 	if  cvalue != nil {
-	        value := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+	        value := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		writer.Write(value[:size])
-		C.deallocate_gvalue_buffer((*C.char)(ptr))
+		//C.deallocate_gvalue_buffer((*C.char)(ptr))
 	}
 	// Allocate a staging buffer.
 	//buf := make([]byte, int(bufSize))
@@ -1069,7 +1071,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
 	if ptr != nil {
-	        C.deallocate_gvalue_buffer((*C.char)(ptr))
+	        //C.deallocate_gvalue_buffer((*C.char)(ptr))
 	}
 	if err != nil && err != errKineticNotFound {
 		return ObjectInfo{}, toObjectErr(err, bucket, object)
@@ -1215,15 +1217,15 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         if err != nil {
                 err = errFileNotFound
 		if ptr != nil {
-	                C.deallocate_gvalue_buffer((*C.char)(ptr))
+	                //C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
                 return  err
         }
         var fsMetaBytes []byte
         if (cvalue != nil) {
-		fsMetaBytes = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+		fsMetaBytes = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-		C.deallocate_gvalue_buffer((*C.char)(ptr))
+		//C.deallocate_gvalue_buffer((*C.char)(ptr))
 	}
         if len(fsMeta.Parts) == 0 {
 		key := bucket + SlashSeparator + object

@@ -25,7 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	//"log"
+	"log"
 	//"io/ioutil"
 	//"os"
 	//pathutil "path"
@@ -163,6 +163,7 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
         }
 
         bufSize := int64(blockSizeV1)
+	log.Println(" BLOCKSIZEV1 ", bufSize, data.Size())
         if size := data.Size(); size > 0 && bufSize > size {
                 bufSize = size
         }
@@ -375,7 +376,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         var fsMetaBytes []byte
         var fsMeta fsMetaV1
         if (cvalue != nil) {
-		fsMetaBytes = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+		fsMetaBytes = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		//kineticMutex.Unlock()
 	        var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	        err = json.Unmarshal(fsMetaBytes, &fsMeta);
@@ -525,7 +526,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         }
         var fsMetaBytes []byte
         if (cvalue != nil) {
-		fsMetaBytes = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+		fsMetaBytes = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		//kineticMutex.Unlock()
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
 		C.deallocate_gvalue_buffer((*C.char)(ptr))

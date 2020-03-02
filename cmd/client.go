@@ -70,30 +70,30 @@ func (c *Client) Read(value []byte) (int, error) {
         if err != nil {
                 err = errFileNotFound
 		if ptr != nil {
-			C.deallocate_gvalue_buffer((*C.char)(ptr))
+			//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
                 c.ReleaseConn(c.Idx)
                 return 0, err
         }
         if (cvalue != nil) {
-		fsMetaBytes := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+		fsMetaBytes := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-	        C.deallocate_gvalue_buffer((*C.char)(ptr))
+	        //C.deallocate_gvalue_buffer((*C.char)(ptr))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
 		cvalue, ptr, size, err := c.CGet(string(c.Key), c.Opts)
                 if err != nil {
                         if ptr != nil {
-				C.deallocate_gvalue_buffer((*C.char)(ptr))
+				//C.deallocate_gvalue_buffer((*C.char)(ptr))
 			}
                         c.ReleaseConn(c.Idx)
                         return 0, err
                 }
 		if cvalue  != nil {
-			value1 := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+			value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 			copy(value, value1)
-	                C.deallocate_gvalue_buffer((*C.char)(ptr))
+	                //C.deallocate_gvalue_buffer((*C.char)(ptr))
                         c.ReleaseConn(c.Idx)
                         return int(size), err
                 }
@@ -108,19 +108,20 @@ func (c *Client) Read(value []byte) (int, error) {
 			key := string(c.Key)+ "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
 			///log.Println(" KEY: ", key)
 			cvalue, ptr1, size, err := c.CGet(key, c.Opts)
+
 			if err != nil {
 				///log.Println(" NOT FOUND")
 				if ptr1 != nil {
-					 C.deallocate_gvalue_buffer((*C.char)(ptr1))
+					 //C.deallocate_gvalue_buffer((*C.char)(ptr1))
 				}
 				c.ReleaseConn(c.Idx)
 				return 0, err
 			}
 			if cvalue != nil {
-				value1 := (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+				value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 				copy(value, value1)
 				///log.Println(" VAL SIZE", len(value))
-				C.deallocate_gvalue_buffer((*C.char)(ptr1))
+				//C.deallocate_gvalue_buffer((*C.char)(ptr1))
 				if i ==  len(fsMeta.Parts) -1 {
 					///log.Println(" Release Connection")
 					*(c.NextPartNumber) = 0
@@ -559,7 +560,9 @@ func (c *Client) CGet(key string, acmd CmdOpts) (*C.char, *C.char, uint32, error
 	var size  int
 	var status int
 	var cvalue *C.char
-        cvalue = C.Get(1, c_key, &psv, &ptr, (*C.int)(unsafe.Pointer(&size)), (*C.int)(unsafe.Pointer(&status)))
+	bvalue := make([]byte, 5*1048576)
+        cvalue = C.Get(1, c_key, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, &ptr, (*C.int)(unsafe.Pointer(&size)), (*C.int)(unsafe.Pointer(&status)))
+	//log.Println("CVALUE BVALUE", cvalue, *ptr)
 	mutexCmd.Unlock()
 	var err error = nil
 	if status != 0 || cvalue == nil {
@@ -840,7 +843,7 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 	var size int = 0
 	c_size := (*C.int)(unsafe.Pointer(&size))
 	C.GetKeyRange(1, c_startKey, c_endKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), 800, false, c_Keys, c_size)
-        Keys = (*[1 << 20 ]byte)(unsafe.Pointer(c_Keys))[:size:size]
+        Keys = (*[1 << 30 ]byte)(unsafe.Pointer(c_Keys))[:size:size]
 	keyStrings := strings.Split(string(Keys[:size]), ":")
         //log.Println(" KEYS: ", string(Keys[:size]))
 	var keys [][]byte

@@ -408,8 +408,7 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		statusCodeWritten = true
 		w.WriteHeader(http.StatusPartialContent)
 	}
-	//objInfo.Size = 1024*1024
-	buf := make([]byte, 1024*1024) //objInfo.Size)
+	buf := make([]byte, objInfo.Size)
 	//var buf bytes.Buffer
         //log.Println("6. GET OBJECT HANDLER SIZE")
 	if _, err = io.CopyBuffer(httpWriter, gr, buf); err != nil {

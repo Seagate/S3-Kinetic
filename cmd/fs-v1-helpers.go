@@ -25,6 +25,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"os"
 	pathutil "path"
 	"runtime"
@@ -247,7 +248,7 @@ func fsStatDir(ctx context.Context, statDir string) (os.FileInfo, error) {
 
 func koStat(key string) (KVInfo, error) {
 	var oi KVInfo
-	//log.Println(" KO STAT")
+	log.Println(" KO STAT")
         kopts := CmdOpts{
                 ClusterVersion:  0,
                 Force:           true,
@@ -271,7 +272,7 @@ func koStat(key string) (KVInfo, error) {
 	}
         var value []byte
         if (cvalue != nil) {
-            value = (*[1 << 20 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+            value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         }
         C.deallocate_gvalue_buffer((*C.char)(ptr))
         //kineticMutex.Unlock()
@@ -285,7 +286,7 @@ func koStat(key string) (KVInfo, error) {
                 size:    fsMeta.KoInfo.Size,
                 modTime: fsMeta.KoInfo.CreatedTime,
         }
-        //log.Println(" END: KO STAT")
+        log.Println(" END: KO STAT")
         return fi, err
 }
 
