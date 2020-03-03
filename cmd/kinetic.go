@@ -31,6 +31,7 @@ import (
 	"net/http"
 	"path"
 	"time"
+	"strings"
 	"sync"
 	//"github.com/minio/minio/pkg/kinetic"
 	"github.com/minio/minio/pkg/kinetic_proto"
@@ -97,7 +98,7 @@ func InitKineticConnection(IP string, tls bool, kc *Client) error {
 }
 
 type KineticObjects struct {
-	//totalUsed    uint64 //Total usage
+	totalUsed    uint64 //Total usage
 	fsPath       string
 	metaJSONFile string
 	rwPool       *fsIOPool
@@ -1262,7 +1263,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 }
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
-	//log.Println("LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
+	//log.Println("LIST OBJECTS in Bucket ", bucket,  "prefix:", prefix, "marker:",  marker, "deli:", delimiter, maxKeys)
 	var objInfos []ObjectInfo
 	//var eof bool
 	//var nextMarker string
@@ -1288,16 +1289,40 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	}
 	for _, key := range keys {
 		var objInfo ObjectInfo
-		if string(key[:5]) == "meta." {
+                //log.Println("KEY ", string(key), string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]))
+		if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
 			//log.Println("KEY ", string(key[5:]))
-			objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(5+len(bucket)+1):]))
+			objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
 			//nextMarker = objInfo.Name
 			if err != nil {
 				return loi, err
 			}
+	                if delimiter == SlashSeparator && prefix != "" &&  !hasSuffix(string(prefix), SlashSeparator) {
+				objInfo.IsDir = true
+				objInfo.Name = prefix + SlashSeparator
+			} else if delimiter == SlashSeparator && prefix == "" {
+				result := strings.Split( string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
+				if len(result) != 0 {
+	                                objInfo.IsDir = true
+	                                objInfo.Name = result[0] + SlashSeparator
+				}
+			}
 			//objInfo.Name = string([]byte(objInfo.Name)[len(bucket)+1:])
-			objInfos = append(objInfos, objInfo)
-                        //log.Println("2. KEY ", objInfo.Name)
+			if len(objInfos) == 0 {
+                                objInfos = append(objInfos, objInfo)
+			} else {
+				var found bool = false
+				for _, obj := range objInfos {
+					if obj.Name == objInfo.Name {
+						found = true
+						break
+					}
+				}
+				if !found {
+                                        objInfos = append(objInfos, objInfo)
+				}
+
+			}
 		}
 	}
 	result := ListObjectsInfo{}
@@ -1311,6 +1336,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
         //log.Println("END: LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
 	return result, nil
 }
+
 
 func (ko *KineticObjects) ReloadFormat(ctx context.Context, dryRun bool) error {
 	logger.LogIf(ctx, NotImplemented{})

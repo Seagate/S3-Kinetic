@@ -20,7 +20,7 @@ import (
 	"context"
 	"path"
 	"sync"
-
+	"log"
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
@@ -241,6 +241,7 @@ func removeListenerConfig(ctx context.Context, objAPI ObjectLayer, bucket string
 }
 
 func listObjectsNonSlash(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int, tpool *TreeWalkPool, listDir ListDirFunc, getObjInfo func(context.Context, string, string) (ObjectInfo, error), getObjectInfoDirs ...func(context.Context, string, string) (ObjectInfo, error)) (loi ListObjectsInfo, err error) {
+	log.Println("LIST OBJS NON SLASH")
 	endWalkCh := make(chan struct{})
 	defer close(endWalkCh)
 	recursive := true
@@ -324,7 +325,10 @@ func listObjectsNonSlash(ctx context.Context, bucket, prefix, marker, delimiter 
 }
 
 func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, delimiter string, maxKeys int, tpool *TreeWalkPool, listDir ListDirFunc, getObjInfo func(context.Context, string, string) (ObjectInfo, error), getObjectInfoDirs ...func(context.Context, string, string) (ObjectInfo, error)) (loi ListObjectsInfo, err error) {
+	log.Println(" lISTOBJECTS", prefix, marker,  delimiter,  maxKeys)
 	if delimiter != SlashSeparator && delimiter != "" {
+	        log.Println(" 0. lISTOBJECTS", prefix, marker,  delimiter,  maxKeys)
+
 		return listObjectsNonSlash(ctx, bucket, prefix, marker, delimiter, maxKeys, tpool, listDir, getObjInfo, getObjectInfoDirs...)
 	}
 
@@ -351,6 +355,8 @@ func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, d
 	// as '/' we don't have any entries, since all the keys are
 	// of form 'keyName/...'
 	if delimiter == SlashSeparator && prefix == SlashSeparator {
+        log.Println(" 1. lISTOBJECTS")
+
 		return loi, nil
 	}
 
@@ -362,8 +368,11 @@ func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, d
 	// Default is recursive, if delimiter is set then list non recursive.
 	recursive := true
 	if delimiter == SlashSeparator {
+        log.Println(" 2. lISTOBJECTS")
+
 		recursive = false
 	}
+        log.Println(" 3. lISTOBJECTS")
 
 	walkResultCh, endWalkCh := tpool.Release(listParams{bucket, recursive, marker, prefix, false})
 	if walkResultCh == nil {

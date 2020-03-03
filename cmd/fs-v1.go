@@ -522,6 +522,7 @@ func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, 
 	}
 	// For a directory, we need to send an reader that returns no bytes.
 	if hasSuffix(object, SlashSeparator) {
+		log.Println("IT IS A DIR")
 		// The lock taken above is released when
 		// objReader.Close() is called by the caller.
 		return NewGetObjectReaderFromReader(bytes.NewBuffer(nil), objInfo, opts.CheckCopyPrecondFn, nsUnlocker)
@@ -860,6 +861,7 @@ func (fs *FSObjects) putObject(ctx context.Context, bucket string, object string
 	// with a slash separator, we treat it like a valid operation
 	// and return success.
 	if isObjectDir(object, data.Size()) {
+		log.Println("OBJECT IS DIR", object, data.Size())
 		// Check if an object is present as one of the parent dir.
 		if fs.parentDirIsObject(ctx, bucket, path.Dir(object)) {
 			return ObjectInfo{}, toObjectErr(errFileParentIsFile, bucket, object)
@@ -1032,6 +1034,8 @@ func (fs *FSObjects) DeleteObject(ctx context.Context, bucket, object string) er
 func (fs *FSObjects) listDirFactory() ListDirFunc {
 	// listDir - lists all the entries at a given prefix and given entry in the prefix.
 	listDir := func(bucket, prefixDir, prefixEntry string) (entries []string) {
+        log.Println("ListDir", bucket, prefixDir, prefixEntry)
+
 		var err error
 		entries, err = readDir(pathJoin(fs.fsPath, bucket, prefixDir))
 		if err != nil && err != errFileNotFound {
@@ -1131,7 +1135,7 @@ func (fs *FSObjects) getObjectETag(ctx context.Context, bucket, entry string, lo
 // ListObjects - list all objects at prefix upto maxKeys., optionally delimited by '/'. Maintains the list pool
 // state for future re-entrant list requests.
 func (fs *FSObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
-	//fmt.Println("LIST OBJECTS in Bucket ", bucket, " prefix ", prefix, " marker ", marker, " deli ", delimiter, " ", maxKeys)
+	fmt.Println("LIST OBJECTS in Bucket ", bucket, "Pre:", prefix, "Mark:", marker, "Del:", delimiter, maxKeys)
 	return listObjects(ctx, fs, bucket, prefix, marker, delimiter, maxKeys, fs.listPool,
 		fs.listDirFactory(), fs.getObjectInfo, fs.getObjectInfo)
 }
