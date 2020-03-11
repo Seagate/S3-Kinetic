@@ -25,7 +25,7 @@ import (
 	"encoding/xml"
 	//"fmt"
 	"io"
-	"log"
+	//"log"
 	goioutil "io/ioutil"
 	"net/http"
 	"net/url"
@@ -677,7 +677,7 @@ func isRemoteCallRequired(ctx context.Context, bucket string, objAPI ObjectLayer
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
 func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println(" COPY OBJECT HANDLER")
+	//log.Println(" COPY OBJECT HANDLER")
 	ctx := newContext(r, w, "CopyObject")
 
 	defer logger.AuditLog(w, r, "CopyObject", mustGetClaimsFromToken(r))
@@ -795,7 +795,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	getOpts.CheckCopyPrecondFn = checkCopyPrecondFn
 	srcOpts.CheckCopyPrecondFn = checkCopyPrecondFn
 	var rs *HTTPRangeSpec
-	log.Println("GETOBJECTNINFO IN HANDLER")
+	//log.Println("GETOBJECTNINFO IN HANDLER")
 	gr, err := getObjectNInfo(ctx, srcBucket, srcObject, rs, r.Header, lock, getOpts)
 	if err != nil {
 		if isErrPreconditionFailed(err) {
@@ -1026,7 +1026,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	var objInfo ObjectInfo
 
 	if isRemoteCopyRequired(ctx, srcBucket, dstBucket, objectAPI) {
-                log.Println(" REMOTE COPY HANDLER", srcInfo.Reader)
+                //log.Println(" REMOTE COPY HANDLER", srcInfo.Reader)
 
 		var dstRecords []dns.SrvRecord
 		dstRecords, err = globalDNSConfig.Get(dstBucket)
@@ -1041,7 +1041,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 			writeErrorResponse(ctx, w, toAPIError(ctx, rerr), r.URL, guessIsBrowserReq(r))
 			return
 		}
-		log.Println(" COPY HANDLER", srcInfo.Reader)
+		//log.Println(" COPY HANDLER", srcInfo.Reader)
 		remoteObjInfo, rerr := client.PutObject(dstBucket, dstObject, srcInfo.Reader,
 			srcInfo.Size, "", "", srcInfo.UserDefined, dstOpts.ServerSideEncryption)
 		if rerr != nil {
@@ -1053,7 +1053,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 	} else {
 		// Copy source object to destination, if source and destination
 		// object is same then only metadata is updated.
-                log.Println(" 1. COPY HANDLER SAME ", srcInfo.Reader)
+                //log.Println(" 1. COPY HANDLER SAME ", srcInfo.Reader)
 
 		objInfo, err = objectAPI.CopyObject(ctx, srcBucket, srcObject, dstBucket, dstObject, srcInfo, srcOpts, dstOpts)
 		if err != nil {
@@ -1093,7 +1093,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
 func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Request) {
-	//fmt.Println(" PUT OBJECT HANDLER")
+	//log.Println(" PUT OBJECT HANDLER")
 	ctx := newContext(r, w, "PutObject")
 	defer logger.AuditLog(w, r, "PutObject", mustGetClaimsFromToken(r))
 
@@ -1113,11 +1113,12 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 	object := vars["object"]
-
 	// To detect if the client has disconnected.
 	r.Body = &detectDisconnect{r.Body, r.Context().Done()}
 
 	// X-Amz-Copy-Source shouldn't be set for this call.
+	//log.Println(" 1. PUT OBJ HANDLER", object)
+
 	if _, ok := r.Header[xhttp.AmzCopySource]; ok {
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidCopySource), r.URL, guessIsBrowserReq(r))
 		return
@@ -1137,6 +1138,7 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidDigest), r.URL, guessIsBrowserReq(r))
 		return
 	}
+
 	/// if Content-Length is unknown/missing, deny the request
 	size := r.ContentLength
 	rAuthType := getRequestAuthType(r)
@@ -1153,6 +1155,7 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 			}
 		}
 	}
+
 	if size == -1 {
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentLength), r.URL, guessIsBrowserReq(r))
 		return
@@ -1273,21 +1276,28 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 		writeErrorResponseHeadersOnly(w, toAPIError(ctx, err))
 		return
 	}
+	//log.Println("2. PUT OBJ HANDLER", object)
 	getObjectInfo := objectAPI.GetObjectInfo
 	if api.CacheAPI() != nil {
 		getObjectInfo = api.CacheAPI().GetObjectInfo
 		putObject = api.CacheAPI().PutObject
 	}
+        //log.Println("3. PUT OBJ HANDLER", object)
+
 	retPerms := isPutActionAllowed(rAuthType, bucket, object, r, iampolicy.PutObjectRetentionAction)
 	retentionMode, retentionDate, s3Err := checkPutObjectRetentionAllowed(ctx, r, bucket, object, getObjectInfo, retPerms)
 	if s3Err == ErrNone && retentionMode != "" {
 		metadata[strings.ToLower(xhttp.AmzObjectLockMode)] = string(retentionMode)
 		metadata[strings.ToLower(xhttp.AmzObjectLockRetainUntilDate)] = retentionDate.UTC().Format(time.RFC3339)
 	}
+        //log.Println("4. PUT OBJ HANDLER", object)
+
 	if s3Err != ErrNone {
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Err), r.URL, guessIsBrowserReq(r))
 		return
 	}
+
+        //log.Println("5. PUT OBJ HANDLER", object)
 
 	var objectEncryptionKey []byte
 	if objectAPI.IsEncryptionSupported() {
@@ -1314,6 +1324,7 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 
 	// Ensure that metadata does not contain sensitive information
 	crypto.RemoveSensitiveEntries(metadata)
+        //log.Println(" 11. PUT OBJ HANDLER", object)
 
 	// Create the object..
 	objInfo, err := putObject(ctx, bucket, object, pReader, opts)
@@ -1321,6 +1332,7 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
+        //log.Println(" 12. PUT OBJ HANDLER", object)
 
 	etag := objInfo.ETag
 	if objInfo.IsCompressed() {
@@ -1345,7 +1357,7 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	writeSuccessResponseHeadersOnly(w)
-
+	//log.Println(" POT SUCCESS", object)
 	// Notify object created event.
 	sendEvent(eventArgs{
 		EventName:    event.ObjectCreatedPut,

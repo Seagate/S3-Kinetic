@@ -33,7 +33,7 @@ char* allocate_pvalue_buffer(int size);
 void deallocate_gvalue_buffer(char* buff);
 
 
-char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, char*** ptr, int* size, int* status);
+char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
 
 int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size,
           _Bool sync, int64_t sequence, int64_t connID);

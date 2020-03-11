@@ -20,7 +20,7 @@ import (
 	"context"
 	"os"
 	"strings"
-
+	"log"
 	"github.com/minio/minio/cmd/logger"
 )
 
@@ -64,6 +64,7 @@ func handleSignals() {
 	}
 
 	for {
+		log.Println(" SIGNALS")
 		select {
 		case err := <-globalHTTPServerErrorCh:
 			if objAPI := newObjectLayerWithoutSafeModeFn(); objAPI != nil {

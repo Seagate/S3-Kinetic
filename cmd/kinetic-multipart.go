@@ -107,7 +107,7 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
         }
 	//log.Println(" META BYTES", string(fsMetaBytes))
 
-	kopts := CmdOpts{
+	kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{}, //(fsMeta.Meta),
@@ -174,7 +174,7 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
 		//log.Println("READ ERROR")
                 return pi, err
         }
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -240,7 +240,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 return result, toObjectErr(err, bucket)
         }
 
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -364,13 +364,10 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 	//log.Println(" GET JSON FILE FOR", key)
         //kineticMutex.Lock()
         kc = GetKineticConnection()
-        cvalue, ptr, size, err := kc.CGet(key, kopts)
+        cvalue, size, err := kc.CGet(key, 0,  kopts)
         ReleaseConnection(kc.Idx)
         if err != nil {
                 err = errFileNotFound
-		if ptr != nil {
-			//C.deallocate_gvalue_buffer((*C.char)(ptr))
-		}
                 return result, err
         }
         var fsMetaBytes []byte
@@ -380,7 +377,6 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 		//kineticMutex.Unlock()
 	        var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	        err = json.Unmarshal(fsMetaBytes, &fsMeta);
-	        //C.deallocate_gvalue_buffer((*C.char)(ptr))
 		if err != nil {
 			return result, err
 		}
@@ -408,7 +404,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
 
         // Allocate parts similar to incoming slice.
         fsMeta.Parts = make([]ObjectPartInfo, len(parts))
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -480,7 +476,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                 }
 		if hiddenMultiParts {
                 //DELETE meta data of PARTs so that it will not show up on client "ls" command
-			kopts := CmdOpts {
+			kopts := Opts {
 				ClusterVersion:  0,
 				Force:           true,
 				Tag:             []byte{},
@@ -515,13 +511,10 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         key := bucket + "/" + object + "." + fs.metaJSONFile
         //kineticMutex.Lock()
         kc = GetKineticConnection()
-        cvalue, ptr, size, err := kc.CGet(key, kopts)
+        cvalue, size, err := kc.CGet(key, 0, kopts)
         ReleaseConnection(kc.Idx)
         if err != nil {
                 err = errFileNotFound
-		if ptr != nil {
-			//C.deallocate_gvalue_buffer((*C.char)(ptr))
-		}
                 return oi, err
         }
         var fsMetaBytes []byte
@@ -529,7 +522,6 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
 		fsMetaBytes = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		//kineticMutex.Unlock()
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-		//C.deallocate_gvalue_buffer((*C.char)(ptr))
 		if err != nil {
 			return oi, err
 		}

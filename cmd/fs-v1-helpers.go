@@ -249,7 +249,7 @@ func fsStatDir(ctx context.Context, statDir string) (os.FileInfo, error) {
 func koStat(key string) (KVInfo, error) {
 	var oi KVInfo
 	//log.Println(" KO STAT")
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -261,20 +261,17 @@ func koStat(key string) (KVInfo, error) {
         fsMeta := newFSMetaV1()
         fsMeta.Meta = make(map[string]string)
 
-	metaKey := "meta." + key
         kc := GetKineticConnection()
-        cvalue, _, size, err := kc.CGet(metaKey, kopts)
+        cvalue, size, err := kc.CGetMeta(key, kopts)
         ReleaseConnection(kc.Idx)
         if err != nil {
                 err = errFileNotFound 
-                //C.deallocate_gvalue_buffer((*C.char)(ptr))
                 return oi, err
 	}
         var value []byte
         if (cvalue != nil) {
-            value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+            value = (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         }
-        //C.deallocate_gvalue_buffer((*C.char)(ptr))
         //kineticMutex.Unlock()
         err = json.Unmarshal(value[:size], &fsMeta)
         if err != nil {
