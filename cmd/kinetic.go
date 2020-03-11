@@ -40,7 +40,7 @@ import (
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/cmd/logger"
 
-	//"log"
+	"log"
 	"github.com/minio/minio/pkg/lock"
 	"github.com/minio/minio/pkg/madmin"
 
@@ -1224,12 +1224,12 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 			if err != nil {
 				return loi, err
 			}
-	                if delimiter == SlashSeparator && prefix != "" &&  !hasSuffix(string(prefix), SlashSeparator) {
+	                if delimiter == SlashSeparator && prefix != "" && !hasSuffix(string(prefix), SlashSeparator) {
 				objInfo.IsDir = true
 				objInfo.Name = prefix + SlashSeparator
 			} else if delimiter == SlashSeparator && prefix == "" {
-				result := strings.Split( string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
-				if len(result) != 0 {
+				result := strings.Split(string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
+				if len(result) > 1 {
 	                                objInfo.IsDir = true
 	                                objInfo.Name = result[0] + SlashSeparator
 				}
@@ -1260,7 +1260,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		}
 		result.Objects = append(result.Objects, objInfo)
 	}
-        //log.Println("END: LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
+        log.Println("END: LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
 	return result, nil
 }
 
