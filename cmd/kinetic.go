@@ -40,7 +40,7 @@ import (
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/cmd/logger"
 
-	"log"
+	//"log"
 	"github.com/minio/minio/pkg/lock"
 	"github.com/minio/minio/pkg/madmin"
 
@@ -1220,18 +1220,32 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
 			//log.Println("KEY ", string(key[5:]))
 			objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
+			//log.Println("OBJECT NAME", objInfo.Name)
 			//nextMarker = objInfo.Name
 			if err != nil {
 				return loi, err
 			}
-	                if delimiter == SlashSeparator && prefix != "" && !hasSuffix(string(prefix), SlashSeparator) {
-				objInfo.IsDir = true
-				objInfo.Name = prefix + SlashSeparator
+	                if delimiter == SlashSeparator && prefix != "" {
+                                if  !hasSuffix(string(prefix), SlashSeparator) {
+					objInfo.IsDir = true
+					objInfo.Name = prefix + SlashSeparator
+				} else {
+	                                result := strings.Split(string(key[len("meta.") + len(bucket) +1 + len(prefix):]), SlashSeparator)
+                                        //log.Println(" 1. RESULT ", result, len(result))
+					if len(result) == 1 {
+						//log.Println("0. RESULT ", objInfo.Name)
+					}else if len(result) > 1 { // && len(result) <= 2{
+                                                objInfo.IsDir = true
+                                                objInfo.Name = prefix + result[0] + SlashSeparator
+                                                //log.Println(" 2. RESULT ", objInfo.Name)
+                                        }
+				}
 			} else if delimiter == SlashSeparator && prefix == "" {
 				result := strings.Split(string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
+				//log.Println(" RESULT ", result, len(result))
 				if len(result) > 1 {
-	                                objInfo.IsDir = true
-	                                objInfo.Name = result[0] + SlashSeparator
+		                       objInfo.IsDir = true
+                                       objInfo.Name = result[0] + SlashSeparator
 				}
 			}
 			//objInfo.Name = string([]byte(objInfo.Name)[len(bucket)+1:])
@@ -1260,7 +1274,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		}
 		result.Objects = append(result.Objects, objInfo)
 	}
-        log.Println("END: LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
+        //log.Println("END: LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
 	return result, nil
 }
 
