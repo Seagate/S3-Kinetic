@@ -1297,14 +1297,27 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 			if err != nil {
 				return loi, err
 			}
-	                if delimiter == SlashSeparator && prefix != "" &&  !hasSuffix(string(prefix), SlashSeparator) {
-				objInfo.IsDir = true
-				objInfo.Name = prefix + SlashSeparator
+	                if delimiter == SlashSeparator && prefix != "" {
+                                if  !hasSuffix(string(prefix), SlashSeparator) {
+					objInfo.IsDir = true
+					objInfo.Name = prefix + SlashSeparator
+				} else {
+	                                result := strings.Split(string(key[len("meta.") + len(bucket) +1 + len(prefix):]), SlashSeparator)
+                                        //log.Println(" 1. RESULT ", result, len(result))
+					if len(result) == 1 {
+						//log.Println("0. RESULT ", objInfo.Name)
+					}else if len(result) > 1 { // && len(result) <= 2{
+                                                objInfo.IsDir = true
+                                                objInfo.Name = prefix + result[0] + SlashSeparator
+                                                //log.Println(" 2. RESULT ", objInfo.Name)
+                                        }
+				}
 			} else if delimiter == SlashSeparator && prefix == "" {
-				result := strings.Split( string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
-				if len(result) != 0 {
-	                                objInfo.IsDir = true
-	                                objInfo.Name = result[0] + SlashSeparator
+				result := strings.Split(string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
+				//log.Println(" RESULT ", result, len(result))
+				if len(result) > 1 {
+		                       objInfo.IsDir = true
+                                       objInfo.Name = result[0] + SlashSeparator
 				}
 			}
 			//objInfo.Name = string([]byte(objInfo.Name)[len(bucket)+1:])
