@@ -50,7 +50,7 @@ const (
 	MqttQueueDir          = "queue_dir"
 	MqttQueueLimit        = "queue_limit"
 
-	EnvMQTTState             = "MINIO_NOTIFY_MQTT_STATE"
+	EnvMQTTEnable            = "MINIO_NOTIFY_MQTT_ENABLE"
 	EnvMQTTBroker            = "MINIO_NOTIFY_MQTT_BROKER"
 	EnvMQTTTopic             = "MINIO_NOTIFY_MQTT_TOPIC"
 	EnvMQTTQoS               = "MINIO_NOTIFY_MQTT_QOS"
@@ -121,6 +121,14 @@ func (target *MQTTTarget) ID() event.TargetID {
 	return target.id
 }
 
+// IsActive - Return true if target is up and active
+func (target *MQTTTarget) IsActive() (bool, error) {
+	if !target.client.IsConnectionOpen() {
+		return false, errNotConnected
+	}
+	return true, nil
+}
+
 // send - sends an event to the mqtt.
 func (target *MQTTTarget) send(eventData event.Event) error {
 	objectName, err := url.QueryUnescape(eventData.S3.Object.Key)
@@ -144,8 +152,9 @@ func (target *MQTTTarget) send(eventData event.Event) error {
 // Send - reads an event from store and sends it to MQTT.
 func (target *MQTTTarget) Send(eventKey string) error {
 	// Do not send if the connection is not active.
-	if !target.client.IsConnectionOpen() {
-		return errNotConnected
+	_, err := target.IsActive()
+	if err != nil {
+		return err
 	}
 
 	eventData, err := target.store.Get(eventKey)
@@ -174,8 +183,9 @@ func (target *MQTTTarget) Save(eventData event.Event) error {
 	}
 
 	// Do not send if the connection is not active.
-	if !target.client.IsConnectionOpen() {
-		return errNotConnected
+	_, err := target.IsActive()
+	if err != nil {
+		return err
 	}
 
 	return target.send(eventData)
@@ -189,7 +199,7 @@ func (target *MQTTTarget) Close() error {
 }
 
 // NewMQTTTarget - creates new MQTT target.
-func NewMQTTTarget(id string, args MQTTArgs, doneCh <-chan struct{}, loggerOnce func(ctx context.Context, err error, id interface{}, kind ...interface{})) (*MQTTTarget, error) {
+func NewMQTTTarget(id string, args MQTTArgs, doneCh <-chan struct{}, loggerOnce func(ctx context.Context, err error, id interface{}, kind ...interface{}), test bool) (*MQTTTarget, error) {
 	if args.MaxReconnectInterval == 0 {
 		// Default interval
 		// https://github.com/eclipse/paho.mqtt.golang/blob/master/options.go#L115
@@ -229,7 +239,7 @@ func NewMQTTTarget(id string, args MQTTArgs, doneCh <-chan struct{}, loggerOnce 
 				ok := token.WaitTimeout(reconnectInterval * time.Second)
 				if ok && token.Error() != nil {
 					target.loggerOnce(context.Background(),
-						fmt.Errorf("Previous connect failed with %s attempting a reconnect",
+						fmt.Errorf("Previous connect failed with %w attempting a reconnect",
 							token.Error()),
 						target.ID())
 					time.Sleep(reconnectInterval * time.Second)
@@ -251,13 +261,13 @@ func NewMQTTTarget(id string, args MQTTArgs, doneCh <-chan struct{}, loggerOnce 
 			return nil, err
 		}
 
-		go retryRegister()
-
-		// Replays the events from the store.
-		eventKeyCh := replayEvents(target.store, doneCh, loggerOnce, target.ID())
-
-		// Start replaying events from the store.
-		go sendEvents(target, eventKeyCh, doneCh, loggerOnce)
+		if !test {
+			go retryRegister()
+			// Replays the events from the store.
+			eventKeyCh := replayEvents(target.store, doneCh, loggerOnce, target.ID())
+			// Start replaying events from the store.
+			go sendEvents(target, eventKeyCh, doneCh, loggerOnce)
+		}
 	} else {
 		if token.Wait() && token.Error() != nil {
 			return nil, token.Error()

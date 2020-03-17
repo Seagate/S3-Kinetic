@@ -19,7 +19,6 @@ package cache
 import (
 	"errors"
 	"strconv"
-	"strings"
 
 	"github.com/minio/minio/cmd/config"
 	"github.com/minio/minio/pkg/env"
@@ -27,31 +26,36 @@ import (
 
 // Cache ENVs
 const (
-	Drives  = "drives"
-	Exclude = "exclude"
-	Expiry  = "expiry"
-	MaxUse  = "maxuse"
-	Quota   = "quota"
+	Drives        = "drives"
+	Exclude       = "exclude"
+	Expiry        = "expiry"
+	MaxUse        = "maxuse"
+	Quota         = "quota"
+	After         = "after"
+	WatermarkLow  = "watermark_low"
+	WatermarkHigh = "watermark_high"
 
-	EnvCacheState               = "MINIO_CACHE_STATE"
-	EnvCacheDrives              = "MINIO_CACHE_DRIVES"
-	EnvCacheExclude             = "MINIO_CACHE_EXCLUDE"
-	EnvCacheExpiry              = "MINIO_CACHE_EXPIRY"
-	EnvCacheMaxUse              = "MINIO_CACHE_MAXUSE"
-	EnvCacheQuota               = "MINIO_CACHE_QUOTA"
+	EnvCacheDrives        = "MINIO_CACHE_DRIVES"
+	EnvCacheExclude       = "MINIO_CACHE_EXCLUDE"
+	EnvCacheExpiry        = "MINIO_CACHE_EXPIRY"
+	EnvCacheMaxUse        = "MINIO_CACHE_MAXUSE"
+	EnvCacheQuota         = "MINIO_CACHE_QUOTA"
+	EnvCacheAfter         = "MINIO_CACHE_AFTER"
+	EnvCacheWatermarkLow  = "MINIO_CACHE_WATERMARK_LOW"
+	EnvCacheWatermarkHigh = "MINIO_CACHE_WATERMARK_HIGH"
+
 	EnvCacheEncryptionMasterKey = "MINIO_CACHE_ENCRYPTION_MASTER_KEY"
 
-	DefaultExpiry = "90"
-	DefaultQuota  = "80"
+	DefaultExpiry        = "90"
+	DefaultQuota         = "80"
+	DefaultAfter         = "0"
+	DefaultWaterMarkLow  = "70"
+	DefaultWaterMarkHigh = "80"
 )
 
 // DefaultKVS - default KV settings for caching.
 var (
 	DefaultKVS = config.KVS{
-		config.KV{
-			Key:   config.State,
-			Value: config.StateOff,
-		},
 		config.KV{
 			Key:   Drives,
 			Value: "",
@@ -68,6 +72,18 @@ var (
 			Key:   Quota,
 			Value: DefaultQuota,
 		},
+		config.KV{
+			Key:   After,
+			Value: DefaultAfter,
+		},
+		config.KV{
+			Key:   WatermarkLow,
+			Value: DefaultWaterMarkLow,
+		},
+		config.KV{
+			Key:   WatermarkHigh,
+			Value: DefaultWaterMarkHigh,
+		},
 	}
 )
 
@@ -75,51 +91,36 @@ const (
 	cacheDelimiter = ","
 )
 
+// Enabled returns if cache is enabled.
+func Enabled(kvs config.KVS) bool {
+	drives := kvs.Get(Drives)
+	return drives != ""
+}
+
 // LookupConfig - extracts cache configuration provided by environment
 // variables and merge them with provided CacheConfiguration.
 func LookupConfig(kvs config.KVS) (Config, error) {
 	cfg := Config{}
-
 	if err := config.CheckValidKeys(config.CacheSubSys, kvs, DefaultKVS); err != nil {
 		return cfg, err
 	}
 
-	// Check if cache is explicitly disabled
-	stateBool, err := config.ParseBool(env.Get(EnvCacheState, kvs.Get(config.State)))
-	if err != nil {
-		// Parsing failures happen due to empty KVS, ignore it.
-		if kvs.Empty() {
-			return cfg, nil
-		}
-		return cfg, err
-	}
-
 	drives := env.Get(EnvCacheDrives, kvs.Get(Drives))
-	if stateBool {
-		if len(drives) == 0 {
-			return cfg, config.Error("'drives' key cannot be empty if you wish to enable caching")
-		}
-	}
 	if len(drives) == 0 {
 		return cfg, nil
 	}
 
-	cfg.Drives, err = parseCacheDrives(strings.Split(drives, cacheDelimiter))
+	var err error
+	cfg.Drives, err = parseCacheDrives(drives)
 	if err != nil {
-		cfg.Drives, err = parseCacheDrives(strings.Split(drives, cacheDelimiterLegacy))
-		if err != nil {
-			return cfg, err
-		}
+		return cfg, err
 	}
 
 	cfg.Enabled = true
 	if excludes := env.Get(EnvCacheExclude, kvs.Get(Exclude)); excludes != "" {
-		cfg.Exclude, err = parseCacheExcludes(strings.Split(excludes, cacheDelimiter))
+		cfg.Exclude, err = parseCacheExcludes(excludes)
 		if err != nil {
-			cfg.Exclude, err = parseCacheExcludes(strings.Split(excludes, cacheDelimiterLegacy))
-			if err != nil {
-				return cfg, err
-			}
+			return cfg, err
 		}
 	}
 
@@ -141,9 +142,7 @@ func LookupConfig(kvs config.KVS) (Config, error) {
 			return cfg, config.ErrInvalidCacheQuota(err)
 		}
 		cfg.Quota = cfg.MaxUse
-	}
-
-	if quotaStr := env.Get(EnvCacheQuota, kvs.Get(Quota)); quotaStr != "" {
+	} else if quotaStr := env.Get(EnvCacheQuota, kvs.Get(Quota)); quotaStr != "" {
 		cfg.Quota, err = strconv.Atoi(quotaStr)
 		if err != nil {
 			return cfg, config.ErrInvalidCacheQuota(err)
@@ -156,5 +155,45 @@ func LookupConfig(kvs config.KVS) (Config, error) {
 		cfg.MaxUse = cfg.Quota
 	}
 
+	if afterStr := env.Get(EnvCacheAfter, kvs.Get(After)); afterStr != "" {
+		cfg.After, err = strconv.Atoi(afterStr)
+		if err != nil {
+			return cfg, config.ErrInvalidCacheAfter(err)
+		}
+		// after should be a valid value >= 0.
+		if cfg.After < 0 {
+			err := errors.New("cache after value cannot be less than 0")
+			return cfg, config.ErrInvalidCacheAfter(err)
+		}
+	}
+
+	if lowWMStr := env.Get(EnvCacheWatermarkLow, kvs.Get(WatermarkLow)); lowWMStr != "" {
+		cfg.WatermarkLow, err = strconv.Atoi(lowWMStr)
+		if err != nil {
+			return cfg, config.ErrInvalidCacheWatermarkLow(err)
+		}
+		// WatermarkLow should be a valid percentage.
+		if cfg.WatermarkLow < 0 || cfg.WatermarkLow > 100 {
+			err := errors.New("config min watermark value should be between 0 and 100")
+			return cfg, config.ErrInvalidCacheWatermarkLow(err)
+		}
+	}
+
+	if highWMStr := env.Get(EnvCacheWatermarkHigh, kvs.Get(WatermarkHigh)); highWMStr != "" {
+		cfg.WatermarkHigh, err = strconv.Atoi(highWMStr)
+		if err != nil {
+			return cfg, config.ErrInvalidCacheWatermarkHigh(err)
+		}
+
+		// MaxWatermark should be a valid percentage.
+		if cfg.WatermarkHigh < 0 || cfg.WatermarkHigh > 100 {
+			err := errors.New("config high watermark value should be between 0 and 100")
+			return cfg, config.ErrInvalidCacheWatermarkHigh(err)
+		}
+	}
+	if cfg.WatermarkLow > cfg.WatermarkHigh {
+		err := errors.New("config high watermark value should be greater than low watermark value")
+		return cfg, config.ErrInvalidCacheWatermarkHigh(err)
+	}
 	return cfg, nil
 }

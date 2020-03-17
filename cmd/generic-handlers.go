@@ -28,10 +28,10 @@ import (
 	"github.com/minio/minio-go/v6/pkg/set"
 
 	humanize "github.com/dustin/go-humanize"
+	"github.com/minio/minio/cmd/config/etcd/dns"
 	"github.com/minio/minio/cmd/crypto"
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/dns"
 	"github.com/minio/minio/pkg/handlers"
 	"github.com/rs/cors"
 )
@@ -108,7 +108,7 @@ func isHTTPHeaderSizeTooLarge(header http.Header) bool {
 		length := len(key) + len(header.Get(key))
 		size += length
 		for _, prefix := range userMetadataKeyPrefixes {
-			if hasPrefix(key, prefix) {
+			if HasPrefix(key, prefix) {
 				usersize += length
 				break
 			}
@@ -148,7 +148,7 @@ func (h reservedMetadataHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 // and must not set by clients
 func containsReservedMetadata(header http.Header) bool {
 	for key := range header {
-		if hasPrefix(key, ReservedMetadataPrefix) {
+		if HasPrefix(key, ReservedMetadataPrefix) {
 			return true
 		}
 	}
@@ -159,6 +159,7 @@ func containsReservedMetadata(header http.Header) bool {
 const (
 	minioReservedBucket     = "minio"
 	minioReservedBucketPath = SlashSeparator + minioReservedBucket
+	loginPathPrefix         = SlashSeparator + "login"
 )
 
 // Adds redirect rules for incoming requests.
@@ -267,8 +268,8 @@ func (h cacheControlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Trace("CACHECONTROLHANDLER ServeHTTP")
 	if r.Method == http.MethodGet && guessIsBrowserReq(r) {
 		// For all browser requests set appropriate Cache-Control policies
-		if hasPrefix(r.URL.Path, minioReservedBucketPath+SlashSeparator) {
-			if hasSuffix(r.URL.Path, ".js") || r.URL.Path == minioReservedBucketPath+"/favicon.ico" {
+		if HasPrefix(r.URL.Path, minioReservedBucketPath+SlashSeparator) {
+			if HasSuffix(r.URL.Path, ".js") || r.URL.Path == minioReservedBucketPath+"/favicon.ico" {
 				// For assets set cache expiry of one year. For each release, the name
 				// of the asset name will change and hence it can not be served from cache.
 				w.Header().Set(xhttp.CacheControl, "max-age=31536000")
@@ -286,6 +287,16 @@ func (h cacheControlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // API requests.
 func isAdminReq(r *http.Request) bool {
 	return strings.HasPrefix(r.URL.Path, adminPathPrefix)
+}
+
+// guessIsLoginSTSReq - returns true if incoming request is Login STS user
+func guessIsLoginSTSReq(req *http.Request) bool {
+	if req == nil {
+		return false
+	}
+	return strings.HasPrefix(req.URL.Path, loginPathPrefix) ||
+		(req.Method == http.MethodPost && req.URL.Path == SlashSeparator &&
+			getRequestAuthType(req) == authTypeSTS)
 }
 
 // Adds verification for incoming paths.
@@ -436,12 +447,16 @@ func setIgnoreResourcesHandler(h http.Handler) http.Handler {
 // Checks requests for not implemented Bucket resources
 func ignoreNotImplementedBucketResources(req *http.Request) bool {
 	for name := range req.URL.Query() {
-		// Enable GetBucketACL, GetBucketCors, GetBucketWebsite,
-		// GetBucketAcccelerate, GetBucketRequestPayment,
-		// GetBucketLogging, GetBucketLifecycle,
-		// GetBucketReplication, GetBucketTagging,
-		// GetBucketVersioning, DeleteBucketTagging,
-		// and DeleteBucketWebsite dummy calls specifically.
+		// Enable PutBucketACL, GetBucketACL, GetBucketCors,
+		// GetBucketWebsite, GetBucketAcccelerate,
+		// GetBucketRequestPayment, GetBucketLogging,
+		// GetBucketLifecycle, GetBucketReplication,
+		// GetBucketTagging, GetBucketVersioning,
+		// DeleteBucketTagging, and DeleteBucketWebsite
+		// dummy calls specifically.
+		if name == "acl" && req.Method == http.MethodPut {
+			return false
+		}
 		if ((name == "acl" ||
 			name == "cors" ||
 			name == "website" ||
@@ -457,7 +472,7 @@ func ignoreNotImplementedBucketResources(req *http.Request) bool {
 			return false
 		}
 
-		if notimplementedBucketResourceNames[name] {
+		if notImplementedBucketResourceNames[name] {
 			return true
 		}
 	}
@@ -467,11 +482,11 @@ func ignoreNotImplementedBucketResources(req *http.Request) bool {
 // Checks requests for not implemented Object resources
 func ignoreNotImplementedObjectResources(req *http.Request) bool {
 	for name := range req.URL.Query() {
-		// Enable GetObjectACL and GetObjectTagging dummy calls specifically.
-		if (name == "acl" || name == "tagging") && req.Method == http.MethodGet {
+		// Enable Get/PutObjectACL dummy call specifically.
+		if name == "acl" && (req.Method == http.MethodGet || req.Method == http.MethodPut) {
 			return false
 		}
-		if notimplementedObjectResourceNames[name] {
+		if notImplementedObjectResourceNames[name] {
 			return true
 		}
 	}
@@ -479,9 +494,8 @@ func ignoreNotImplementedObjectResources(req *http.Request) bool {
 }
 
 // List of not implemented bucket queries
-var notimplementedBucketResourceNames = map[string]bool{
+var notImplementedBucketResourceNames = map[string]bool{
 	"accelerate":     true,
-	"acl":            true,
 	"cors":           true,
 	"inventory":      true,
 	"logging":        true,
@@ -494,10 +508,8 @@ var notimplementedBucketResourceNames = map[string]bool{
 }
 
 // List of not implemented object queries
-var notimplementedObjectResourceNames = map[string]bool{
-	"acl":     true,
+var notImplementedObjectResourceNames = map[string]bool{
 	"restore": true,
-	"tagging": true,
 	"torrent": true,
 }
 
@@ -538,9 +550,8 @@ func setHTTPStatsHandler(h http.Handler) http.Handler {
 func (h httpStatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	isS3Request := !strings.HasPrefix(r.URL.Path, minioReservedBucketPath)
 	// record s3 connection stats.
-	recordRequest := &recordTrafficRequest{ReadCloser: r.Body, isS3Request: isS3Request}
-	r.Body = recordRequest
-	recordResponse := &recordTrafficResponse{w, isS3Request}
+	r.Body = &recordTrafficRequest{ReadCloser: r.Body, isS3Request: isS3Request}
+	recordResponse := &recordTrafficResponse{ResponseWriter: w, isS3Request: isS3Request}
 	// Execute the request
 	h.handler.ServeHTTP(recordResponse, r)
 }
@@ -622,7 +633,8 @@ func (f bucketForwardingHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	log.Trace("BUCKETFORWARDHANDLER ServeHTTP")
 	if globalDNSConfig == nil || len(globalDomainNames) == 0 ||
 		guessIsHealthCheckReq(r) || guessIsMetricsReq(r) ||
-		guessIsRPCReq(r) || isAdminReq(r) {
+		guessIsRPCReq(r) || guessIsLoginSTSReq(r) || isAdminReq(r) ||
+		!globalBucketFederation {
 		f.handler.ServeHTTP(w, r)
 		return
 	}
@@ -634,13 +646,13 @@ func (f bucketForwardingHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		switch r.Method {
 		case http.MethodPut:
 			if getRequestAuthType(r) == authTypeJWT {
-				bucket, _ = urlPath2BucketObjectName(strings.TrimPrefix(r.URL.Path, minioReservedBucketPath+"/upload"))
+				bucket, _ = path2BucketObjectWithBasePath(minioReservedBucketPath+"/upload", r.URL.Path)
 			}
 		case http.MethodGet:
 			if t := r.URL.Query().Get("token"); t != "" {
-				bucket, _ = urlPath2BucketObjectName(strings.TrimPrefix(r.URL.Path, minioReservedBucketPath+"/download"))
+				bucket, _ = path2BucketObjectWithBasePath(minioReservedBucketPath+"/download", r.URL.Path)
 			} else if getRequestAuthType(r) != authTypeJWT && !strings.HasPrefix(r.URL.Path, minioReservedBucketPath) {
-				bucket, _ = urlPath2BucketObjectName(r.URL.Path)
+				bucket, _ = request2BucketObjectName(r)
 			}
 		}
 		if bucket == "" {
@@ -690,7 +702,7 @@ func (f bucketForwardingHandler) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	// requests have target bucket and object in URI and source details are in
 	// header fields
 	if r.Method == http.MethodPut && r.Header.Get(xhttp.AmzCopySource) != "" {
-		bucket, object = urlPath2BucketObjectName(r.Header.Get(xhttp.AmzCopySource))
+		bucket, object = path2BucketObject(r.Header.Get(xhttp.AmzCopySource))
 		if bucket == "" || object == "" {
 			f.handler.ServeHTTP(w, r)
 			return

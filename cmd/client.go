@@ -147,11 +147,12 @@ func (c *Client) Close() {
 	c.socket.Close()
 }
 
-func ComputeHMAC(msg, hmac_key []byte) []byte {
-	var msg_size uint32 = uint32(len(msg))
+//ComputeHMAC: 
+func ComputeHMAC(msg, HmacKey []byte) []byte {
+	var msgSize uint32 = uint32(len(msg))
 	size := make([]byte, 4, 5)
-	binary.BigEndian.PutUint32(size[1:5], msg_size)
-	h := hmac.New(sha1.New, []byte(hmac_key))
+	binary.BigEndian.PutUint32(size[1:5], msgSize)
+	h := hmac.New(sha1.New, []byte(HmacKey))
 	h.Write(size[1:5])
 	h.Write(msg)
 	khmac := h.Sum(nil)

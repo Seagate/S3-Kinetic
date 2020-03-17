@@ -53,8 +53,8 @@ func (d *naughtyDisk) IsOnline() bool {
 	return d.disk.IsOnline()
 }
 
-func (d *naughtyDisk) LastError() (err error) {
-	return nil
+func (*naughtyDisk) Hostname() string {
+	return ""
 }
 
 func (d *naughtyDisk) Close() (err error) {
@@ -80,11 +80,22 @@ func (d *naughtyDisk) calcError() (err error) {
 func (d *naughtyDisk) SetDiskID(id string) {
 }
 
+func (d *naughtyDisk) CrawlAndGetDataUsage(endCh <-chan struct{}) (info DataUsageInfo, err error) {
+	return d.disk.CrawlAndGetDataUsage(endCh)
+}
+
 func (d *naughtyDisk) DiskInfo() (info DiskInfo, err error) {
 	if err := d.calcError(); err != nil {
 		return info, err
 	}
 	return d.disk.DiskInfo()
+}
+
+func (d *naughtyDisk) MakeVolBulk(volumes ...string) (err error) {
+	if err := d.calcError(); err != nil {
+		return err
+	}
+	return d.disk.MakeVolBulk(volumes...)
 }
 
 func (d *naughtyDisk) MakeVol(volume string) (err error) {
@@ -114,7 +125,7 @@ func (d *naughtyDisk) DeleteVol(volume string) (err error) {
 	return d.disk.DeleteVol(volume)
 }
 
-func (d *naughtyDisk) Walk(volume, path, marker string, recursive bool, leafFile string, readMetadataFn readMetadataFunc, endWalkCh chan struct{}) (chan FileInfo, error) {
+func (d *naughtyDisk) Walk(volume, path, marker string, recursive bool, leafFile string, readMetadataFn readMetadataFunc, endWalkCh <-chan struct{}) (chan FileInfo, error) {
 	if err := d.calcError(); err != nil {
 		return nil, err
 	}
@@ -183,6 +194,13 @@ func (d *naughtyDisk) DeleteFileBulk(volume string, paths []string) ([]error, er
 		errs[idx] = d.disk.DeleteFile(volume, path)
 	}
 	return errs, nil
+}
+
+func (d *naughtyDisk) DeletePrefixes(volume string, paths []string) ([]error, error) {
+	if err := d.calcError(); err != nil {
+		return nil, err
+	}
+	return d.disk.DeletePrefixes(volume, paths)
 }
 
 func (d *naughtyDisk) WriteAll(volume string, path string, reader io.Reader) (err error) {

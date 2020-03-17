@@ -35,11 +35,6 @@ import (
 	"github.com/minio/minio/pkg/env"
 )
 
-func init() {
-	logger.Init(GOPATH, GOROOT)
-	logger.RegisterError(config.FmtError)
-}
-
 var (
 	gatewayCmd = cli.Command{
 		Name:            "gateway",
@@ -104,10 +99,6 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 		logger.FatalIf(errUnexpected, "Gateway implementation not initialized")
 	}
 
-	// Disable logging until gateway initialization is complete, any
-	// error during initialization will be shown as a fatal message
-	logger.Disable = true
-
 	// Validate if we have access, secret set through environment.
 	globalGatewayName = gw.Name()
 	gatewayName := gw.Name()
@@ -117,6 +108,9 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 
 	// Handle common command args.
 	handleCommonCmdArgs(ctx)
+
+	// Initialize all help
+	initHelp()
 
 	// Get port to listen on from gateway address
 	globalMinioHost, globalMinioPort = mustSplitHostPort(globalCLIContext.Addr)
@@ -145,9 +139,6 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 	// Set when gateway is enabled
 	globalIsGateway = true
 
-	// Initialize globalConsoleSys system
-	globalConsoleSys = NewConsoleLogger(context.Background(), globalEndpoints)
-
 	enableConfigOps := gatewayName == "nas"
 
 	// TODO: We need to move this code with globalConfigSys.Init()
@@ -158,16 +149,17 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 	srvCfg := newServerConfig()
 
 	// Override any values from ENVs.
-	if err := lookupConfigs(srvCfg); err != nil {
-		logger.FatalIf(err, "Unable to initialize server config")
-	}
+	lookupConfigs(srvCfg)
 
 	// hold the mutex lock before a new config is assigned.
 	globalServerConfigMu.Lock()
 	globalServerConfig = srvCfg
 	globalServerConfigMu.Unlock()
 
-	router := mux.NewRouter().SkipClean(true)
+	// Initialize router. `SkipClean(true)` stops gorilla/mux from
+	// normalizing URL path minio/minio#3256
+	// avoid URL path encoding minio/minio#8950
+	router := mux.NewRouter().SkipClean(true).UseEncodedPath()
 
 	if globalEtcdClient != nil {
 		// Enable STS router if etcd is enabled.
@@ -203,11 +195,15 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 		getCert = globalTLSCerts.GetCertificate
 	}
 
-	globalHTTPServer = xhttp.NewServer([]string{globalCLIContext.Addr},
+	httpServer := xhttp.NewServer([]string{globalCLIContext.Addr},
 		criticalErrorHandler{registerHandlers(router, globalHandlers...)}, getCert)
 	go func() {
-		globalHTTPServerErrorCh <- globalHTTPServer.Start()
+		globalHTTPServerErrorCh <- httpServer.Start()
 	}()
+
+	globalObjLayerMutex.Lock()
+	globalHTTPServer = httpServer
+	globalObjLayerMutex.Unlock()
 
 	signal.Notify(globalOSSignalCh, os.Interrupt, syscall.SIGTERM)
 
@@ -219,26 +215,13 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 		globalHTTPServer.Shutdown()
 		logger.FatalIf(err, "Unable to initialize gateway backend")
 	}
-
 	newObject = NewGatewayLayerWithLocker(newObject)
-
-	// Re-enable logging
-	logger.Disable = false
 
 	// Once endpoints are finalized, initialize the new object api in safe mode.
 	globalObjLayerMutex.Lock()
 	globalSafeMode = true
 	globalObjectAPI = newObject
 	globalObjLayerMutex.Unlock()
-
-	// Populate existing buckets to the etcd backend
-	if globalDNSConfig != nil {
-		buckets, err := newObject.ListBuckets(context.Background())
-		if err != nil {
-			logger.Fatal(err, "Unable to list buckets")
-		}
-		initFederatorBackend(buckets, newObject)
-	}
 
 	// Migrate all backend configs to encrypted backend, also handles rotation as well.
 	// For "nas" gateway we need to specially handle the backend migration as well.
@@ -254,12 +237,16 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 	// sub-systems, make sure that we do not move the above codeblock elsewhere.
 	if enableConfigOps {
 		logger.FatalIf(globalConfigSys.Init(newObject), "Unable to initialize config system")
+		buckets, err := newObject.ListBuckets(context.Background())
+		if err != nil {
+			logger.Fatal(err, "Unable to list buckets")
+		}
 
+		logger.FatalIf(globalNotificationSys.Init(buckets, newObject), "Unable to initialize notification system")
 		// Start watching disk for reloading config, this
 		// is only enabled for "NAS" gateway.
 		globalConfigSys.WatchConfigNASDisk(newObject)
 	}
-
 	// This is only to uniquely identify each gateway deployments.
 	globalDeploymentID = env.Get("MINIO_GATEWAY_DEPLOYMENT_ID", mustGetUUID())
 	logger.SetDeploymentID(globalDeploymentID)
@@ -286,6 +273,15 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 		globalObjLayerMutex.Lock()
 		globalCacheObjectAPI = cacheAPI
 		globalObjLayerMutex.Unlock()
+	}
+
+	// Populate existing buckets to the etcd backend
+	if globalDNSConfig != nil {
+		buckets, err := newObject.ListBuckets(context.Background())
+		if err != nil {
+			logger.Fatal(err, "Unable to list buckets")
+		}
+		initFederatorBackend(buckets, newObject)
 	}
 
 	// Verify if object layer supports

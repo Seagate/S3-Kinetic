@@ -64,36 +64,21 @@ FLAGS:
 HDFS-NAMENODE:
   HDFS namenode URI
 
-ENVIRONMENT VARIABLES:
-  ACCESS:
-     MINIO_ACCESS_KEY: Username or access key of minimum 3 characters in length.
-     MINIO_SECRET_KEY: Password or secret key of minimum 8 characters in length.
-
-  BROWSER:
-     MINIO_BROWSER: To disable web browser access, set this value to "off".
-
-  DOMAIN:
-     MINIO_DOMAIN: To enable virtual-host-style requests, set this value to Minio host domain name.
-
-  CACHE:
-     MINIO_CACHE_DRIVES: List of mounted drives or directories delimited by ",".
-     MINIO_CACHE_EXCLUDE: List of cache exclusion patterns delimited by ",".
-     MINIO_CACHE_EXPIRY: Cache expiry duration in days.
-     MINIO_CACHE_QUOTA: Maximum permitted usage of the cache in percentage (0-100).
-
 EXAMPLES:
-  1. Start minio gateway server for HDFS backend.
+  1. Start minio gateway server for HDFS backend
      {{.Prompt}} {{.EnvVarSetCommand}} MINIO_ACCESS_KEY{{.AssignmentOperator}}accesskey
      {{.Prompt}} {{.EnvVarSetCommand}} MINIO_SECRET_KEY{{.AssignmentOperator}}secretkey
      {{.Prompt}} {{.HelpName}} hdfs://namenode:8200
 
-  2. Start minio gateway server for HDFS with edge caching enabled.
+  2. Start minio gateway server for HDFS with edge caching enabled
      {{.Prompt}} {{.EnvVarSetCommand}} MINIO_ACCESS_KEY{{.AssignmentOperator}}accesskey
      {{.Prompt}} {{.EnvVarSetCommand}} MINIO_SECRET_KEY{{.AssignmentOperator}}secretkey
      {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_DRIVES{{.AssignmentOperator}}"/mnt/drive1,/mnt/drive2,/mnt/drive3,/mnt/drive4"
      {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_EXCLUDE{{.AssignmentOperator}}"bucket1/*,*.png"
-     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_EXPIRY{{.AssignmentOperator}}40
-     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_QUOTA{{.AssignmentOperator}}80
+     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_QUOTA{{.AssignmentOperator}}90 
+     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_AFTER{{.AssignmentOperator}}3
+     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_WATERMARK_LOW{{.AssignmentOperator}}75
+     {{.Prompt}} {{.EnvVarSetCommand}} MINIO_CACHE_WATERMARK_HIGH{{.AssignmentOperator}}85
      {{.Prompt}} {{.HelpName}} hdfs://namenode:8200
 `
 
@@ -213,14 +198,14 @@ func (g *HDFS) NewGatewayLayer(creds auth.Credentials) (minio.ObjectLayer, error
 
 // Production - hdfs gateway is production ready.
 func (g *HDFS) Production() bool {
-	return false
+	return true
 }
 
 func (n *hdfsObjects) Shutdown(ctx context.Context) error {
 	return n.clnt.Close()
 }
 
-func (n *hdfsObjects) StorageInfo(ctx context.Context) minio.StorageInfo {
+func (n *hdfsObjects) StorageInfo(ctx context.Context, _ bool) minio.StorageInfo {
 	fsInfo, err := n.clnt.StatFs()
 	if err != nil {
 		return minio.StorageInfo{}
@@ -341,7 +326,7 @@ func (n *hdfsObjects) ListBuckets(ctx context.Context) (buckets []minio.BucketIn
 
 func (n *hdfsObjects) listDirFactory() minio.ListDirFunc {
 	// listDir - lists all the entries at a given prefix and given entry in the prefix.
-	listDir := func(bucket, prefixDir, prefixEntry string) (entries []string) {
+	listDir := func(bucket, prefixDir, prefixEntry string) (emptyDir bool, entries []string) {
 		f, err := n.clnt.Open(minio.PathJoin(hdfsSeparator, bucket, prefixDir))
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -356,6 +341,9 @@ func (n *hdfsObjects) listDirFactory() minio.ListDirFunc {
 			logger.LogIf(context.Background(), err)
 			return
 		}
+		if len(fis) == 0 {
+			return true, nil
+		}
 		for _, fi := range fis {
 			if fi.IsDir() {
 				entries = append(entries, fi.Name()+hdfsSeparator)
@@ -363,7 +351,7 @@ func (n *hdfsObjects) listDirFactory() minio.ListDirFunc {
 				entries = append(entries, fi.Name())
 			}
 		}
-		return minio.FilterMatchingPrefix(entries, prefixEntry)
+		return false, minio.FilterMatchingPrefix(entries, prefixEntry)
 	}
 
 	// Return list factory instance.
@@ -372,8 +360,23 @@ func (n *hdfsObjects) listDirFactory() minio.ListDirFunc {
 
 // ListObjects lists all blobs in HDFS bucket filtered by prefix.
 func (n *hdfsObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi minio.ListObjectsInfo, err error) {
+	if _, err := n.clnt.Stat(minio.PathJoin(hdfsSeparator, bucket)); err != nil {
+		return loi, hdfsToObjectErr(ctx, err, bucket)
+	}
+
 	getObjectInfo := func(ctx context.Context, bucket, entry string) (minio.ObjectInfo, error) {
-		return n.GetObjectInfo(ctx, bucket, entry, minio.ObjectOptions{})
+		fi, err := n.clnt.Stat(minio.PathJoin(hdfsSeparator, bucket, entry))
+		if err != nil {
+			return minio.ObjectInfo{}, hdfsToObjectErr(ctx, err, bucket, entry)
+		}
+		return minio.ObjectInfo{
+			Bucket:  bucket,
+			Name:    entry,
+			ModTime: fi.ModTime(),
+			Size:    fi.Size(),
+			IsDir:   fi.IsDir(),
+			AccTime: fi.(*hdfs.FileInfo).AccessTime(),
+		}, nil
 	}
 
 	return minio.ListObjects(ctx, n, bucket, prefix, marker, delimiter, maxKeys, n.listPool, n.listDirFactory(), getObjectInfo, getObjectInfo)
@@ -731,4 +734,9 @@ func (n *hdfsObjects) AbortMultipartUpload(ctx context.Context, bucket, object, 
 		return hdfsToObjectErr(ctx, err, bucket)
 	}
 	return hdfsToObjectErr(ctx, n.clnt.Remove(minio.PathJoin(hdfsSeparator, minioMetaTmpBucket, uploadID)), bucket, object, uploadID)
+}
+
+// IsReady returns whether the layer is ready to take requests.
+func (n *hdfsObjects) IsReady(_ context.Context) bool {
+	return true
 }

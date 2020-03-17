@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -261,6 +262,13 @@ func (e BucketLifecycleNotFound) Error() string {
 	return "No bucket life cycle found for bucket : " + e.Bucket
 }
 
+// BucketSSEConfigNotFound - no bucket encryption config found
+type BucketSSEConfigNotFound GenericError
+
+func (e BucketSSEConfigNotFound) Error() string {
+	return "No bucket encryption found for bucket: " + e.Bucket
+}
+
 /// Bucket related errors.
 
 // BucketNameInvalid - bucketname provided is invalid.
@@ -340,11 +348,10 @@ func (e ObjectTooSmall) Error() string {
 
 // OperationTimedOut - a timeout occurred.
 type OperationTimedOut struct {
-	Path string
 }
 
 func (e OperationTimedOut) Error() string {
-	return "Operation timed out: " + e.Path
+	return "Operation timed out"
 }
 
 /// Multipart related errors.
@@ -429,14 +436,14 @@ func (e BackendDown) Error() string {
 
 // isErrBucketNotFound - Check if error type is BucketNotFound.
 func isErrBucketNotFound(err error) bool {
-	_, ok := err.(BucketNotFound)
-	return ok
+	var bkNotFound BucketNotFound
+	return errors.As(err, &bkNotFound)
 }
 
 // isErrObjectNotFound - Check if error type is ObjectNotFound.
 func isErrObjectNotFound(err error) bool {
-	_, ok := err.(ObjectNotFound)
-	return ok
+	var objNotFound ObjectNotFound
+	return errors.As(err, &objNotFound)
 }
 
 // PreConditionFailed - Check if copy precondition failed

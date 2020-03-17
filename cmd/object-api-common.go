@@ -20,7 +20,7 @@ import (
 	"context"
 	"path"
 	"sync"
-	"log"
+
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
@@ -59,7 +59,7 @@ func init() {
 // if size == 0 and object ends with SlashSeparator then
 // returns true.
 func isObjectDir(object string, size int64) bool {
-	return hasSuffix(object, SlashSeparator) && size == 0
+	return HasSuffix(object, SlashSeparator) && size == 0
 }
 
 // Converts just bucket, object metadata into ObjectInfo datatype.
@@ -91,9 +91,6 @@ func deleteBucketMetadata(ctx context.Context, bucket string, objAPI ObjectLayer
 
 	// Delete notification config, if present - ignore any errors.
 	removeNotificationConfig(ctx, objAPI, bucket)
-
-	// Delete listener config, if present - ignore any errors.
-	removeListenerConfig(ctx, objAPI, bucket)
 }
 
 // Depending on the disk type network or local, initialize storage API.
@@ -114,7 +111,7 @@ func cleanupDir(ctx context.Context, storage StorageAPI, volume, dirPath string)
 	var delFunc func(string) error
 	// Function to delete entries recursively.
 	delFunc = func(entryPath string) error {
-		if !hasSuffix(entryPath, SlashSeparator) {
+		if !HasSuffix(entryPath, SlashSeparator) {
 			// Delete the file entry.
 			err := storage.DeleteFile(volume, entryPath)
 			logger.LogIf(ctx, err)
@@ -150,78 +147,6 @@ func cleanupDir(ctx context.Context, storage StorageAPI, volume, dirPath string)
 	return err
 }
 
-// Cleanup objects in bulk and recursively: each object will have a list of sub-files to delete in the backend
-func cleanupObjectsBulk(storage StorageAPI, volume string, objsPaths []string, errs []error) ([]error, error) {
-	// The list of files in disk to delete
-	var filesToDelete []string
-	// Map files to delete to the passed objsPaths
-	var filesToDeleteObjsIndexes []int
-
-	// Traverse and return the list of sub entries
-	var traverse func(string) ([]string, error)
-	traverse = func(entryPath string) ([]string, error) {
-		var output = make([]string, 0)
-		if !hasSuffix(entryPath, SlashSeparator) {
-			output = append(output, entryPath)
-			return output, nil
-		}
-		entries, err := storage.ListDir(volume, entryPath, -1, "")
-		if err != nil {
-			if err == errFileNotFound {
-				return nil, nil
-			}
-			return nil, err
-		}
-
-		for _, entry := range entries {
-			subEntries, err := traverse(pathJoin(entryPath, entry))
-			if err != nil {
-				return nil, err
-			}
-			output = append(output, subEntries...)
-		}
-		return output, nil
-	}
-
-	// Find and collect the list of files to remove associated
-	// to the passed objects paths
-	for idx, objPath := range objsPaths {
-		if errs[idx] != nil {
-			continue
-		}
-		output, err := traverse(retainSlash(pathJoin(objPath)))
-		if err != nil {
-			errs[idx] = err
-			continue
-		} else {
-			errs[idx] = nil
-		}
-		filesToDelete = append(filesToDelete, output...)
-		for i := 0; i < len(output); i++ {
-			filesToDeleteObjsIndexes = append(filesToDeleteObjsIndexes, idx)
-		}
-	}
-
-	// Reverse the list so remove can succeed
-	reverseStringSlice(filesToDelete)
-
-	dErrs, err := storage.DeleteFileBulk(volume, filesToDelete)
-	if err != nil {
-		return nil, err
-	}
-
-	// Map files deletion errors to the correspondent objects
-	for i := range dErrs {
-		if dErrs[i] != nil {
-			if errs[filesToDeleteObjsIndexes[i]] != nil {
-				errs[filesToDeleteObjsIndexes[i]] = dErrs[i]
-			}
-		}
-	}
-
-	return errs, nil
-}
-
 // Removes notification.xml for a given bucket, only used during DeleteBucket.
 func removeNotificationConfig(ctx context.Context, objAPI ObjectLayer, bucket string) error {
 	// Verify bucket is valid.
@@ -233,15 +158,7 @@ func removeNotificationConfig(ctx context.Context, objAPI ObjectLayer, bucket st
 	return objAPI.DeleteObject(ctx, minioMetaBucket, ncPath)
 }
 
-// Remove listener configuration from storage layer. Used when a bucket is deleted.
-func removeListenerConfig(ctx context.Context, objAPI ObjectLayer, bucket string) error {
-	// make the path
-	lcPath := path.Join(bucketConfigPrefix, bucket, bucketListenerConfig)
-	return objAPI.DeleteObject(ctx, minioMetaBucket, lcPath)
-}
-
 func listObjectsNonSlash(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int, tpool *TreeWalkPool, listDir ListDirFunc, getObjInfo func(context.Context, string, string) (ObjectInfo, error), getObjectInfoDirs ...func(context.Context, string, string) (ObjectInfo, error)) (loi ListObjectsInfo, err error) {
-	log.Println("LIST OBJS NON SLASH")
 	endWalkCh := make(chan struct{})
 	defer close(endWalkCh)
 	recursive := true
@@ -324,22 +241,74 @@ func listObjectsNonSlash(ctx context.Context, bucket, prefix, marker, delimiter 
 	return result, nil
 }
 
-func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, delimiter string, maxKeys int, tpool *TreeWalkPool, listDir ListDirFunc, getObjInfo func(context.Context, string, string) (ObjectInfo, error), getObjectInfoDirs ...func(context.Context, string, string) (ObjectInfo, error)) (loi ListObjectsInfo, err error) {
-	log.Println(" lISTOBJECTS", prefix, marker,  delimiter,  maxKeys)
-	if delimiter != SlashSeparator && delimiter != "" {
-	        log.Println(" 0. lISTOBJECTS", prefix, marker,  delimiter,  maxKeys)
+// Walk a bucket, optionally prefix recursively, until we have returned
+// all the content to objectInfo channel, it is callers responsibility
+// to allocate a receive channel for ObjectInfo, upon any unhandled
+// error walker returns error. Optionally if context.Done() is received
+// then Walk() stops the walker.
+func fsWalk(ctx context.Context, obj ObjectLayer, bucket, prefix string, listDir ListDirFunc, results chan<- ObjectInfo, getObjInfo func(context.Context, string, string) (ObjectInfo, error), getObjectInfoDirs ...func(context.Context, string, string) (ObjectInfo, error)) error {
+	if err := checkListObjsArgs(ctx, bucket, prefix, "", obj); err != nil {
+		// Upon error close the channel.
+		close(results)
+		return err
+	}
 
+	walkResultCh := startTreeWalk(ctx, bucket, prefix, "", true, listDir, ctx.Done())
+
+	go func() {
+		defer close(results)
+
+		for {
+			walkResult, ok := <-walkResultCh
+			if !ok {
+				break
+			}
+
+			var objInfo ObjectInfo
+			var err error
+			if HasSuffix(walkResult.entry, SlashSeparator) {
+				for _, getObjectInfoDir := range getObjectInfoDirs {
+					objInfo, err = getObjectInfoDir(ctx, bucket, walkResult.entry)
+					if err == nil {
+						break
+					}
+					if err == errFileNotFound {
+						err = nil
+						objInfo = ObjectInfo{
+							Bucket: bucket,
+							Name:   walkResult.entry,
+							IsDir:  true,
+						}
+					}
+				}
+			} else {
+				objInfo, err = getObjInfo(ctx, bucket, walkResult.entry)
+			}
+			if err != nil {
+				continue
+			}
+			results <- objInfo
+			if walkResult.end {
+				break
+			}
+		}
+	}()
+	return nil
+}
+
+func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, delimiter string, maxKeys int, tpool *TreeWalkPool, listDir ListDirFunc, getObjInfo func(context.Context, string, string) (ObjectInfo, error), getObjectInfoDirs ...func(context.Context, string, string) (ObjectInfo, error)) (loi ListObjectsInfo, err error) {
+	if delimiter != SlashSeparator && delimiter != "" {
 		return listObjectsNonSlash(ctx, bucket, prefix, marker, delimiter, maxKeys, tpool, listDir, getObjInfo, getObjectInfoDirs...)
 	}
 
-	if err := checkListObjsArgs(ctx, bucket, prefix, marker, delimiter, obj); err != nil {
+	if err := checkListObjsArgs(ctx, bucket, prefix, marker, obj); err != nil {
 		return loi, err
 	}
 
 	// Marker is set validate pre-condition.
 	if marker != "" {
 		// Marker not common with prefix is not implemented. Send an empty response
-		if !hasPrefix(marker, prefix) {
+		if !HasPrefix(marker, prefix) {
 			return loi, nil
 		}
 	}
@@ -355,8 +324,6 @@ func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, d
 	// as '/' we don't have any entries, since all the keys are
 	// of form 'keyName/...'
 	if delimiter == SlashSeparator && prefix == SlashSeparator {
-        log.Println(" 1. lISTOBJECTS")
-
 		return loi, nil
 	}
 
@@ -368,13 +335,10 @@ func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, d
 	// Default is recursive, if delimiter is set then list non recursive.
 	recursive := true
 	if delimiter == SlashSeparator {
-        log.Println(" 2. lISTOBJECTS")
-
 		recursive = false
 	}
-        log.Println(" 3. lISTOBJECTS")
 
-	walkResultCh, endWalkCh := tpool.Release(listParams{bucket, recursive, marker, prefix, false})
+	walkResultCh, endWalkCh := tpool.Release(listParams{bucket, recursive, marker, prefix})
 	if walkResultCh == nil {
 		endWalkCh = make(chan struct{})
 		walkResultCh = startTreeWalk(ctx, bucket, prefix, marker, recursive, listDir, endWalkCh)
@@ -395,7 +359,7 @@ func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, d
 
 		var objInfo ObjectInfo
 		var err error
-		if hasSuffix(walkResult.entry, SlashSeparator) {
+		if HasSuffix(walkResult.entry, SlashSeparator) {
 			for _, getObjectInfoDir := range getObjectInfoDirs {
 				objInfo, err = getObjectInfoDir(ctx, bucket, walkResult.entry)
 				if err == nil {
@@ -435,7 +399,7 @@ func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, d
 	}
 
 	// Save list routine for the next marker if we haven't reached EOF.
-	params := listParams{bucket, recursive, nextMarker, prefix, false}
+	params := listParams{bucket, recursive, nextMarker, prefix}
 	if !eof {
 		tpool.Set(params, walkResultCh, endWalkCh)
 	}
@@ -458,4 +422,27 @@ func listObjects(ctx context.Context, obj ObjectLayer, bucket, prefix, marker, d
 
 	// Success.
 	return result, nil
+}
+
+// Fetch the histogram interval corresponding
+// to the passed object size.
+func objSizeToHistoInterval(usize uint64) string {
+	size := int64(usize)
+
+	var interval objectHistogramInterval
+	for _, interval = range ObjectsHistogramIntervals {
+		var cond1, cond2 bool
+		if size >= interval.start || interval.start == -1 {
+			cond1 = true
+		}
+		if size <= interval.end || interval.end == -1 {
+			cond2 = true
+		}
+		if cond1 && cond2 {
+			return interval.name
+		}
+	}
+
+	// This would be the last element of histogram intervals
+	return interval.name
 }

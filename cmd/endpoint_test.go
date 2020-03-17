@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
 	"net"
 	"net/url"
@@ -25,51 +24,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/minio/cli"
 	"github.com/minio/minio-go/v6/pkg/set"
 )
 
-func TestSubOptimalEndpointInput(t *testing.T) {
-	args1 := []string{"http://localhost/d1", "http://localhost/d2", "http://localhost/d3", "http://localhost/d4"}
-	args2 := []string{"http://example.org/d1", "http://example.com/d1", "http://example.net/d1", "http://example.edu/d1"}
-
-	tests := []struct {
-		setupType SetupType
-		ctx       *cli.Context
-		endpoints EndpointZones
-		isErr     bool
-	}{
-		{
-			setupType: DistXLSetupType,
-			ctx:       cli.NewContext(cli.NewApp(), flag.NewFlagSet("", flag.ContinueOnError), nil),
-			endpoints: mustGetZoneEndpoints(args1...),
-			isErr:     false,
-		},
-		{
-			setupType: DistXLSetupType,
-			ctx:       cli.NewContext(cli.NewApp(), flag.NewFlagSet("", flag.ContinueOnError), nil),
-			endpoints: mustGetZoneEndpoints(args2...),
-			isErr:     false,
-		},
-	}
-	for i, test := range tests {
-		test := test
-		t.Run(fmt.Sprintf("Test%d", i+1), func(t *testing.T) {
-			err := checkEndpointsSubOptimal(test.ctx, test.setupType, test.endpoints)
-			if test.isErr && err == nil {
-				t.Error("expected err but found nil")
-			}
-			if !test.isErr && err != nil {
-				t.Errorf("expected err nil but found an err %s", err)
-			}
-		})
-	}
-}
-
 func TestNewEndpoint(t *testing.T) {
-	u1, _ := url.Parse("http://localhost/path")
 	u2, _ := url.Parse("https://example.org/path")
-	u3, _ := url.Parse("http://127.0.0.1:8080/path")
 	u4, _ := url.Parse("http://192.168.253.200/path")
 
 	testCases := []struct {
@@ -91,10 +50,7 @@ func TestNewEndpoint(t *testing.T) {
 		{"http:path", Endpoint{URL: &url.URL{Path: "http:path"}, IsLocal: true}, PathEndpointType, nil},
 		{"http:/path", Endpoint{URL: &url.URL{Path: "http:/path"}, IsLocal: true}, PathEndpointType, nil},
 		{"http:///path", Endpoint{URL: &url.URL{Path: "http:/path"}, IsLocal: true}, PathEndpointType, nil},
-		{"http://localhost/path", Endpoint{URL: u1, IsLocal: true}, URLEndpointType, nil},
-		{"http://localhost/path//", Endpoint{URL: u1, IsLocal: true}, URLEndpointType, nil},
 		{"https://example.org/path", Endpoint{URL: u2, IsLocal: false}, URLEndpointType, nil},
-		{"http://127.0.0.1:8080/path", Endpoint{URL: u3, IsLocal: true}, URLEndpointType, nil},
 		{"http://192.168.253.200/path", Endpoint{URL: u4, IsLocal: false}, URLEndpointType, nil},
 		{"", Endpoint{}, -1, fmt.Errorf("empty or root endpoint is not supported")},
 		{SlashSeparator, Endpoint{}, -1, fmt.Errorf("empty or root endpoint is not supported")},
@@ -112,28 +68,31 @@ func TestNewEndpoint(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		endpoint, err := NewEndpoint(testCase.arg)
-		if err == nil {
-			err = endpoint.UpdateIsLocal()
-		}
-
-		if testCase.expectedErr == nil {
-			if err != nil {
-				t.Fatalf("error: expected = <nil>, got = %v", err)
+		testCase := testCase
+		t.Run("", func(t *testing.T) {
+			endpoint, err := NewEndpoint(testCase.arg)
+			if err == nil {
+				err = endpoint.UpdateIsLocal()
 			}
-		} else if err == nil {
-			t.Fatalf("error: expected = %v, got = <nil>", testCase.expectedErr)
-		} else if testCase.expectedErr.Error() != err.Error() {
-			t.Fatalf("error: expected = %v, got = %v", testCase.expectedErr, err)
-		}
 
-		if err == nil && !reflect.DeepEqual(testCase.expectedEndpoint, endpoint) {
-			t.Fatalf("endpoint: expected = %+v, got = %+v", testCase.expectedEndpoint, endpoint)
-		}
+			if testCase.expectedErr == nil {
+				if err != nil {
+					t.Errorf("error: expected = <nil>, got = %v", err)
+				}
+			} else if err == nil {
+				t.Errorf("error: expected = %v, got = <nil>", testCase.expectedErr)
+			} else if testCase.expectedErr.Error() != err.Error() {
+				t.Errorf("error: expected = %v, got = %v", testCase.expectedErr, err)
+			}
 
-		if err == nil && testCase.expectedType != endpoint.Type() {
-			t.Fatalf("type: expected = %+v, got = %+v", testCase.expectedType, endpoint.Type())
-		}
+			if err == nil && !reflect.DeepEqual(testCase.expectedEndpoint, endpoint) {
+				t.Errorf("endpoint: expected = %#v, got = %#v", testCase.expectedEndpoint, endpoint)
+			}
+
+			if err == nil && testCase.expectedType != endpoint.Type() {
+				t.Errorf("type: expected = %+v, got = %+v", testCase.expectedType, endpoint.Type())
+			}
+		})
 	}
 }
 
@@ -281,25 +240,19 @@ func TestCreateEndpoints(t *testing.T) {
 				Endpoint{URL: &url.URL{Path: "d3"}, IsLocal: true},
 				Endpoint{URL: &url.URL{Path: "d4"}, IsLocal: true},
 			}, XLSetupType, nil},
-		// XL Setup with URLEndpointType
+		// DistXL Setup with URLEndpointType
 		{":9000", [][]string{{"http://localhost/d1", "http://localhost/d2", "http://localhost/d3", "http://localhost/d4"}}, ":9000", Endpoints{
-			Endpoint{URL: &url.URL{Path: "/d1"}, IsLocal: true},
-			Endpoint{URL: &url.URL{Path: "/d2"}, IsLocal: true},
-			Endpoint{URL: &url.URL{Path: "/d3"}, IsLocal: true},
-			Endpoint{URL: &url.URL{Path: "/d4"}, IsLocal: true},
-		}, XLSetupType, nil},
-		// XL Setup with URLEndpointType having mixed naming to local host.
-		{"127.0.0.1:10000", [][]string{{"http://localhost/d1", "http://localhost/d2", "http://127.0.0.1/d3", "http://127.0.0.1/d4"}}, ":10000", Endpoints{
-			Endpoint{URL: &url.URL{Path: "/d1"}, IsLocal: true},
-			Endpoint{URL: &url.URL{Path: "/d2"}, IsLocal: true},
-			Endpoint{URL: &url.URL{Path: "/d3"}, IsLocal: true},
-			Endpoint{URL: &url.URL{Path: "/d4"}, IsLocal: true},
-		}, XLSetupType, fmt.Errorf("all local endpoints should not have different hostname/ips")},
+			Endpoint{URL: &url.URL{Scheme: "http", Host: "localhost", Path: "/d1"}, IsLocal: true},
+			Endpoint{URL: &url.URL{Scheme: "http", Host: "localhost", Path: "/d2"}, IsLocal: true},
+			Endpoint{URL: &url.URL{Scheme: "http", Host: "localhost", Path: "/d3"}, IsLocal: true},
+			Endpoint{URL: &url.URL{Scheme: "http", Host: "localhost", Path: "/d4"}, IsLocal: true},
+		}, DistXLSetupType, nil},
+		// DistXL Setup with URLEndpointType having mixed naming to local host.
+		{"127.0.0.1:10000", [][]string{{"http://localhost/d1", "http://localhost/d2", "http://127.0.0.1/d3", "http://127.0.0.1/d4"}}, "", Endpoints{}, -1, fmt.Errorf("all local endpoints should not have different hostnames/ips")},
+
 		{":9001", [][]string{{"http://10.0.0.1:9000/export", "http://10.0.0.2:9000/export", "http://" + nonLoopBackIP + ":9001/export", "http://10.0.0.2:9001/export"}}, "", Endpoints{}, -1, fmt.Errorf("path '/export' can not be served by different port on same address")},
 
 		{":9000", [][]string{{"http://127.0.0.1:9000/export", "http://" + nonLoopBackIP + ":9000/export", "http://10.0.0.1:9000/export", "http://10.0.0.2:9000/export"}}, "", Endpoints{}, -1, fmt.Errorf("path '/export' cannot be served by different address on same server")},
-
-		{":9000", [][]string{{"http://localhost/d1", "http://localhost/d2", "http://example.org/d3", "http://example.com/d4"}}, "", Endpoints{}, -1, fmt.Errorf("'localhost' resolves to loopback address is not allowed for distributed XL")},
 
 		// DistXL type
 		{"127.0.0.1:10000", [][]string{{case1Endpoint1, case1Endpoint2, "http://example.org/d3", "http://example.com/d4"}}, "127.0.0.1:10000", Endpoints{
@@ -349,16 +302,25 @@ func TestCreateEndpoints(t *testing.T) {
 	for _, testCase := range testCases {
 		testCase := testCase
 		t.Run("", func(t *testing.T) {
-			endpoints, setupType, err := CreateEndpoints(testCase.serverAddr, testCase.args...)
+			endpoints, setupType, err := CreateEndpoints(testCase.serverAddr, false, testCase.args...)
 			if err == nil && testCase.expectedErr != nil {
 				t.Errorf("error: expected = %v, got = <nil>", testCase.expectedErr)
 			}
 			if err == nil {
-				if !reflect.DeepEqual(endpoints, testCase.expectedEndpoints) {
-					t.Errorf("endpoints: expected = %v, got = %v", testCase.expectedEndpoints, endpoints)
-				}
 				if setupType != testCase.expectedSetupType {
 					t.Errorf("setupType: expected = %v, got = %v", testCase.expectedSetupType, setupType)
+				}
+				if len(endpoints) != len(testCase.expectedEndpoints) {
+					t.Errorf("endpoints: expected = %d, got = %d", len(testCase.expectedEndpoints),
+						len(endpoints))
+				} else {
+					for i, endpoint := range endpoints {
+						if testCase.expectedEndpoints[i].String() != endpoint.String() {
+							t.Errorf("endpoints: expected = %s, got = %s",
+								testCase.expectedEndpoints[i],
+								endpoint)
+						}
+					}
 				}
 			}
 			if err != nil && testCase.expectedErr == nil {
@@ -397,7 +359,7 @@ func TestGetLocalPeer(t *testing.T) {
 	for i, testCase := range testCases {
 		zendpoints := mustGetZoneEndpoints(testCase.endpointArgs...)
 		if !zendpoints[0].Endpoints[0].IsLocal {
-			if err := zendpoints[0].Endpoints.UpdateIsLocal(); err != nil {
+			if err := zendpoints[0].Endpoints.UpdateIsLocal(false); err != nil {
 				t.Fatalf("error: expected = <nil>, got = %v", err)
 			}
 		}
@@ -429,7 +391,7 @@ func TestGetRemotePeers(t *testing.T) {
 	for _, testCase := range testCases {
 		zendpoints := mustGetZoneEndpoints(testCase.endpointArgs...)
 		if !zendpoints[0].Endpoints[0].IsLocal {
-			if err := zendpoints[0].Endpoints.UpdateIsLocal(); err != nil {
+			if err := zendpoints[0].Endpoints.UpdateIsLocal(false); err != nil {
 				t.Fatalf("error: expected = <nil>, got = %v", err)
 			}
 		}

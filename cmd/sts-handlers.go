@@ -36,7 +36,15 @@ import (
 
 const (
 	// STS API version.
-	stsAPIVersion = "2011-06-15"
+	stsAPIVersion       = "2011-06-15"
+	stsVersion          = "Version"
+	stsAction           = "Action"
+	stsPolicy           = "Policy"
+	stsToken            = "Token"
+	stsWebIdentityToken = "WebIdentityToken"
+	stsDurationSeconds  = "DurationSeconds"
+	stsLDAPUsername     = "LDAPUsername"
+	stsLDAPPassword     = "LDAPPassword"
 
 	// STS API action constants
 	clientGrants = "AssumeRoleWithClientGrants"
@@ -45,6 +53,10 @@ const (
 	assumeRole   = "AssumeRole"
 
 	stsRequestBodyLimit = 10 * (1 << 20) // 10 MiB
+
+	// JWT claim keys
+	expClaim = "exp"
+	subClaim = "sub"
 
 	// LDAP claim keys
 	ldapUser   = "ldapUser"
@@ -71,30 +83,30 @@ func registerSTSRouter(router *mux.Router) {
 	}).HandlerFunc(httpTraceAll(sts.AssumeRole))
 
 	// Assume roles with JWT handler, handles both ClientGrants and WebIdentity.
-	stsRouter.Methods("POST").MatcherFunc(func(r *http.Request, rm *mux.RouteMatch) bool {
+	stsRouter.Methods(http.MethodPost).MatcherFunc(func(r *http.Request, rm *mux.RouteMatch) bool {
 		ctypeOk := wildcard.MatchSimple("application/x-www-form-urlencoded*", r.Header.Get(xhttp.ContentType))
 		noQueries := len(r.URL.Query()) == 0
 		return ctypeOk && noQueries
 	}).HandlerFunc(httpTraceAll(sts.AssumeRoleWithJWT))
 
 	// AssumeRoleWithClientGrants
-	stsRouter.Methods("POST").HandlerFunc(httpTraceAll(sts.AssumeRoleWithClientGrants)).
-		Queries("Action", clientGrants).
-		Queries("Version", stsAPIVersion).
-		Queries("Token", "{Token:.*}")
+	stsRouter.Methods(http.MethodPost).HandlerFunc(httpTraceAll(sts.AssumeRoleWithClientGrants)).
+		Queries(stsAction, clientGrants).
+		Queries(stsVersion, stsAPIVersion).
+		Queries(stsToken, "{Token:.*}")
 
 	// AssumeRoleWithWebIdentity
-	stsRouter.Methods("POST").HandlerFunc(httpTraceAll(sts.AssumeRoleWithWebIdentity)).
-		Queries("Action", webIdentity).
-		Queries("Version", stsAPIVersion).
-		Queries("WebIdentityToken", "{Token:.*}")
+	stsRouter.Methods(http.MethodPost).HandlerFunc(httpTraceAll(sts.AssumeRoleWithWebIdentity)).
+		Queries(stsAction, webIdentity).
+		Queries(stsVersion, stsAPIVersion).
+		Queries(stsWebIdentityToken, "{Token:.*}")
 
 	// AssumeRoleWithLDAPIdentity
-	stsRouter.Methods("POST").HandlerFunc(httpTraceAll(sts.AssumeRoleWithLDAPIdentity)).
-		Queries("Action", ldapIdentity).
-		Queries("Version", stsAPIVersion).
-		Queries("LDAPUsername", "{LDAPUsername:.*}").
-		Queries("LDAPPassword", "{LDAPPassword:.*}")
+	stsRouter.Methods(http.MethodPost).HandlerFunc(httpTraceAll(sts.AssumeRoleWithLDAPIdentity)).
+		Queries(stsAction, ldapIdentity).
+		Queries(stsVersion, stsAPIVersion).
+		Queries(stsLDAPUsername, "{LDAPUsername:.*}").
+		Queries(stsLDAPPassword, "{LDAPPassword:.*}")
 }
 
 func checkAssumeRoleAuth(ctx context.Context, r *http.Request) (user auth.Credentials, stsErr STSErrorCode) {
@@ -104,11 +116,17 @@ func checkAssumeRoleAuth(ctx context.Context, r *http.Request) (user auth.Creden
 	case authTypeSigned:
 		s3Err := isReqAuthenticated(ctx, r, globalServerRegion, serviceSTS)
 		if STSErrorCode(s3Err) != ErrSTSNone {
+			if s3Err == ErrInvalidAccessKeyID {
+				return user, ErrSTSInvalidAccessKey
+			}
 			return user, STSErrorCode(s3Err)
 		}
 		var owner bool
 		user, owner, s3Err = getReqAccessKeyV4(r, globalServerRegion, serviceSTS)
 		if STSErrorCode(s3Err) != ErrSTSNone {
+			if s3Err == ErrInvalidAccessKeyID {
+				return user, ErrSTSInvalidAccessKey
+			}
 			return user, STSErrorCode(s3Err)
 		}
 		// Root credentials are not allowed to use STS API
@@ -141,12 +159,12 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Form.Get("Version") != stsAPIVersion {
-		writeSTSErrorResponse(ctx, w, ErrSTSMissingParameter, fmt.Errorf("Invalid STS API version %s, expecting %s", r.Form.Get("Version"), stsAPIVersion))
+	if r.Form.Get(stsVersion) != stsAPIVersion {
+		writeSTSErrorResponse(ctx, w, ErrSTSMissingParameter, fmt.Errorf("Invalid STS API version %s, expecting %s", r.Form.Get(stsVersion), stsAPIVersion))
 		return
 	}
 
-	action := r.Form.Get("Action")
+	action := r.Form.Get(stsAction)
 	switch action {
 	case assumeRole:
 	default:
@@ -157,7 +175,7 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 	ctx = newContext(r, w, action)
 	defer logger.AuditLog(w, r, action, nil)
 
-	sessionPolicyStr := r.Form.Get("Policy")
+	sessionPolicyStr := r.Form.Get(stsPolicy)
 	// https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
 	// The plain text that you use for both inline and managed session
 	// policies shouldn't exceed 2048 characters.
@@ -182,7 +200,7 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	m := make(map[string]interface{})
-	m["exp"], err = openid.GetDefaultExpiration(r.Form.Get("DurationSeconds"))
+	m[expClaim], err = openid.GetDefaultExpiration(r.Form.Get(stsDurationSeconds))
 	if err != nil {
 		writeSTSErrorResponse(ctx, w, ErrSTSInvalidParameterValue, err)
 		return
@@ -202,7 +220,7 @@ func (sts *stsAPIHandlers) AssumeRole(w http.ResponseWriter, r *http.Request) {
 	// This policy is the policy associated with the user
 	// requesting for temporary credentials. The temporary
 	// credentials will inherit the same policy requirements.
-	m[iamPolicyName()] = policyName
+	m[iamPolicyClaimName()] = policyName
 
 	if len(sessionPolicyStr) > 0 {
 		m[iampolicy.SessionPolicyName] = base64.StdEncoding.EncodeToString([]byte(sessionPolicyStr))
@@ -248,12 +266,12 @@ func (sts *stsAPIHandlers) AssumeRoleWithJWT(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if r.Form.Get("Version") != stsAPIVersion {
+	if r.Form.Get(stsVersion) != stsAPIVersion {
 		writeSTSErrorResponse(ctx, w, ErrSTSMissingParameter, fmt.Errorf("Invalid STS API version %s, expecting %s", r.Form.Get("Version"), stsAPIVersion))
 		return
 	}
 
-	action := r.Form.Get("Action")
+	action := r.Form.Get(stsAction)
 	switch action {
 	case clientGrants, webIdentity:
 	default:
@@ -275,12 +293,12 @@ func (sts *stsAPIHandlers) AssumeRoleWithJWT(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	token := r.Form.Get("Token")
+	token := r.Form.Get(stsToken)
 	if token == "" {
-		token = r.Form.Get("WebIdentityToken")
+		token = r.Form.Get(stsWebIdentityToken)
 	}
 
-	m, err := v.Validate(token, r.Form.Get("DurationSeconds"))
+	m, err := v.Validate(token, r.Form.Get(stsDurationSeconds))
 	if err != nil {
 		switch err {
 		case openid.ErrTokenExpired:
@@ -291,7 +309,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithJWT(w http.ResponseWriter, r *http.Requ
 				writeSTSErrorResponse(ctx, w, ErrSTSWebIdentityExpiredToken, err)
 			}
 			return
-		case openid.ErrInvalidDuration:
+		case auth.ErrInvalidDuration:
 			writeSTSErrorResponse(ctx, w, ErrSTSInvalidParameterValue, err)
 			return
 		}
@@ -299,7 +317,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithJWT(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	sessionPolicyStr := r.Form.Get("Policy")
+	sessionPolicyStr := r.Form.Get(stsPolicy)
 	// https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoleWithWebIdentity.html
 	// The plain text that you use for both inline and managed session
 	// policies shouldn't exceed 2048 characters.
@@ -338,12 +356,12 @@ func (sts *stsAPIHandlers) AssumeRoleWithJWT(w http.ResponseWriter, r *http.Requ
 	// be set and configured on your identity provider as part of
 	// JWT custom claims.
 	var policyName string
-	if v, ok := m[iamPolicyName()]; ok {
+	if v, ok := m[iamPolicyClaimName()]; ok {
 		policyName, _ = v.(string)
 	}
 
 	var subFromToken string
-	if v, ok := m["sub"]; ok {
+	if v, ok := m[subClaim]; ok {
 		subFromToken, _ = v.(string)
 	}
 
@@ -415,12 +433,12 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 		return
 	}
 
-	if r.Form.Get("Version") != stsAPIVersion {
+	if r.Form.Get(stsVersion) != stsAPIVersion {
 		writeSTSErrorResponse(ctx, w, ErrSTSMissingParameter, fmt.Errorf("Invalid STS API version %s, expecting %s", r.Form.Get("Version"), stsAPIVersion))
 		return
 	}
 
-	action := r.Form.Get("Action")
+	action := r.Form.Get(stsAction)
 	switch action {
 	case ldapIdentity:
 	default:
@@ -431,15 +449,15 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 	ctx = newContext(r, w, action)
 	defer logger.AuditLog(w, r, action, nil)
 
-	ldapUsername := r.Form.Get("LDAPUsername")
-	ldapPassword := r.Form.Get("LDAPPassword")
+	ldapUsername := r.Form.Get(stsLDAPUsername)
+	ldapPassword := r.Form.Get(stsLDAPPassword)
 
 	if ldapUsername == "" || ldapPassword == "" {
 		writeSTSErrorResponse(ctx, w, ErrSTSMissingParameter, fmt.Errorf("LDAPUsername and LDAPPassword cannot be empty"))
 		return
 	}
 
-	sessionPolicyStr := r.Form.Get("Policy")
+	sessionPolicyStr := r.Form.Get(stsPolicy)
 	// https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
 	// The plain text that you use for both inline and managed session
 	// policies shouldn't exceed 2048 characters.
@@ -464,13 +482,16 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 
 	ldapConn, err := globalLDAPConfig.Connect()
 	if err != nil {
-		writeSTSErrorResponse(ctx, w, ErrSTSInvalidParameterValue, fmt.Errorf("LDAP server connection failure: %v", err))
+		writeSTSErrorResponse(ctx, w, ErrSTSInvalidParameterValue, fmt.Errorf("LDAP server connection failure: %w", err))
 		return
 	}
 	if ldapConn == nil {
-		writeSTSErrorResponse(ctx, w, ErrSTSInvalidParameterValue, fmt.Errorf("LDAP server not configured: %v", err))
+		writeSTSErrorResponse(ctx, w, ErrSTSInvalidParameterValue, fmt.Errorf("LDAP server not configured: %w", err))
 		return
 	}
+
+	// Close ldap connection to avoid leaks.
+	defer ldapConn.Close()
 
 	usernameSubs, _ := xldap.NewSubstituter("username", ldapUsername)
 	// We ignore error below as we already validated the username
@@ -478,7 +499,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 	usernameDN, _ := usernameSubs.Substitute(globalLDAPConfig.UsernameFormat)
 	// Bind with user credentials to validate the password
 	if err = ldapConn.Bind(usernameDN, ldapPassword); err != nil {
-		err = fmt.Errorf("LDAP authentication failure: %v", err)
+		err = fmt.Errorf("LDAP authentication failure: %w", err)
 		writeSTSErrorResponse(ctx, w, ErrSTSInvalidParameterValue, err)
 		return
 	}
@@ -505,7 +526,7 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 
 		sr, err := ldapConn.Search(searchRequest)
 		if err != nil {
-			writeSTSErrorResponse(ctx, w, ErrSTSInvalidParameterValue, fmt.Errorf("LDAP search failure: %v", err))
+			writeSTSErrorResponse(ctx, w, ErrSTSInvalidParameterValue, fmt.Errorf("LDAP search failure: %w", err))
 			return
 		}
 		for _, entry := range sr.Entries {
@@ -516,9 +537,9 @@ func (sts *stsAPIHandlers) AssumeRoleWithLDAPIdentity(w http.ResponseWriter, r *
 	}
 	expiryDur := globalLDAPConfig.GetExpiryDuration()
 	m := map[string]interface{}{
-		"exp":        UTCNow().Add(expiryDur).Unix(),
-		"ldapUser":   ldapUsername,
-		"ldapGroups": groups,
+		expClaim:   UTCNow().Add(expiryDur).Unix(),
+		ldapUser:   ldapUsername,
+		ldapGroups: groups,
 	}
 
 	if len(sessionPolicyStr) > 0 {

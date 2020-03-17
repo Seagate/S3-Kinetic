@@ -588,7 +588,6 @@ func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string,
 
 		fsMeta.Parts[i] = ObjectPartInfo{
 			Number:     part.PartNumber,
-			ETag:       part.ETag,
 			Size:       fi.Size(),
 			ActualSize: actualSize,
 		}
@@ -697,7 +696,7 @@ func (fs *FSObjects) CompleteMultipartUpload(ctx context.Context, bucket string,
 	}
 
 	// Deny if WORM is enabled
-	if globalWORMEnabled {
+	if isWORMEnabled(bucket) {
 		if _, err := fsStatFile(ctx, pathJoin(fs.fsPath, bucket, object)); err == nil {
 			return ObjectInfo{}, ObjectAlreadyExists{Bucket: bucket, Object: object}
 		}

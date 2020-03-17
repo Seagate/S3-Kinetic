@@ -21,9 +21,13 @@ import (
 	"errors"
 
 	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/lifecycle"
+
+	bucketsse "github.com/minio/minio/pkg/bucket/encryption"
+	"github.com/minio/minio/pkg/bucket/lifecycle"
+	"github.com/minio/minio/pkg/bucket/object/tagging"
+	"github.com/minio/minio/pkg/bucket/policy"
+
 	"github.com/minio/minio/pkg/madmin"
-	"github.com/minio/minio/pkg/policy"
 )
 
 // GatewayLocker implements custom NeNSLock implementation
@@ -33,8 +37,8 @@ type GatewayLocker struct {
 }
 
 // NewNSLock - implements gateway level locker
-func (l *GatewayLocker) NewNSLock(ctx context.Context, bucket string, object string) RWLocker {
-	return l.nsMutex.NewNSLock(ctx, nil, bucket, object)
+func (l *GatewayLocker) NewNSLock(ctx context.Context, bucket string, objects ...string) RWLocker {
+	return l.nsMutex.NewNSLock(ctx, nil, bucket, objects...)
 }
 
 // NewGatewayLayerWithLocker - initialize gateway with locker.
@@ -45,8 +49,14 @@ func NewGatewayLayerWithLocker(gwLayer ObjectLayer) ObjectLayer {
 // GatewayUnsupported list of unsupported call stubs for gateway.
 type GatewayUnsupported struct{}
 
+// CrawlAndGetDataUsage - crawl is not implemented for gateway
+func (a GatewayUnsupported) CrawlAndGetDataUsage(ctx context.Context, endCh <-chan struct{}) DataUsageInfo {
+	logger.CriticalIf(ctx, errors.New("not implemented"))
+	return DataUsageInfo{}
+}
+
 // NewNSLock is a dummy stub for gateway.
-func (a GatewayUnsupported) NewNSLock(ctx context.Context, bucket string, object string) RWLocker {
+func (a GatewayUnsupported) NewNSLock(ctx context.Context, bucket string, objects ...string) RWLocker {
 	logger.CriticalIf(ctx, errors.New("not implemented"))
 	return nil
 }
@@ -121,6 +131,21 @@ func (a GatewayUnsupported) DeleteBucketLifecycle(ctx context.Context, bucket st
 	return NotImplemented{}
 }
 
+// GetBucketSSEConfig returns bucket encryption config on given bucket
+func (a GatewayUnsupported) GetBucketSSEConfig(ctx context.Context, bucket string) (*bucketsse.BucketSSEConfig, error) {
+	return nil, NotImplemented{}
+}
+
+// SetBucketSSEConfig sets bucket encryption config on given bucket
+func (a GatewayUnsupported) SetBucketSSEConfig(ctx context.Context, bucket string, config *bucketsse.BucketSSEConfig) error {
+	return NotImplemented{}
+}
+
+// DeleteBucketSSEConfig deletes bucket encryption config on given bucket
+func (a GatewayUnsupported) DeleteBucketSSEConfig(ctx context.Context, bucket string) error {
+	return NotImplemented{}
+}
+
 // ReloadFormat - Not implemented stub.
 func (a GatewayUnsupported) ReloadFormat(ctx context.Context, dryRun bool) error {
 	return NotImplemented{}
@@ -141,11 +166,6 @@ func (a GatewayUnsupported) ListBucketsHeal(ctx context.Context) (buckets []Buck
 	return nil, NotImplemented{}
 }
 
-// ListObjectsHeal - Not implemented stub
-func (a GatewayUnsupported) ListObjectsHeal(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (result ListObjectsInfo, err error) {
-	return ListObjectsInfo{}, NotImplemented{}
-}
-
 // HealObject - Not implemented stub
 func (a GatewayUnsupported) HealObject(ctx context.Context, bucket, object string, dryRun, remove bool, scanMode madmin.HealScanMode) (h madmin.HealResultItem, e error) {
 	return h, NotImplemented{}
@@ -156,8 +176,13 @@ func (a GatewayUnsupported) ListObjectsV2(ctx context.Context, bucket, prefix, c
 	return result, NotImplemented{}
 }
 
+// Walk - Not implemented stub
+func (a GatewayUnsupported) Walk(ctx context.Context, bucket, prefix string, results chan<- ObjectInfo) error {
+	return NotImplemented{}
+}
+
 // HealObjects - Not implemented stub
-func (a GatewayUnsupported) HealObjects(ctx context.Context, bucket, prefix string, fn func(string, string) error) (e error) {
+func (a GatewayUnsupported) HealObjects(ctx context.Context, bucket, prefix string, fn healObjectFn) (e error) {
 	return NotImplemented{}
 }
 
@@ -165,6 +190,30 @@ func (a GatewayUnsupported) HealObjects(ctx context.Context, bucket, prefix stri
 func (a GatewayUnsupported) CopyObject(ctx context.Context, srcBucket string, srcObject string, destBucket string, destObject string,
 	srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (objInfo ObjectInfo, err error) {
 	return objInfo, NotImplemented{}
+}
+
+// GetMetrics - no op
+func (a GatewayUnsupported) GetMetrics(ctx context.Context) (*Metrics, error) {
+	logger.LogIf(ctx, NotImplemented{})
+	return &Metrics{}, NotImplemented{}
+}
+
+// PutObjectTag - not implemented.
+func (a GatewayUnsupported) PutObjectTag(ctx context.Context, bucket, object string, tags string) error {
+	logger.LogIf(ctx, NotImplemented{})
+	return NotImplemented{}
+}
+
+// GetObjectTag - not implemented.
+func (a GatewayUnsupported) GetObjectTag(ctx context.Context, bucket, object string) (tagging.Tagging, error) {
+	logger.LogIf(ctx, NotImplemented{})
+	return tagging.Tagging{}, NotImplemented{}
+}
+
+// DeleteObjectTag - not implemented.
+func (a GatewayUnsupported) DeleteObjectTag(ctx context.Context, bucket, object string) error {
+	logger.LogIf(ctx, NotImplemented{})
+	return NotImplemented{}
 }
 
 // IsNotificationSupported returns whether bucket notification is applicable for this layer.
@@ -184,5 +233,10 @@ func (a GatewayUnsupported) IsEncryptionSupported() bool {
 
 // IsCompressionSupported returns whether compression is applicable for this layer.
 func (a GatewayUnsupported) IsCompressionSupported() bool {
+	return false
+}
+
+// IsReady - No Op.
+func (a GatewayUnsupported) IsReady(_ context.Context) bool {
 	return false
 }

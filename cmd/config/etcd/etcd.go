@@ -19,11 +19,11 @@ package etcd
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/clientv3/namespace"
 	"github.com/minio/minio/cmd/config"
 	"github.com/minio/minio/pkg/env"
 	xnet "github.com/minio/minio/pkg/net"
@@ -38,12 +38,13 @@ const (
 // etcd environment values
 const (
 	Endpoints     = "endpoints"
+	PathPrefix    = "path_prefix"
 	CoreDNSPath   = "coredns_path"
 	ClientCert    = "client_cert"
 	ClientCertKey = "client_cert_key"
 
-	EnvEtcdState         = "MINIO_ETCD_STATE"
 	EnvEtcdEndpoints     = "MINIO_ETCD_ENDPOINTS"
+	EnvEtcdPathPrefix    = "MINIO_ETCD_PATH_PREFIX"
 	EnvEtcdCoreDNSPath   = "MINIO_ETCD_COREDNS_PATH"
 	EnvEtcdClientCert    = "MINIO_ETCD_CLIENT_CERT"
 	EnvEtcdClientCertKey = "MINIO_ETCD_CLIENT_CERT_KEY"
@@ -53,11 +54,11 @@ const (
 var (
 	DefaultKVS = config.KVS{
 		config.KV{
-			Key:   config.State,
-			Value: config.StateOff,
+			Key:   Endpoints,
+			Value: "",
 		},
 		config.KV{
-			Key:   Endpoints,
+			Key:   PathPrefix,
 			Value: "",
 		},
 		config.KV{
@@ -78,6 +79,7 @@ var (
 // Config - server etcd config.
 type Config struct {
 	Enabled     bool   `json:"enabled"`
+	PathPrefix  string `json:"pathPrefix"`
 	CoreDNSPath string `json:"coreDNSPath"`
 	clientv3.Config
 }
@@ -87,7 +89,14 @@ func New(cfg Config) (*clientv3.Client, error) {
 	if !cfg.Enabled {
 		return nil, nil
 	}
-	return clientv3.New(cfg.Config)
+	cli, err := clientv3.New(cfg.Config)
+	if err != nil {
+		return nil, err
+	}
+	cli.KV = namespace.NewKV(cli.KV, cfg.PathPrefix)
+	cli.Watcher = namespace.NewWatcher(cli.Watcher, cfg.PathPrefix)
+	cli.Lease = namespace.NewLease(cli.Lease, cfg.PathPrefix)
+	return cli, nil
 }
 
 func parseEndpoints(endpoints string) ([]string, bool, error) {
@@ -100,7 +109,7 @@ func parseEndpoints(endpoints string) ([]string, bool, error) {
 			return nil, false, err
 		}
 		if etcdSecure && u.Scheme == "http" {
-			return nil, false, fmt.Errorf("all endpoints should be https or http: %s", endpoint)
+			return nil, false, config.Errorf("all endpoints should be https or http: %s", endpoint)
 		}
 		// If one of the endpoint is https, we will use https directly.
 		etcdSecure = etcdSecure || u.Scheme == "https"
@@ -109,37 +118,10 @@ func parseEndpoints(endpoints string) ([]string, bool, error) {
 	return etcdEndpoints, etcdSecure, nil
 }
 
-func lookupLegacyConfig(rootCAs *x509.CertPool) (Config, error) {
-	cfg := Config{}
-	endpoints := env.Get(EnvEtcdEndpoints, "")
-	if endpoints == "" {
-		return cfg, nil
-	}
-	etcdEndpoints, etcdSecure, err := parseEndpoints(endpoints)
-	if err != nil {
-		return cfg, err
-	}
-	cfg.Enabled = true
-	cfg.DialTimeout = defaultDialTimeout
-	cfg.DialKeepAliveTime = defaultDialKeepAlive
-	cfg.Endpoints = etcdEndpoints
-	cfg.CoreDNSPath = "/skydns"
-	if etcdSecure {
-		cfg.TLS = &tls.Config{
-			RootCAs: rootCAs,
-		}
-		// This is only to support client side certificate authentication
-		// https://coreos.com/etcd/docs/latest/op-guide/security.html
-		etcdClientCertFile := env.Get(EnvEtcdClientCert, "")
-		etcdClientCertKey := env.Get(EnvEtcdClientCertKey, "")
-		if etcdClientCertFile != "" && etcdClientCertKey != "" {
-			cfg.TLS.GetClientCertificate = func(unused *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-				cert, err := tls.LoadX509KeyPair(etcdClientCertFile, etcdClientCertKey)
-				return &cert, err
-			}
-		}
-	}
-	return cfg, nil
+// Enabled returns if etcd is enabled.
+func Enabled(kvs config.KVS) bool {
+	endpoints := kvs.Get(Endpoints)
+	return endpoints != ""
 }
 
 // LookupConfig - Initialize new etcd config.
@@ -149,38 +131,9 @@ func LookupConfig(kvs config.KVS, rootCAs *x509.CertPool) (Config, error) {
 		return cfg, err
 	}
 
-	stateBool, err := config.ParseBool(env.Get(EnvEtcdState, config.StateOn))
-	if err != nil {
-		return cfg, err
-	}
-
-	if stateBool {
-		// By default state is 'on' to honor legacy config.
-		cfg, err = lookupLegacyConfig(rootCAs)
-		if err != nil {
-			return cfg, err
-		}
-		// If old legacy config is enabled honor it.
-		if cfg.Enabled {
-			return cfg, nil
-		}
-	}
-
-	stateBool, err = config.ParseBool(env.Get(EnvEtcdState, kvs.Get(config.State)))
-	if err != nil {
-		if kvs.Empty() {
-			return cfg, nil
-		}
-		return cfg, err
-	}
-
-	if !stateBool {
-		return cfg, nil
-	}
-
 	endpoints := env.Get(EnvEtcdEndpoints, kvs.Get(Endpoints))
 	if endpoints == "" {
-		return cfg, config.Error("'endpoints' key cannot be empty to enable etcd")
+		return cfg, nil
 	}
 
 	etcdEndpoints, etcdSecure, err := parseEndpoints(endpoints)
@@ -193,6 +146,8 @@ func LookupConfig(kvs config.KVS, rootCAs *x509.CertPool) (Config, error) {
 	cfg.DialKeepAliveTime = defaultDialKeepAlive
 	cfg.Endpoints = etcdEndpoints
 	cfg.CoreDNSPath = env.Get(EnvEtcdCoreDNSPath, kvs.Get(CoreDNSPath))
+	// Default path prefix for all keys on etcd, other than CoreDNSPath.
+	cfg.PathPrefix = env.Get(EnvEtcdPathPrefix, kvs.Get(PathPrefix))
 	if etcdSecure {
 		cfg.TLS = &tls.Config{
 			RootCAs: rootCAs,
