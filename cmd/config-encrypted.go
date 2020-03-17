@@ -40,7 +40,6 @@ func handleEncryptedConfigBackend(objAPI ObjectLayer, server bool) error {
 
 	// If its server mode or nas gateway, migrate the backend.
 	doneCh := make(chan struct{})
-	defer close(doneCh)
 
 	var encrypted bool
 	var err error
@@ -49,18 +48,28 @@ func handleEncryptedConfigBackend(objAPI ObjectLayer, server bool) error {
 	// the following reasons:
 	//  - Read quorum is lost just after the initialization
 	//    of the object layer.
-	for range newRetryTimerSimple(doneCh) {
-		if encrypted, err = checkBackendEncrypted(objAPI); err != nil {
-			if err == errDiskNotFound ||
-				strings.Contains(err.Error(), InsufficientReadQuorum{}.Error()) {
-				logger.Info("Waiting for config backend to be encrypted..")
-				continue
+	retryTimerCh := newRetryTimerSimple(doneCh)
+	var stop bool
+	for !stop {
+		select {
+		case <-retryTimerCh:
+			if encrypted, err = checkBackendEncrypted(objAPI); err != nil {
+				if err == errDiskNotFound ||
+					strings.Contains(err.Error(), InsufficientReadQuorum{}.Error()) {
+					logger.Info("Waiting for config backend to be encrypted..")
+					continue
+				}
+				close(doneCh)
+				return err
 			}
-			return err
+			stop = true
+		case <-globalOSSignalCh:
+			close(doneCh)
+			return fmt.Errorf("Config encryption process stopped gracefully")
 		}
-		break
 	}
-	fmt.Println(" ****** ENCRYPTED?  ", encrypted)
+	close(doneCh)
+
 	if encrypted {
 		// backend is encrypted, but credentials are not specified
 		// we shall fail right here. if not proceed forward.
@@ -75,7 +84,7 @@ func handleEncryptedConfigBackend(objAPI ObjectLayer, server bool) error {
 			return nil
 		}
 		if !globalActiveCred.IsValid() {
-			return errInvalidArgument
+			return config.ErrMissingCredentialsBackendEncrypted(nil)
 		}
 	}
 
@@ -84,24 +93,33 @@ func handleEncryptedConfigBackend(objAPI ObjectLayer, server bool) error {
 		return err
 	}
 
+	doneCh = make(chan struct{})
+	defer close(doneCh)
+
+	retryTimerCh = newRetryTimerSimple(doneCh)
+
 	// Migrating Config backend needs a retry mechanism for
 	// the following reasons:
 	//  - Read quorum is lost just after the initialization
 	//    of the object layer.
-	for range newRetryTimerSimple(doneCh) {
-		// Migrate IAM configuration
-		if err = migrateConfigPrefixToEncrypted(objAPI, activeCredOld, encrypted); err != nil {
-			if err == errDiskNotFound ||
-				strings.Contains(err.Error(), InsufficientReadQuorum{}.Error()) ||
-				strings.Contains(err.Error(), InsufficientWriteQuorum{}.Error()) {
-				logger.Info("Waiting for config backend to be encrypted..")
-				continue
+	for {
+		select {
+		case <-retryTimerCh:
+			// Migrate IAM configuration
+			if err = migrateConfigPrefixToEncrypted(objAPI, activeCredOld, encrypted); err != nil {
+				if err == errDiskNotFound ||
+					strings.Contains(err.Error(), InsufficientReadQuorum{}.Error()) ||
+					strings.Contains(err.Error(), InsufficientWriteQuorum{}.Error()) {
+					logger.Info("Waiting for config backend to be encrypted..")
+					continue
+				}
+				return err
 			}
-			return err
+			return nil
+		case <-globalOSSignalCh:
+			return fmt.Errorf("Config encryption process stopped gracefully")
 		}
-		break
 	}
-	return nil
 }
 
 const (
@@ -122,15 +140,10 @@ func checkBackendEtcdEncrypted(ctx context.Context, client *etcd.Client) (bool, 
 }
 
 func checkBackendEncrypted(objAPI ObjectLayer) (bool, error) {
-	fmt.Println(" *******CHECK BACKEND")
 	data, err := readConfig(context.Background(), objAPI, backendEncryptedFile)
-        fmt.Println(" *******1.CHECK BACKEND ", data)
-
 	if err != nil && err != errConfigNotFound {
-                fmt.Println(" err ERRCONFIGNOT FOUND")
 		return false, err
 	}
-        fmt.Println( " ***** EQUAL ",  bytes.Equal(data, backendEncryptedMigrationComplete))
 	return err == nil && bytes.Equal(data, backendEncryptedMigrationComplete), nil
 }
 
@@ -254,7 +267,12 @@ func migrateIAMConfigsEtcdToEncrypted(client *etcd.Client) error {
 		}
 
 		if !utf8.Valid(data) {
-			return errors.New("config data not in plain-text form")
+			_, err = decryptData(data, globalActiveCred)
+			if err == nil {
+				// Config is already encrypted with right keys
+				continue
+			}
+			return errors.New("config data not in plain-text form or encrypted")
 		}
 
 		cencdata, err = madmin.EncryptData(globalActiveCred.String(), data)
@@ -266,9 +284,11 @@ func migrateIAMConfigsEtcdToEncrypted(client *etcd.Client) error {
 			return err
 		}
 	}
-	if encrypted && globalActiveCred.IsValid() {
+
+	if encrypted && globalActiveCred.IsValid() && activeCredOld.IsValid() {
 		logger.Info("Rotation complete, please make sure to unset MINIO_ACCESS_KEY_OLD and MINIO_SECRET_KEY_OLD envs")
 	}
+
 	return saveKeyEtcd(ctx, client, backendEncryptedFile, backendEncryptedMigrationComplete)
 }
 
@@ -288,7 +308,7 @@ func migrateConfigPrefixToEncrypted(objAPI ObjectLayer, activeCredOld auth.Crede
 	} else {
 		logger.Info("Attempting encryption of all config, IAM users and policies on MinIO backend")
 	}
-	fmt.Println( "SAVE CONFIG")
+
 	err := saveConfig(context.Background(), objAPI, backendEncryptedFile, backendEncryptedMigrationIncomplete)
 	if err != nil {
 		return err
@@ -296,7 +316,8 @@ func migrateConfigPrefixToEncrypted(objAPI ObjectLayer, activeCredOld auth.Crede
 
 	var marker string
 	for {
-		res, err := objAPI.ListObjects(context.Background(), minioMetaBucket, minioConfigPrefix, marker, "", maxObjectList)
+		res, err := objAPI.ListObjects(context.Background(), minioMetaBucket,
+			minioConfigPrefix, marker, "", maxObjectList)
 		if err != nil {
 			return err
 		}
@@ -326,7 +347,12 @@ func migrateConfigPrefixToEncrypted(objAPI ObjectLayer, activeCredOld auth.Crede
 			}
 
 			if !utf8.Valid(data) {
-				return errors.New("config data not in plain-text form")
+				_, err = decryptData(data, globalActiveCred)
+				if err == nil {
+					// Config is already encrypted with right keys
+					continue
+				}
+				return errors.New("config data not in plain-text form or encrypted")
 			}
 
 			cencdata, err = madmin.EncryptData(globalActiveCred.String(), data)
@@ -346,7 +372,7 @@ func migrateConfigPrefixToEncrypted(objAPI ObjectLayer, activeCredOld auth.Crede
 		marker = res.NextMarker
 	}
 
-	if encrypted && globalActiveCred.IsValid() {
+	if encrypted && globalActiveCred.IsValid() && activeCredOld.IsValid() {
 		logger.Info("Rotation complete, please make sure to unset MINIO_ACCESS_KEY_OLD and MINIO_SECRET_KEY_OLD envs")
 	}
 

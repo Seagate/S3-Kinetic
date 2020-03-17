@@ -90,12 +90,16 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
         if _, err := fs.GetBucketInfo(ctx, bucket); err != nil {
                 return "", toObjectErr(err, bucket)
         }
+
         uploadID := mustGetUUID()
+
         // Initialize fs.json values.
         fsMeta := newFSMetaV1()
+
         fsMeta.Meta = opts.UserDefined
         fsMeta.Meta["size"] = strconv.FormatInt(0, 10)
         fsMeta.KoInfo = KOInfo{Name: object, Size: 0, CreatedTime: time.Now()}
+
         fsMetaBytes, err := json.Marshal(fsMeta)
         if err != nil {
                 logger.LogIf(ctx, err)
@@ -154,7 +158,6 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
         }
 
         bufSize := int64(blockSizeV1)
-	//log.Println(" BLOCKSIZEV1 ", bufSize, data.Size())
         if size := data.Size(); size > 0 && bufSize > size {
                 bufSize = size
         }

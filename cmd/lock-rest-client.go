@@ -17,6 +17,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -47,6 +48,8 @@ func toLockError(err error) error {
 	switch err.Error() {
 	case errLockConflict.Error():
 		return errLockConflict
+	case errLockNotExpired.Error():
+		return errLockNotExpired
 	}
 	return err
 }
@@ -74,8 +77,8 @@ func (client *lockRESTClient) call(method string, values url.Values, body io.Rea
 	}
 
 	if isNetworkError(err) {
-		time.AfterFunc(defaultRetryUnit*3, func() {
-			// After 3 seconds, take this lock client online for a retry.
+		time.AfterFunc(defaultRetryUnit, func() {
+			// After 1 seconds, take this lock client online for a retry.
 			atomic.StoreInt32(&client.connected, 1)
 		})
 
@@ -102,14 +105,17 @@ func (client *lockRESTClient) restCall(call string, args dsync.LockArgs) (reply 
 	values := url.Values{}
 	values.Set(lockRESTUID, args.UID)
 	values.Set(lockRESTSource, args.Source)
-	values.Set(lockRESTResource, args.Resource)
-
-	respBody, err := client.call(call, values, nil, -1)
+	var buffer bytes.Buffer
+	for _, resource := range args.Resources {
+		buffer.WriteString(resource)
+		buffer.WriteString("\n")
+	}
+	respBody, err := client.call(call, values, &buffer, -1)
 	defer http.DrainBody(respBody)
 	switch err {
 	case nil:
 		return true, nil
-	case errLockConflict:
+	case errLockConflict, errLockNotExpired:
 		return false, nil
 	default:
 		return false, err
@@ -136,10 +142,9 @@ func (client *lockRESTClient) Unlock(args dsync.LockArgs) (reply bool, err error
 	return client.restCall(lockRESTMethodUnlock, args)
 }
 
-func closeLockers(lockers []dsync.NetLocker) {
-	for _, locker := range lockers {
-		locker.Close()
-	}
+// Expired calls expired handler to check if lock args have expired.
+func (client *lockRESTClient) Expired(args dsync.LockArgs) (expired bool, err error) {
+	return client.restCall(lockRESTMethodExpired, args)
 }
 
 func newLockAPI(endpoint Endpoint) dsync.NetLocker {

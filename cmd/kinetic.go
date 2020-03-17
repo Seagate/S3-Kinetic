@@ -29,10 +29,14 @@ import (
 	//"errors"
 	"io"
 	"net/http"
+	"os"
+	//"os/user"
 	"path"
+	"sort"
 	"time"
 	"strings"
 	"sync"
+	"sync/atomic"
 	//"github.com/minio/minio/pkg/kinetic"
 	"github.com/minio/minio/pkg/kinetic_proto"
 	"github.com/minio/minio/pkg/mimedb"
@@ -40,13 +44,14 @@ import (
 	"github.com/minio/minio-go/pkg/s3utils"
 	"github.com/minio/minio/cmd/logger"
 
-	//"log"
+	"log"
 	"github.com/minio/minio/pkg/lock"
 	"github.com/minio/minio/pkg/madmin"
-
+        bucketsse "github.com/minio/minio/pkg/bucket/encryption"
+	"github.com/minio/minio/pkg/bucket/object/tagging"
 	"encoding/json"
-	"github.com/minio/minio/pkg/lifecycle"
-	"github.com/minio/minio/pkg/policy"
+	"github.com/minio/minio/pkg/bucket/lifecycle"
+	"github.com/minio/minio/pkg/bucket/policy"
 	"strconv"
 )
 
@@ -98,12 +103,14 @@ func InitKineticConnection(IP string, tls bool, kc *Client) error {
 }
 
 type KineticObjects struct {
-	totalUsed    uint64 //Total usage
-	fsPath       string
-	metaJSONFile string
-	rwPool       *fsIOPool
-	listPool     *TreeWalkPool
-	nsMutex      *nsLockMap
+	totalUsed	uint64 //Total usage
+	activeIOCount	int64 
+        maxActiveIOCount int64
+	fsPath		string
+	metaJSONFile	string
+	rwPool		*fsIOPool
+	listPool	*TreeWalkPool
+	nsMutex		*nsLockMap
 	//kcsMutex     *sync.Mutex
 	//kcsIdx       int
 	//kcs          map[int]*kinetic.Client
@@ -132,7 +139,6 @@ func ReleaseConnection(ix int) {
 	if  kConnsPool.totalInUsed < 0 {
 		fmt.Println(" CONNECTION ERROR")
 	}
-	//log.Println("RELEASE ", ix, kConnsPool.totalInUsed)
 	kConnsPool.cond.Broadcast()
 	kConnsPool.Unlock()
 }
@@ -157,19 +163,15 @@ func GetKineticConnection() *Client {
 			}
 		}
 		if kc == nil {
-			//log.Println("WAIT FOR CONN", kConnsPool.totalInUsed)
 			kConnsPool.cond.Wait()
-                        //log.Println("GOT SIG FOR CONN", kConnsPool.totalInUsed)
-
 		} else {
 			break;
 		}
 	}
 	if kConnsPool.totalInUsed > kConnsPool.totalInUsedMax {
 		kConnsPool.totalInUsedMax = kConnsPool.totalInUsed
-		//log.Println(" MAX TOTAL IN USED", kConnsPool.totalInUsedMax)
+		log.Println(" MAX TOTAL IN USED", kConnsPool.totalInUsedMax)
 	}
-	//log.Println(" GET CONN", kc.Idx, kConnsPool.totalInUsed)
 	kConnsPool.Unlock()
 	return kc
 }
@@ -291,16 +293,44 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	return Ko, nil
 }
 
-func (ko *KineticObjects) NewNSLock(ctx context.Context, bucket string, object string) RWLocker {
-    return ko.nsMutex.NewNSLock(ctx, nil, bucket, object)
+
+// NewNSLock - initialize a new namespace RWLocker instance.
+func (ko *KineticObjects) NewNSLock(ctx context.Context, bucket string, objects ...string) RWLocker {
+        // lockers are explicitly 'nil' for FS mode since there are only local lockers
+        return ko.nsMutex.NewNSLock(ctx, nil, bucket, objects...)
 }
 
 func (ko *KineticObjects) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (ko *KineticObjects) StorageInfo(ctx context.Context) StorageInfo {
+func (ko *KineticObjects) StorageInfo(ctx context.Context, _ bool) StorageInfo {
 	return StorageInfo{}
+}
+
+func (ko *KineticObjects) waitForLowActiveIO() {
+        for atomic.LoadInt64(&ko.activeIOCount) >= ko.maxActiveIOCount {
+                time.Sleep(lowActiveIOWaitTick)
+        }
+}
+
+
+// CrawlAndGetDataUsage returns data usage stats of the current FS deployment
+func (ko *KineticObjects) CrawlAndGetDataUsage(ctx context.Context, endCh <-chan struct{}) DataUsageInfo {
+        dataUsageInfo := updateUsage(ko.fsPath, endCh, ko.waitForLowActiveIO, func(item Item) (int64, error) {
+                // Get file size, symlinks which cannot bex
+                // followed are automatically filtered by fastwalk.
+                fi, err := os.Stat(item.Path)
+                if err != nil {
+                        return 0, errSkipFile
+                }
+                return fi.Size(), nil
+        })
+
+        dataUsageInfo.LastUpdate = UTCNow()
+        atomic.StoreUint64(&ko.totalUsed, dataUsageInfo.ObjectsTotalSize)
+
+        return dataUsageInfo
 }
 
 /// Bucket operations
@@ -635,6 +665,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
         return objInfo, nil
 }
 
+//THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
         //log.Println("***GetObjectNInfo***", object)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
@@ -670,7 +701,7 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	}
 
 	// For a directory, we need to send an reader that returns no bytes.
-	if hasSuffix(object, SlashSeparator) {
+	if HasSuffix(object, SlashSeparator) {
 		// The lock taken above is released when
 		// objReader.Close() is called by the caller.
 		return NewGetObjectReaderFromReader(bytes.NewBuffer(nil), objInfo, opts.CheckCopyPrecondFn, nsUnlocker)
@@ -923,7 +954,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 	}
 
 	// If its a directory request, we return an empty body.
-	if hasSuffix(object, SlashSeparator) {
+	if HasSuffix(object, SlashSeparator) {
 		_, err = writer.Write([]byte(""))
 		logger.LogIf(ctx, err)
 		return toObjectErr(err, bucket, object)
@@ -949,7 +980,32 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 	        ReleaseConnection(kc.Idx)
 		return toObjectErr(err, bucket, object)
 	}
+	/*
+			if bucket != minioMetaBucket {
+				fsMetaPath := pathJoin(ko.fsPath, minioMetaBucket, bucketMetaPrefix, bucket, object, ko.metaJSONFile)
+				if lock {
+					_, err = ko.rwPool.Open(fsMetaPath)
+					if err != nil && err != errFileNotFound {
+						logger.LogIf(ctx, err)
+						return toObjectErr(err, bucket, object)
+					}
+					defer ko.rwPool.Close(fsMetaPath)
+				}
+			}
+
+		if etag != "" && etag != defaultEtag {
+			objEtag, perr := ko.getObjectETag(ctx, bucket, object, lock)
+			if perr != nil {
+				return toObjectErr(perr, bucket, object)
+			}
+			if objEtag != etag {
+				logger.LogIf(ctx, InvalidETag{})
+				return toObjectErr(InvalidETag{}, bucket, object)
+			}
+		} */
 	// Read the object, doesn't exist returns an s3 compatible error.
+	//fsObjPath := pathJoin(ko.fsPath, bucket, object)
+	//reader, size, err := fsOpenFile(ctx, fsObjPath, offset)
 	bufSize := int64(blockSizeV1)
 	if length > 0 && bufSize > length {
 		bufSize = length
@@ -1032,6 +1088,30 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	fsMeta := newFSMetaV1()
 	fsMeta.Meta = meta
 
+	// This is a special case with size as '0' and object ends
+	// with a slash separator, we treat it like a valid operation
+	// and return success.
+	/*if isObjectDir(object, data.Size()) {
+		// Check if an object is present as one of the parent dir.
+		if ko.parentDirIsObject(ctx, bucket, path.Dir(object)) {
+			return ObjectInfo{}, toObjectErr(errFileParentIsFile, bucket, object)
+		}
+		if err = mkdirAll(pathJoin(ko.fsPath, bucket, object), 0777); err != nil {
+			logger.LogIf(ctx, err)
+			return ObjectInfo{}, toObjectErr(err, bucket, object)
+		}
+		var fi KVInfo
+		if fi, err = fsStatDir(ctx, pathJoin(ko.fsPath, bucket, object)); err != nil {
+			return ObjectInfo{}, toObjectErr(err, bucket, object)
+		}
+		return fsMeta.ToObjectInfo(bucket, object, fi), nil
+	}
+
+	// Check if an object is present as one of the parent dir.
+	if ko.parentDirIsObject(ctx, bucket, path.Dir(object)) {
+		return ObjectInfo{}, toObjectErr(errFileParentIsFile, bucket, object)
+	}
+	*/
 	// Validate input data size and it can never be less than zero.
 	if data.Size() < -1 {
 		logger.LogIf(ctx, errInvalidArgument)
@@ -1220,13 +1300,12 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
 			//log.Println("KEY ", string(key[5:]))
 			objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
-			//log.Println("OBJECT NAME", objInfo.Name)
 			//nextMarker = objInfo.Name
 			if err != nil {
 				return loi, err
 			}
 	                if delimiter == SlashSeparator && prefix != "" {
-                                if  !hasSuffix(string(prefix), SlashSeparator) {
+                                if  !HasSuffix(string(prefix), SlashSeparator) {
 					objInfo.IsDir = true
 					objInfo.Name = prefix + SlashSeparator
 				} else {
@@ -1278,15 +1357,88 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	return result, nil
 }
 
+// Returns function "listDir" of the type listDirFunc.
+// isLeaf - is used by listDir function to check if an entry
+// is a leaf or non-leaf entry.
+func (ko *KineticObjects) listDirFactory() ListDirFunc {
+        // listDir - lists all the entries at a given prefix and given entry in the prefix.
+        listDir := func(bucket, prefixDir, prefixEntry string) (emptyDir bool, entries []string) {
+                var err error
+                entries, err = readDir(pathJoin(ko.fsPath, bucket, prefixDir))
+                if err != nil && err != errFileNotFound {
+                        logger.LogIf(context.Background(), err)
+                        return false, nil
+                }
+                if len(entries) == 0 {
+                        return true, nil
+                }
+                sort.Strings(entries)
+                return false, filterMatchingPrefix(entries, prefixEntry)
+        }
+
+        // Return list factory instance.
+        return listDir
+}
+
+// isObjectDir returns true if the specified bucket & prefix exists
+// and the prefix represents an empty directory. An S3 empty directory
+// is also an empty directory in the FS backend.
+func (ko *KineticObjects) isObjectDir(bucket, prefix string) bool {
+        entries, err := readDirN(pathJoin(ko.fsPath, bucket, prefix), 1)
+        if err != nil {
+                return false
+        }
+        return len(entries) == 0
+}
+
+
+
+// GetObjectTag - get object tags from an existing object
+func (ko *KineticObjects) GetObjectTag(ctx context.Context, bucket, object string) (tagging.Tagging, error) {
+        oi, err := ko.GetObjectInfo(ctx, bucket, object, ObjectOptions{})
+        if err != nil {
+                return tagging.Tagging{}, err
+        }
+
+        tags, err := tagging.FromString(oi.UserTags)
+        if err != nil {
+                return tagging.Tagging{}, err
+        }
+
+        return tags, nil
+
+}
+
+// PutObjectTag - replace or add tags to an existing object
+func (ko *KineticObjects) PutObjectTag(ctx context.Context, bucket, object string, tags string) error {
+	return nil
+}
+
+
+// DeleteObjectTag - delete object tags from an existing object
+func (ko *KineticObjects) DeleteObjectTag(ctx context.Context, bucket, object string) error {
+        return ko.PutObjectTag(ctx, bucket, object, "")
+}
+
+
 func (ko *KineticObjects) ReloadFormat(ctx context.Context, dryRun bool) error {
 	logger.LogIf(ctx, NotImplemented{})
 	return NotImplemented{}
 }
 
-func (ko *KineticObjects) HealObjects(ctx context.Context, bucket, prefix string, fn func(string, string) error) (e error) {
-	logger.LogIf(ctx, NotImplemented{})
-	return NotImplemented{}
+
+// HealObjects - no-op for fs. Valid only for XL.
+func (ko *KineticObjects) HealObjects(ctx context.Context, bucket, prefix string, fn healObjectFn) (e error) {
+        logger.LogIf(ctx, NotImplemented{})
+        return NotImplemented{}
 }
+
+// GetMetrics - no op
+func (ko *KineticObjects) GetMetrics(ctx context.Context) (*Metrics, error) {
+        logger.LogIf(ctx, NotImplemented{})
+        return &Metrics{}, NotImplemented{}
+}
+
 
 // ListBucketsHeal - list all buckets to be healed. Valid only for XL
 func (ko *KineticObjects) ListBucketsHeal(ctx context.Context) ([]BucketInfo, error) {
@@ -1313,6 +1465,16 @@ func (ko *KineticObjects) HealBucket(ctx context.Context, bucket string, dryRun,
 	logger.LogIf(ctx, NotImplemented{})
 	return madmin.HealResultItem{}, NotImplemented{}
 }
+
+// Walk a bucket, optionally prefix recursively, until we have returned
+// all the content to objectInfo channel, it is callers responsibility
+// to allocate a receive channel for ObjectInfo, upon any unhandled
+// error walker returns error. Optionally if context.Done() is received
+// then Walk() stops the walker.
+func (ko *KineticObjects) Walk(ctx context.Context, bucket, prefix string, results chan<- ObjectInfo) error {
+        return fsWalk(ctx, ko, bucket, prefix, ko.listDirFactory(), results, ko.getObjectInfo, ko.getObjectInfo)
+}
+
 
 // HealFormat - no-op for ko, Valid only for XL.
 func (ko *KineticObjects) HealFormat(ctx context.Context, dryRun bool) (madmin.HealResultItem, error) {
@@ -1348,6 +1510,22 @@ func (ko *KineticObjects) GetBucketLifecycle(ctx context.Context, bucket string)
 func (ko *KineticObjects) DeleteBucketLifecycle(ctx context.Context, bucket string) error {
 	return removeLifecycleConfig(ctx, ko, bucket)
 }
+
+// GetBucketSSEConfig returns bucket encryption config on given bucket
+func (ko *KineticObjects) GetBucketSSEConfig(ctx context.Context, bucket string) (*bucketsse.BucketSSEConfig, error) {
+        return getBucketSSEConfig(ko, bucket)
+}
+
+// SetBucketSSEConfig sets bucket encryption config on given bucket
+func (ko *KineticObjects) SetBucketSSEConfig(ctx context.Context, bucket string, config *bucketsse.BucketSSEConfig) error {
+        return saveBucketSSEConfig(ctx, ko, bucket, config)
+}
+
+// DeleteBucketSSEConfig deletes bucket encryption config on given bucket
+func (ko *KineticObjects) DeleteBucketSSEConfig(ctx context.Context, bucket string) error {
+        return removeBucketSSEConfig(ctx, ko, bucket)
+}
+
 
 func (ko *KineticObjects) ListObjectsV2(ctx context.Context, bucket, prefix, continuationToken, delimiter string, maxKeys int, fetchOwner bool, startAfter string) (result ListObjectsV2Info, err error) {
 	//log.Println(" KINETIC: LIST OBJS V2 ", continuationToken, " ", startAfter)
@@ -1391,3 +1569,10 @@ func (ko *KineticObjects) IsEncryptionSupported() bool {
 func (ko *KineticObjects) IsCompressionSupported() bool {
 	return true
 }
+
+// IsReady - Check if the backend disk is ready to accept traffic.
+func (ko *KineticObjects) IsReady(_ context.Context) bool {
+        _, err := os.Stat(ko.fsPath)
+        return err == nil
+}
+

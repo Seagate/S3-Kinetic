@@ -60,6 +60,10 @@ func TestUndoMakeBucket(t *testing.T) {
 }
 
 func TestHealObjectCorrupted(t *testing.T) {
+	resetGlobalHealState()
+
+	defer resetGlobalHealState()
+
 	nDisks := 16
 	fsDirs, err := getRandomDisks(nDisks)
 	if err != nil {
@@ -185,10 +189,12 @@ func TestHealObjectCorrupted(t *testing.T) {
 		xl.getDisks()[i].DeleteFile(bucket, filepath.Join(object, xlMetaJSONFile))
 	}
 
-	// Try healing now, expect to receive errDiskNotFound.
+	// Try healing now, expect to receive errFileNotFound.
 	_, err = objLayer.HealObject(context.Background(), bucket, object, false, true, madmin.HealDeepScan)
 	if err != nil {
-		t.Errorf("Expected nil but received %v", err)
+		if _, ok := err.(ObjectNotFound); !ok {
+			t.Errorf("Expect %v but received %v", ObjectNotFound{Bucket: bucket, Object: object}, err)
+		}
 	}
 
 	// since majority of xl.jsons are not available, object should be successfully deleted.
@@ -268,6 +274,7 @@ func TestHealObjectXL(t *testing.T) {
 	}
 
 	xlDisks := xl.getDisks()
+	z.zones[0].xlDisksMu.Lock()
 	xl.getDisks = func() []StorageAPI {
 		// Nil more than half the disks, to remove write quorum.
 		for i := 0; i <= len(xlDisks)/2; i++ {
@@ -275,6 +282,7 @@ func TestHealObjectXL(t *testing.T) {
 		}
 		return xlDisks
 	}
+	z.zones[0].xlDisksMu.Unlock()
 
 	// Try healing now, expect to receive errDiskNotFound.
 	_, err = obj.HealObject(context.Background(), bucket, object, false, false, madmin.HealDeepScan)

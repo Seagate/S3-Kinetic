@@ -52,6 +52,19 @@ func (h *healRoutine) queueHealTask(task healTask) {
 	h.tasks <- task
 }
 
+func waitForLowHTTPReq(tolerance int32) {
+	if httpServer := newHTTPServerFn(); httpServer != nil {
+		// Wait at max 10 minute for an inprogress request before proceeding to heal
+		waitCount := 600
+		// Any requests in progress, delay the heal.
+		for (httpServer.GetRequestCount() >= tolerance) &&
+			waitCount > 0 {
+			waitCount--
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
+
 // Wait for heal requests and process them
 func (h *healRoutine) run() {
 	ctx := context.Background()
@@ -61,20 +74,13 @@ func (h *healRoutine) run() {
 			if !ok {
 				break
 			}
-			if globalHTTPServer != nil {
-				// Wait at max 10 minute for an inprogress request before proceeding to heal
-				waitCount := 600
-				// Any requests in progress, delay the heal.
-				for (globalHTTPServer.GetRequestCount() >= int32(globalEndpoints.Nodes())) &&
-					waitCount > 0 {
-					waitCount--
-					time.Sleep(1 * time.Second)
-				}
-			}
+
+			// Wait and proceed if there are active requests
+			waitForLowHTTPReq(int32(globalEndpoints.Nodes()))
 
 			var res madmin.HealResultItem
 			var err error
-			bucket, object := urlPath2BucketObjectName(task.path)
+			bucket, object := path2BucketObject(task.path)
 			switch {
 			case bucket == "" && object == "":
 				res, err = bgHealDiskFormat(ctx, task.opts)
@@ -121,7 +127,7 @@ func startBackgroundHealing() {
 
 	// Launch the background healer sequence to track
 	// background healing operations
-	info := objAPI.StorageInfo(ctx)
+	info := objAPI.StorageInfo(ctx, false)
 	numDisks := info.Backend.OnlineDisks.Sum() + info.Backend.OfflineDisks.Sum()
 	nh := newBgHealSequence(numDisks)
 	globalBackgroundHealState.LaunchNewHealSequence(nh)

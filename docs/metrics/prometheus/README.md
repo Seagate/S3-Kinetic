@@ -118,16 +118,15 @@ The list of metrics and its definition are as follows. (NOTE: instance here is o
     > 1. Instance here is one MinIO node.
     > 2. `s3 requests` exclude internode requests.
 
-
 - standard go runtime metrics prefixed by `go_`
 - process level metrics prefixed with `process_`
-- prometheus scrap metrics prefixed with `promhttp_`
+- prometheus scrape metrics prefixed with `promhttp_`
 
 - `disk_storage_used` : Disk space used by the disk.
 - `disk_storage_available`: Available disk space left on the disk.
 - `disk_storage_total`: Total disk space on the disk.
-- `disks_offline`: Total number of offline disks in current MinIO instance.
-- `disks_total`: Total number of disks in current MinIO instance.
+- `minio_disks_offline`: Total number of offline disks in current MinIO instance.
+- `minio_disks_total`: Total number of disks in current MinIO instance.
 - `s3_requests_total`: Total number of s3 requests in current MinIO instance.
 - `s3_errors_total`: Total number of errors in s3 requests in current MinIO instance.
 - `s3_requests_current`: Total number of active s3 requests in current MinIO instance.
@@ -138,6 +137,25 @@ The list of metrics and its definition are as follows. (NOTE: instance here is o
 - `minio_version_info`: Current MinIO version with commit-id.
 - `s3_ttfb_seconds`: Histogram that holds the latency information of the requests.
 
+Apart from above metrics, MinIO also exposes below mode specific metrics
+
+### Cache specific metrics
+
+MinIO Gateway instances enabled with Disk-Caching expose caching related metrics.
+
+- `cache_data_served`: Total number of bytes served from cache.
+- `cache_hits_total`: Total number of cache hits.
+- `cache_misses_total`: Total number of cache misses.
+
+### Gateway & Cache specific metrics
+
+MinIO Gateway instance exposes metrics related to Gateway communication with the cloud backend (S3, Azure & GCS Gateway).
+
+- `gateway_<gateway_type>_requests`: Total number of GET & HEAD requests made to cloud backend. This metrics has a label `method` that identifies GET & HEAD Requests.
+- `gateway_<gateway_type>_bytes_sent`: Total number of bytes sent to cloud backend (in GET & HEAD Requests).
+- `gateway_<gateway_type>_bytes_received`: Total number of bytes received from cloud backend (in GET & HEAD Requests).
+
+Note that this is currently only support for Azure, S3 and GCS Gateway.
 
 ## Migration guide for the new set of metrics
 
@@ -147,8 +165,8 @@ This migration guide applies for older releases or any releases before `RELEASE.
 
 The migrations include
 
-    - `minio_total_disks` to `disks_total`
-    - `minio_offline_disks` to `disks_offline`
+    - `minio_total_disks` to `minio_disks_total`
+    - `minio_offline_disks` to `minio_disks_offline`
 
 ### MinIO disk level metrics - `disk_storage_*`
 

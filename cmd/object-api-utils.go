@@ -38,11 +38,11 @@ import (
 	"github.com/klauspost/readahead"
 	"github.com/minio/minio-go/v6/pkg/s3utils"
 	"github.com/minio/minio/cmd/config/compress"
+	"github.com/minio/minio/cmd/config/etcd/dns"
 	"github.com/minio/minio/cmd/config/storageclass"
 	"github.com/minio/minio/cmd/crypto"
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
-	"github.com/minio/minio/pkg/dns"
 	"github.com/minio/minio/pkg/hash"
 	"github.com/minio/minio/pkg/ioutil"
 	"github.com/minio/minio/pkg/wildcard"
@@ -52,6 +52,10 @@ import (
 const (
 	// MinIO meta bucket.
 	minioMetaBucket = ".minio.sys"
+	// Background ops meta prefix
+	backgroundOpsMetaPrefix = "background-ops"
+	// MinIO Stats meta prefix.
+	minioMetaBackgroundOpsBucket = minioMetaBucket + SlashSeparator + backgroundOpsMetaPrefix
 	// Multipart meta prefix.
 	mpartMetaPrefix = "multipart"
 	// MinIO Multipart meta prefix.
@@ -73,7 +77,8 @@ const (
 func isMinioMetaBucketName(bucket string) bool {
 	return bucket == minioMetaBucket ||
 		bucket == minioMetaMultipartBucket ||
-		bucket == minioMetaTmpBucket
+		bucket == minioMetaTmpBucket ||
+		bucket == minioMetaBackgroundOpsBucket
 }
 
 // IsValidBucketName verifies that a bucket name is in accordance with
@@ -146,7 +151,7 @@ func IsValidObjectName(object string) bool {
 	if len(object) == 0 {
 		return false
 	}
-	if hasSuffix(object, SlashSeparator) {
+	if HasSuffix(object, SlashSeparator) {
 		return false
 	}
 	return IsValidObjectPrefix(object)
@@ -161,8 +166,7 @@ func IsValidObjectPrefix(object string) bool {
 	if !utf8.ValidString(object) {
 		return false
 	}
-	// Reject unsupported characters in object name.
-	if strings.ContainsAny(object, "\\") {
+	if strings.Contains(object, `//`) {
 		return false
 	}
 	return true
@@ -178,7 +182,7 @@ func checkObjectNameForLengthAndSlash(bucket, object string) error {
 		}
 	}
 	// Check for slash as prefix in object name
-	if hasPrefix(object, SlashSeparator) {
+	if HasPrefix(object, SlashSeparator) {
 		return ObjectNamePrefixAsSlash{
 			Bucket: bucket,
 			Object: object,
@@ -195,11 +199,21 @@ func retainSlash(s string) string {
 	return strings.TrimSuffix(s, SlashSeparator) + SlashSeparator
 }
 
+// pathsJoinPrefix - like pathJoin retains trailing SlashSeparator
+// for all elements, prepends them with 'prefix' respectively.
+func pathsJoinPrefix(prefix string, elem ...string) (paths []string) {
+	paths = make([]string, len(elem))
+	for i, e := range elem {
+		paths[i] = pathJoin(prefix, e)
+	}
+	return paths
+}
+
 // pathJoin - like path.Join() but retains trailing SlashSeparator of the last element
 func pathJoin(elem ...string) string {
 	trailingSlash := ""
 	if len(elem) > 0 {
-		if hasSuffix(elem[len(elem)-1], SlashSeparator) {
+		if HasSuffix(elem[len(elem)-1], SlashSeparator) {
 			trailingSlash = SlashSeparator
 		}
 	}
@@ -235,8 +249,8 @@ func getCompleteMultipartMD5(parts []CompletePart) string {
 func cleanMetadata(metadata map[string]string) map[string]string {
 	// Remove STANDARD StorageClass
 	metadata = removeStandardStorageClass(metadata)
-	// Clean meta etag keys 'md5Sum', 'etag', "expires".
-	return cleanMetadataKeys(metadata, "md5Sum", "etag", "expires")
+	// Clean meta etag keys 'md5Sum', 'etag', "expires", "x-amz-tagging".
+	return cleanMetadataKeys(metadata, "md5Sum", "etag", "expires", xhttp.AmzObjectTagging)
 }
 
 // Filter X-Amz-Storage-Class field only if it is set to STANDARD.
@@ -272,20 +286,20 @@ func extractETag(metadata map[string]string) string {
 	return etag
 }
 
-// Prefix matcher string matches prefix in a platform specific way.
+// HasPrefix - Prefix matcher string matches prefix in a platform specific way.
 // For example on windows since its case insensitive we are supposed
 // to do case insensitive checks.
-func hasPrefix(s string, prefix string) bool {
+func HasPrefix(s string, prefix string) bool {
 	if runtime.GOOS == globalWindowsOSName {
 		return strings.HasPrefix(strings.ToLower(s), strings.ToLower(prefix))
 	}
 	return strings.HasPrefix(s, prefix)
 }
 
-// Suffix matcher string matches suffix in a platform specific way.
+// HasSuffix - Suffix matcher string matches suffix in a platform specific way.
 // For example on windows since its case insensitive we are supposed
 // to do case insensitive checks.
-func hasSuffix(s string, suffix string) bool {
+func HasSuffix(s string, suffix string) bool {
 	if runtime.GOOS == globalWindowsOSName {
 		return strings.HasSuffix(strings.ToLower(s), strings.ToLower(suffix))
 	}

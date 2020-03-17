@@ -17,7 +17,9 @@
 package cmd
 
 import (
+	"context"
 	"crypto/x509"
+	"encoding/gob"
 	"errors"
 	"net"
 	"path/filepath"
@@ -33,6 +35,17 @@ import (
 	"github.com/minio/minio/pkg/certs"
 	"github.com/minio/minio/pkg/env"
 )
+
+func init() {
+	logger.Init(GOPATH, GOROOT)
+	logger.RegisterError(config.FmtError)
+
+	// Initialize globalConsoleSys system
+	globalConsoleSys = NewConsoleLogger(context.Background())
+	logger.AddTarget(globalConsoleSys)
+
+	gob.Register(StorageErr(""))
+}
 
 func verifyObjectLayerFeatures(name string, objAPI ObjectLayer) {
 	if (globalAutoEncryption || GlobalKMS != nil) && !objAPI.IsEncryptionSupported() {
@@ -158,7 +171,7 @@ func handleCommonCmdArgs(ctx *cli.Context) {
 
 func handleCommonEnvVars() {
 	var err error
-	globalBrowserEnabled, err = config.ParseBool(env.Get(config.EnvBrowser, config.StateOn))
+	globalBrowserEnabled, err = config.ParseBool(env.Get(config.EnvBrowser, config.EnableOn))
 	if err != nil {
 		logger.Fatal(config.ErrInvalidBrowserValue(err), "Invalid MINIO_BROWSER value in environment variable")
 	}
@@ -188,7 +201,6 @@ func handleCommonEnvVars() {
 				for _, addr := range addrs {
 					domainIPs.Add(addr)
 				}
-				continue
 			}
 			domainIPs.Add(endpoint)
 		}
@@ -196,13 +208,13 @@ func handleCommonEnvVars() {
 	} else {
 		// Add found interfaces IP address to global domain IPS,
 		// loopback addresses will be naturally dropped.
-		updateDomainIPs(localIP4)
+		updateDomainIPs(mustGetLocalIP4())
 	}
 
 	// In place update is true by default if the MINIO_UPDATE is not set
 	// or is not set to 'off', if MINIO_UPDATE is set to 'off' then
 	// in-place update is off.
-	globalInplaceUpdateDisabled = strings.EqualFold(env.Get(config.EnvUpdate, config.StateOn), config.StateOff)
+	globalInplaceUpdateDisabled = strings.EqualFold(env.Get(config.EnvUpdate, config.EnableOn), config.EnableOff)
 
 	if env.IsSet(config.EnvAccessKey) || env.IsSet(config.EnvSecretKey) {
 		cred, err := auth.CreateCredentials(env.Get(config.EnvAccessKey, ""), env.Get(config.EnvSecretKey, ""))
@@ -211,7 +223,12 @@ func handleCommonEnvVars() {
 				"Unable to validate credentials inherited from the shell environment")
 		}
 		globalActiveCred = cred
-		globalConfigEncrypted =  false //Thai default is true
+		globalConfigEncrypted = true
+	}
+
+	globalWORMEnabled, err = config.LookupWorm()
+	if err != nil {
+		logger.Fatal(config.ErrInvalidWormValue(err), "Invalid worm configuration")
 	}
 }
 

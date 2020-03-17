@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +28,7 @@ import (
 	"reflect"
 	"strings"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/sio"
 )
@@ -383,8 +383,7 @@ func migrateCacheData(ctx context.Context, c *diskCache, bucket, object, oldfile
 		}
 		actualSize, _ = sio.EncryptedSize(uint64(st.Size()))
 	}
-
-	_, err = c.bitrotWriteToCache(destDir, reader, uint64(actualSize))
+	_, err = c.bitrotWriteToCache(destDir, cacheDataFile, reader, uint64(actualSize))
 	return err
 }
 
@@ -445,6 +444,7 @@ func migrateOldCache(ctx context.Context, c *diskCache) error {
 			}
 			// marshal cache metadata after adding version and stat info
 			meta := &cacheMeta{}
+			var json = jsoniter.ConfigCompatibleWithStandardLibrary
 			if err = json.Unmarshal(metaBytes, &meta); err != nil {
 				return err
 			}

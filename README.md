@@ -17,10 +17,11 @@ docker run -p 9000:9000 minio/minio server /data
 docker pull minio/minio:edge
 docker run -p 9000:9000 minio/minio:edge server /data
 ```
-Note: Docker will not display the default keys unless you start the container with the `-it`(interactive TTY) argument. Generally, it is not recommended to use default keys with containers. Please visit MinIO Docker quickstart guide for more information [here](https://docs.min.io/docs/minio-docker-quickstart-guide)
+
+> NOTE: Docker will not display the default keys unless you start the container with the `-it`(interactive TTY) argument. Generally, it is not recommended to use default keys with containers. Please visit MinIO Docker quickstart guide for more information [here](https://docs.min.io/docs/minio-docker-quickstart-guide)
 
 ## macOS
-### Homebrew
+### Homebrew (recommended)
 Install minio packages using [Homebrew](http://brew.sh/)
 ```sh
 brew install minio/stable/minio
@@ -34,8 +35,8 @@ brew install minio/stable/minio
 ```
 
 ### Binary Download
-| Platform    | Architecture | URL                                                         |
-| ----------  | --------     | ------                                                      |
+| Platform    | Architecture | URL                                                       |
+| ----------  | --------     | ------                                                    |
 | Apple macOS | 64-bit Intel | https://dl.min.io/server/minio/release/darwin-amd64/minio |
 ```sh
 chmod 755 minio
@@ -44,8 +45,8 @@ chmod 755 minio
 
 ## GNU/Linux
 ### Binary Download
-| Platform   | Architecture | URL                                                        |
-| ---------- | --------     | ------                                                     |
+| Platform   | Architecture | URL                                                      |
+| ---------- | --------     | ------                                                   |
 | GNU/Linux  | 64-bit Intel | https://dl.min.io/server/minio/release/linux-amd64/minio |
 ```sh
 wget https://dl.min.io/server/minio/release/linux-amd64/minio
@@ -53,8 +54,8 @@ chmod +x minio
 ./minio server /data
 ```
 
-| Platform   | Architecture | URL                                                          |
-| ---------- | --------     | ------                                                       |
+| Platform   | Architecture | URL                                                        |
+| ---------- | --------     | ------                                                     |
 | GNU/Linux  | ppc64le      | https://dl.min.io/server/minio/release/linux-ppc64le/minio |
 ```sh
 wget https://dl.min.io/server/minio/release/linux-ppc64le/minio
@@ -64,8 +65,8 @@ chmod +x minio
 
 ## Microsoft Windows
 ### Binary Download
-| Platform          | Architecture | URL                                                              |
-| ----------        | --------     | ------                                                           |
+| Platform          | Architecture | URL                                                            |
+| ----------        | --------     | ------                                                         |
 | Microsoft Windows | 64-bit       | https://dl.min.io/server/minio/release/windows-amd64/minio.exe |
 ```sh
 minio.exe server D:\Photos
@@ -73,7 +74,7 @@ minio.exe server D:\Photos
 
 ## FreeBSD
 ### Port
-Install minio packages using [pkg](https://github.com/freebsd/pkg)
+Install minio packages using [pkg](https://github.com/freebsd/pkg), MinIO doesn't officially build FreeBSD binaries but is maintained by FreeBSD upstream [here](https://www.freshports.org/www/minio).
 
 ```sh
 pkg install minio
@@ -83,7 +84,7 @@ service minio start
 ```
 
 ## Install from Source
-Source installation is only intended for developers and advanced users. If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install). Minimum version required is [go1.12](https://golang.org/dl/#stable)
+Source installation is only intended for developers and advanced users. If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install). Minimum version required is [go1.13](https://golang.org/dl/#stable)
 
 ```sh
 GO111MODULE=on go get github.com/minio/minio

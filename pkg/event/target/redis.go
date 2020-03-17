@@ -41,7 +41,7 @@ const (
 	RedisQueueDir   = "queue_dir"
 	RedisQueueLimit = "queue_limit"
 
-	EnvRedisState      = "MINIO_NOTIFY_REDIS_STATE"
+	EnvRedisEnable     = "MINIO_NOTIFY_REDIS_ENABLE"
 	EnvRedisFormat     = "MINIO_NOTIFY_REDIS_FORMAT"
 	EnvRedisAddress    = "MINIO_NOTIFY_REDIS_ADDRESS"
 	EnvRedisPassword   = "MINIO_NOTIFY_REDIS_PASSWORD"
@@ -59,6 +59,12 @@ type RedisArgs struct {
 	Key        string    `json:"key"`
 	QueueDir   string    `json:"queueDir"`
 	QueueLimit uint64    `json:"queueLimit"`
+}
+
+// RedisAccessEvent holds event log data and timestamp
+type RedisAccessEvent struct {
+	Event     []event.Event
+	EventTime string
 }
 
 // Validate RedisArgs fields
@@ -125,11 +131,8 @@ func (target *RedisTarget) ID() event.TargetID {
 	return target.id
 }
 
-// Save - saves the events to the store if questore is configured, which will be replayed when the redis connection is active.
-func (target *RedisTarget) Save(eventData event.Event) error {
-	if target.store != nil {
-		return target.store.Put(eventData)
-	}
+// IsActive - Return true if target is up and active
+func (target *RedisTarget) IsActive() (bool, error) {
 	conn := target.pool.Get()
 	defer func() {
 		cErr := conn.Close()
@@ -138,9 +141,21 @@ func (target *RedisTarget) Save(eventData event.Event) error {
 	_, pingErr := conn.Do("PING")
 	if pingErr != nil {
 		if IsConnRefusedErr(pingErr) {
-			return errNotConnected
+			return false, errNotConnected
 		}
-		return pingErr
+		return false, pingErr
+	}
+	return true, nil
+}
+
+// Save - saves the events to the store if questore is configured, which will be replayed when the redis connection is active.
+func (target *RedisTarget) Save(eventData event.Event) error {
+	if target.store != nil {
+		return target.store.Put(eventData)
+	}
+	_, err := target.IsActive()
+	if err != nil {
+		return err
 	}
 	return target.send(eventData)
 }
@@ -176,7 +191,7 @@ func (target *RedisTarget) send(eventData event.Event) error {
 	}
 
 	if target.args.Format == event.AccessFormat {
-		data, err := json.Marshal([]interface{}{eventData.EventTime, []event.Event{eventData}})
+		data, err := json.Marshal([]RedisAccessEvent{{Event: []event.Event{eventData}, EventTime: eventData.EventTime}})
 		if err != nil {
 			return err
 		}
@@ -234,13 +249,13 @@ func (target *RedisTarget) Send(eventKey string) error {
 	return target.store.Del(eventKey)
 }
 
-// Close - does nothing and available for interface compatibility.
+// Close - releases the resources used by the pool.
 func (target *RedisTarget) Close() error {
-	return nil
+	return target.pool.Close()
 }
 
 // NewRedisTarget - creates new Redis target.
-func NewRedisTarget(id string, args RedisArgs, doneCh <-chan struct{}, loggerOnce func(ctx context.Context, err error, id interface{}, errKind ...interface{})) (*RedisTarget, error) {
+func NewRedisTarget(id string, args RedisArgs, doneCh <-chan struct{}, loggerOnce func(ctx context.Context, err error, id interface{}, errKind ...interface{}), test bool) (*RedisTarget, error) {
 	pool := &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 2 * 60 * time.Second,
@@ -305,7 +320,7 @@ func NewRedisTarget(id string, args RedisArgs, doneCh <-chan struct{}, loggerOnc
 		target.firstPing = true
 	}
 
-	if target.store != nil {
+	if target.store != nil && !test {
 		// Replays the events from the store.
 		eventKeyCh := replayEvents(target.store, doneCh, loggerOnce, target.ID())
 		// Start replaying events from the store.

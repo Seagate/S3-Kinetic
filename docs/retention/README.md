@@ -5,6 +5,9 @@ MinIO server allows selectively specify WORM for specific objects or configuring
 Object locking requires locking to be enabled on a bucket at the time of bucket creation. In addition, a default retention period and retention mode can be configured on a bucket to be
 applied to objects created in that bucket.
 
+Independently of retention, an object can also be under legal hold. This effectively disallows
+all deletes and overwrites of an object under legal hold until the hold is lifted.
+
 ## Get Started
 
 ### 1. Prerequisites
@@ -29,15 +32,32 @@ aws s3api put-object --bucket testbucket --key lockme --object-lock-mode GOVERNA
 See https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lock-overview.html for AWS S3 spec on
 object locking and permissions required for object retention and governance bypass overrides.
 
+### Set legal hold on an object
+
+PutObject API allows setting legal hold using `x-amz-object-lock-legal-hold` header.
+
+```sh
+aws s3api put-object --bucket testbucket --key legalhold --object-lock-legal-hold-status ON --body /etc/issue
+```
+
+See https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lock-overview.html for AWS S3 spec on
+object locking and permissions required for specifying legal hold.
+
 ### 3. Note
 
 - When global WORM is enabled by `MINIO_WORM` environment variable or `worm` field in configuration file supersedes bucket level WORM and `PUT object lock configuration` REST API is disabled.
-- global WORM and objects in `Compliance` mode can never be overwritten
+- In global WORM mode objects can never be overwritten
+- If an object is under legal hold, it cannot be overwritten unless the legal hold is explicitly removed.
+- In `Compliance` mode, objects cannot be overwritten or deleted by anyone until retention period
+is expired. If user has requisite governance bypass permissions, an object's retention date can
+be extended in `Compliance` mode.
 - Currently `Governance` mode does not allow overwriting an existing object as versioning is not
-available in MinIO. To that extent `Governance` mode is similar to `Compliance`. However,
-if user has requisite `Governance` bypass permissions, an object in `Governance` mode can be overwritten.
+available in MinIO. However, if user has requisite `Governance` bypass permissions, an object in `Governance` mode can be overwritten.
 - Once object lock configuration is set to a bucket, new objects inherit the retention settings of the bucket object lock configuration (if set) or the retention headers set in the PUT request
 or set with PutObjectRetention API call
+
+- MINIO_NTP_SERVER environment variable can be set to remote NTP server endpoint if system time
+is not desired for setting retention dates.
 
 ## Explore Further
 

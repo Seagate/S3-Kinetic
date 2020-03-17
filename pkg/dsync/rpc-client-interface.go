@@ -21,8 +21,8 @@ type LockArgs struct {
 	// Unique ID of lock/unlock request.
 	UID string
 
-	// Resource contains a entity to be locked/unlocked.
-	Resource string
+	// Resources contains single or multiple entries to be locked/unlocked.
+	Resources []string
 
 	// Source contains the line number, function and file name of the code
 	// on the client node that requested the lock.
@@ -50,6 +50,9 @@ type NetLocker interface {
 	// * a boolean to indicate success/failure of the operation
 	// * an error on failure of unlock request operation.
 	Unlock(args LockArgs) (bool, error)
+
+	// Expired returns if current lock args has expired.
+	Expired(args LockArgs) (bool, error)
 
 	// Returns underlying endpoint of this lock client instance.
 	String() string

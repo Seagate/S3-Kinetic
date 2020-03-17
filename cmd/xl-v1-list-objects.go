@@ -25,7 +25,7 @@ import (
 // disks - used for doing disk.ListDir()
 func listDirFactory(ctx context.Context, disks ...StorageAPI) ListDirFunc {
 	// Returns sorted merged entries from all the disks.
-	listDir := func(bucket, prefixDir, prefixEntry string) (mergedEntries []string) {
+	listDir := func(bucket, prefixDir, prefixEntry string) (emptyDir bool, mergedEntries []string) {
 		for _, disk := range disks {
 			if disk == nil {
 				continue
@@ -36,6 +36,10 @@ func listDirFactory(ctx context.Context, disks ...StorageAPI) ListDirFunc {
 			entries, err = disk.ListDir(bucket, prefixDir, -1, xlMetaJSONFile)
 			if err != nil {
 				continue
+			}
+
+			if len(entries) == 0 {
+				return true, nil
 			}
 
 			// Find elements in entries which are not in mergedEntries
@@ -54,7 +58,7 @@ func listDirFactory(ctx context.Context, disks ...StorageAPI) ListDirFunc {
 				sort.Strings(mergedEntries)
 			}
 		}
-		return filterMatchingPrefix(mergedEntries, prefixEntry)
+		return false, filterMatchingPrefix(mergedEntries, prefixEntry)
 	}
 	return listDir
 }
@@ -67,7 +71,7 @@ func (xl xlObjects) listObjects(ctx context.Context, bucket, prefix, marker, del
 		recursive = false
 	}
 
-	walkResultCh, endWalkCh := xl.listPool.Release(listParams{bucket, recursive, marker, prefix, false})
+	walkResultCh, endWalkCh := xl.listPool.Release(listParams{bucket, recursive, marker, prefix})
 	if walkResultCh == nil {
 		endWalkCh = make(chan struct{})
 		listDir := listDirFactory(ctx, xl.getLoadBalancedDisks()...)
@@ -87,7 +91,7 @@ func (xl xlObjects) listObjects(ctx context.Context, bucket, prefix, marker, del
 		}
 		entry := walkResult.entry
 		var objInfo ObjectInfo
-		if hasSuffix(entry, SlashSeparator) {
+		if HasSuffix(entry, SlashSeparator) {
 			// Object name needs to be full path.
 			objInfo.Bucket = bucket
 			objInfo.Name = entry
@@ -118,7 +122,7 @@ func (xl xlObjects) listObjects(ctx context.Context, bucket, prefix, marker, del
 		}
 	}
 
-	params := listParams{bucket, recursive, nextMarker, prefix, false}
+	params := listParams{bucket, recursive, nextMarker, prefix}
 	if !eof {
 		xl.listPool.Set(params, walkResultCh, endWalkCh)
 	}
@@ -144,7 +148,7 @@ func (xl xlObjects) listObjects(ctx context.Context, bucket, prefix, marker, del
 
 // ListObjects - list all objects at prefix, delimited by '/'.
 func (xl xlObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
-	if err := checkListObjsArgs(ctx, bucket, prefix, marker, delimiter, xl); err != nil {
+	if err := checkListObjsArgs(ctx, bucket, prefix, marker, xl); err != nil {
 		return loi, err
 	}
 
@@ -156,7 +160,7 @@ func (xl xlObjects) ListObjects(ctx context.Context, bucket, prefix, marker, del
 	// Marker is set validate pre-condition.
 	if marker != "" {
 		// Marker not common with prefix is not implemented.Send an empty response
-		if !hasPrefix(marker, prefix) {
+		if !HasPrefix(marker, prefix) {
 			return ListObjectsInfo{}, e
 		}
 	}

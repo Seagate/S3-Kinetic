@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -84,14 +86,20 @@ func (u *URL) UnmarshalJSON(data []byte) (err error) {
 }
 
 // DialHTTP - dials the url to check the connection.
-func (u URL) DialHTTP() error {
-	var client = &http.Client{
-		Transport: &http.Transport{
+func (u URL) DialHTTP(transport *http.Transport) error {
+	if transport == nil {
+		transport = &http.Transport{
 			DialContext: (&net.Dialer{
 				Timeout: 2 * time.Second,
 			}).DialContext,
-		},
+		}
+
 	}
+
+	var client = &http.Client{
+		Transport: transport,
+	}
+
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
 		return err
@@ -100,6 +108,7 @@ func (u URL) DialHTTP() error {
 	if err != nil {
 		return err
 	}
+	io.Copy(ioutil.Discard, resp.Body)
 	resp.Body.Close()
 	return nil
 }
@@ -126,12 +135,23 @@ func ParseURL(s string) (u *URL, err error) {
 		return nil, err
 	}
 
-	if uu.Host == "" {
+	if uu.Hostname() == "" {
 		if uu.Scheme != "" {
 			return nil, errors.New("scheme appears with empty host")
 		}
-	} else if _, err = ParseHost(uu.Host); err != nil {
-		return nil, err
+	} else {
+		portStr := uu.Port()
+		if portStr == "" {
+			switch uu.Scheme {
+			case "http":
+				portStr = "80"
+			case "https":
+				portStr = "443"
+			}
+		}
+		if _, err = ParseHost(net.JoinHostPort(uu.Hostname(), portStr)); err != nil {
+			return nil, err
+		}
 	}
 
 	// Clean path in the URL.

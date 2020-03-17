@@ -25,7 +25,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	//"log"
 	"os"
 	pathutil "path"
 	"runtime"
@@ -488,7 +487,7 @@ func fsDeleteFile(ctx context.Context, basePath, deletePath string) error {
 		return err
 	}
 
-	if err := deleteFile(basePath, deletePath); err != nil {
+	if err := deleteFile(basePath, deletePath, false); err != nil {
 		if err != errFileNotFound {
 			logger.LogIf(ctx, err)
 		}
