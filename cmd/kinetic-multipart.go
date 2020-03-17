@@ -106,8 +106,7 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
                 return "", err
         }
 	//log.Println(" META BYTES", string(fsMetaBytes))
-
-	kopts := CmdOpts{
+	kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{}, //(fsMeta.Meta),
@@ -173,7 +172,7 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
 		//log.Println("READ ERROR")
                 return pi, err
         }
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -239,7 +238,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 return result, toObjectErr(err, bucket)
         }
 
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -407,7 +406,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
 
         // Allocate parts similar to incoming slice.
         fsMeta.Parts = make([]ObjectPartInfo, len(parts))
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -479,7 +478,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                 }
 		if hiddenMultiParts {
                 //DELETE meta data of PARTs so that it will not show up on client "ls" command
-			kopts := CmdOpts {
+			kopts := Opts {
 				ClusterVersion:  0,
 				Force:           true,
 				Tag:             []byte{},

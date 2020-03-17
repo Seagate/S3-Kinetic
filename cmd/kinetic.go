@@ -64,7 +64,7 @@ type KConnsPool struct {
 
 var kConnsPool KConnsPool
 var identity int64 = 1
-var hmac_key string = "asdfasdf"
+var hmacKey string = "asdfasdf"
 
 var wg = sync.WaitGroup{}
 var kineticMutex = &sync.Mutex{}
@@ -81,13 +81,13 @@ func InitKineticConnection(IP string, tls bool, kc *Client) error {
         var err error = nil
 	kc.ConnectionID = 0
 	kc.Identity = identity
-	kc.Hmac_key = hmac_key
+	kc.HmacKey = hmacKey
         //return err
 	if !tls {
 		err = kc.Connect(IP + ":8123")
 
 	} else {
-		err = kc.TlsConnect(IP + ":8443")
+		err = kc.TLSConnect(IP + ":8443")
 	}
 
 	if err != nil {
@@ -145,6 +145,7 @@ func GetKineticConnection() *Client {
 			for i:=0; i< maxQueue; i++ {
 				if kConnsPool.inUsed[i] == false {
 					kc = kConnsPool.kcs[i]
+					kc.Idx = i
 					kc.ReleaseConn = func(x int) {
 						ReleaseConnection(x)
 					}
@@ -187,7 +188,7 @@ func allocateValBuf(bufSize int) []byte {
 func initKineticMeta(kc *Client) error {
 	value := allocateValBuf(0)
 	bucketKey := "bucket." + minioMetaBucket
-	kopts := CmdOpts{
+	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{},
@@ -251,12 +252,12 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	if err != nil {
 		return nil, err
 	}
-	kConnsPool.kcs = make(map[int]*Client, maxQueue) //numberOfKinConns)
+	kConnsPool.kcs = make(map[int]*Client, maxQueue)
 	kConnsPool.inUsed = make(map[int]bool)
 	kConnsPool.totalInUsed = 0
 	kConnsPool.totalInUsedMax = 0
 	kConnsPool.cond = sync.NewCond(&kConnsPool)
-	for i := 0; i < maxQueue; i++ { // numberOfKinConns; i++ {
+	for i := 0; i < maxQueue; i++ {
 		kc := new(Client)
 		kc.Idx = i
 		kc.NextPartNumber = new(int)
@@ -313,7 +314,7 @@ func (ko *KineticObjects) getBucketDir(ctx context.Context, bucket string) (stri
 
 func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KVInfo, error) {
 	//log.Println(" STAT BUCKET DIR: ", bucket)
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -367,7 +368,7 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 		return BucketNameInvalid{Bucket: bucket}
 	}
 	//TODO: Check if Bucket exist before create new one
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -412,7 +413,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
         }
         defer bucketLock.RUnlock()
 	err = nil;
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -447,7 +448,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 
 func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
 	//log.Println("LIST BUCKET")
-	kopts := CmdOpts{
+	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{},
@@ -512,7 +513,7 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
 	defer bucketLock.Unlock()
 	bucketKey := string(make([]byte, 1024))
 	bucketKey = "bucket." + bucket
-	kopts := CmdOpts{
+	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           false,
 		Tag:             []byte{}, //(fsMeta.Meta),
@@ -572,7 +573,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
                 fsMeta := newFSMetaV1()
                 kineticMutex.Lock()
 		kc := GetKineticConnection()
-	        kopts := CmdOpts{
+	        kopts := Opts{
 			ClusterVersion:  0,
 			Force:           true,
 			Tag:             []byte{}, //(fsMeta.Meta),
@@ -763,7 +764,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		metakey := "meta." + key
 		//value := make([]byte, 1024*1024)
 		//;og.Println(" ***GET META OBJECT ", metakey)
-		kopts := kinetic.CmdOpts{
+		kopts := kinetic.Opts{
 			ClusterVersion:  0,
 			Force:           true,
 			Tag:             []byte{}, //(fsMeta.Meta),
@@ -815,7 +816,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 	} else {
 		key = bucket + "/" + object
 	}
-	kopts := CmdOpts{
+	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{}, //(fsMeta.Meta),
@@ -943,7 +944,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 	}
 
 	key := bucket + "/" + object
-	kopts := CmdOpts{
+	kopts := Opts{
 		ClusterVersion: 0,
 		Force:          true,
 		Tag:            []byte{},
@@ -1056,7 +1057,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	// Validate if bucket name is valid and exists.
 	// Kinetic Get bucket to check if it exists.
 	key := "bucket." + bucket
-	kopts := CmdOpts{
+	kopts := Opts{
 		ClusterVersion: 0,
 		Force:          true,
 		Tag:            []byte{},
@@ -1199,7 +1200,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 	if err := checkDelObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}
-        kopts := CmdOpts{
+        kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
                 Tag:             []byte{},
@@ -1267,7 +1268,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	var objInfos []ObjectInfo
 	//var eof bool
 	//var nextMarker string
-	kopts := CmdOpts{
+	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{},
