@@ -561,16 +561,17 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
 	kc := GetKineticConnection()
 	err := kc.Delete(bucketKey, kopts)
 	if err != nil {
+	        kineticMutex.Unlock()
 		return err
 	}
 	metaKey := "meta." + bucketKey
 	err = kc.Delete(metaKey, kopts)
 	if err != nil {
+	        kineticMutex.Unlock()
 		return err
 	}
 	ReleaseConnection(kc.Idx)
 	kineticMutex.Unlock()
-
 	return nil
 }
 
@@ -639,7 +640,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 	                        return oi, toObjectErr(err, srcBucket, srcObject)
 			}
 		}
-                kineticMutex.Unlock()
+                //kineticMutex.Unlock()
 		metaKey = "meta." + dstBucket + dstObject
                 fsMeta.Meta = srcInfo.UserDefined
                 fsMeta.Meta["etag"] = srcInfo.ETag
@@ -650,11 +651,12 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 	        kc = GetKineticConnection()
 		 _, err = kc.CPutMeta(metaKey, buf, len(buf), kopts)
 		if err != nil {
+	        	ReleaseConnection(kc.Idx)
 			kineticMutex.Unlock()
                         return oi, toObjectErr(err, dstBucket, dstObject)
 		}
 
-                // Stat the file to get file size.
+                // get file size.
 
 	        fi := &KVInfo{
 			name:    fsMeta.KoInfo.Name,
@@ -662,12 +664,9 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 			modTime: fsMeta.KoInfo.CreatedTime,
 		}
 
-                //fi, err := fsStatFile(ctx, pathJoin(ko.fsPath, srcBucket, srcObject))
-                //if err != nil {
-                //        return oi, toObjectErr(err, srcBucket, srcObject)
-                //}
-
                 // Return the new object info.
+	        ReleaseConnection(kc.Idx)
+                kineticMutex.Unlock()
                 return fsMeta.ToKVObjectInfo(srcBucket, srcObject, fi), nil
 	}
         if err := checkPutObjectArgs(ctx, dstBucket, dstObject, ko, srcInfo.PutObjReader.Size()); err != nil {
@@ -1049,15 +1048,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 		writer.Write(value[:size])
 		C.deallocate_gvalue_buffer((*C.char)(ptr))
 	}
-	// Allocate a staging buffer.
-	//buf := make([]byte, int(bufSize))
-	//_, err = io.CopyBuffer(writer, io.LimitReader(reader, length), buf)
-	// The writer will be closed incase of range queries, which will emit ErrClosedPipe.
-	//if err == io.ErrClosedPipe {
-	//	err = nil
-	//}
-	//return toObjectErr(err, bucket, object)
-        ////////log.Printf(" END: 1. GET OBJ %s %s %d\n", bucket, object, length)
+        //log.Printf(" END: 1. GET OBJ %s %s %d\n", bucket, object, length)
 	kineticMutex.Unlock()
 	return err
 }
@@ -1157,15 +1148,10 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	//tempObj := mustGetUUID()
 
 	// Allocate a buffer to Read() from request body
-	//bufSize := int64(blockSizeV1)
-	//if size := data.Size(); size > 0 && bufSize > size {
-	//	bufSize = size
-	//}
 	var bufSize int64
 	if data.Size() <=  blockSizeV1 {
 		bufSize = data.Size()
 	} else {
-		//log.Println("DAT SIZE TOO BIG")
 		return ObjectInfo{}, errInvalidArgument
 	}
 	goBuf := allocateValBuf(int(bufSize))
@@ -1184,21 +1170,22 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         bytes, _ := json.Marshal(&fsMeta)
         buf := allocateValBuf(len(bytes))
         copy(buf, bytes)
-        //kineticMutex.Lock()
+        kineticMutex.Lock()
         kc = GetKineticConnection()
 	_, err = kc.CPut(key, goBuf, int(bufSize), kopts)
 	if err != nil {
-		//kineticMutex.Unlock()
+                ReleaseConnection(kc.Idx)
+		kineticMutex.Unlock()
 		return ObjectInfo{}, err
 	}
 	_, err = kc.CPutMeta(key, buf, len(buf), kopts)
         if err != nil {
-	        //kineticMutex.Unlock()
+                ReleaseConnection(kc.Idx)
+		kineticMutex.Unlock()
                 return ObjectInfo{}, err
         }
-	//log.Println("END: putObject")
-	ReleaseConnection(kc.Idx)
-        //kineticMutex.Unlock()
+        ReleaseConnection(kc.Idx)
+	kineticMutex.Unlock()
 	//}()
 	objectInfo := ObjectInfo{
 		Bucket:  bucket,
@@ -1245,15 +1232,17 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
                 Priority:        kinetic_proto.Command_NORMAL,
         }
         key := bucket + SlashSeparator + object
+        kineticMutex.Lock()
         kc := GetKineticConnection()
         fsMeta := fsMetaV1{}
         cvalue, ptr, size, err := kc.CGetMeta(key, kopts)
-        ReleaseConnection(kc.Idx)
         if err != nil {
                 err = errFileNotFound
 		if ptr != nil {
 	                C.deallocate_gvalue_buffer((*C.char)(ptr))
 		}
+                ReleaseConnection(kc.Idx)
+	        kineticMutex.Unlock()
                 return  err
         }
         var fsMetaBytes []byte
@@ -1264,22 +1253,23 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 	}
         if len(fsMeta.Parts) == 0 {
 		key := bucket + SlashSeparator + object
-		//kineticMutex.Lock()
-		kc := GetKineticConnection()
 		err = kc.Delete(key, kopts)
 	        if err != nil {
-        	        return err
-        	}
+                        ReleaseConnection(kc.Idx)
+	                kineticMutex.Unlock()
+		        return err
+		}
 		metakey := "meta." + key
 		err = kc.Delete(metakey, kopts)
 	        if err != nil {
-        	        return err
-        	}
-		ReleaseConnection(kc.Idx)
-		//kineticMutex.Unlock()
+                        ReleaseConnection(kc.Idx)
+	                kineticMutex.Unlock()
+		        return err
+		}
+                ReleaseConnection(kc.Idx)
+	        kineticMutex.Unlock()
 		return nil
 	}
-        kc = GetKineticConnection()
         for _, part := range  fsMeta.Parts {
                 key =  bucket + SlashSeparator + object + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
                 kc.Delete(key, kopts)
@@ -1287,14 +1277,19 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         key = bucket + SlashSeparator + object
         err = kc.Delete(key, kopts)
         if err != nil {
+                ReleaseConnection(kc.Idx)
+                kineticMutex.Unlock()
                 return err
         }
         metakey := "meta." + key
         err = kc.Delete(metakey, kopts)
         if err != nil {
+                ReleaseConnection(kc.Idx)
+                kineticMutex.Unlock()
                 return err
         }
         ReleaseConnection(kc.Idx)
+        kineticMutex.Unlock()
 	return nil
 }
 
