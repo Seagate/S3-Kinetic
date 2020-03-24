@@ -18,6 +18,7 @@ package lifecycle
 
 import (
 	"encoding/xml"
+	"log"
 	"io"
 	"strings"
 	"time"
@@ -53,11 +54,16 @@ func (lc Lifecycle) IsEmpty() bool {
 
 // ParseLifecycleConfig - parses data in given reader to Lifecycle.
 func ParseLifecycleConfig(reader io.Reader) (*Lifecycle, error) {
+        log.Println(" PARSE")
+
 	var lc Lifecycle
 	if err := xml.NewDecoder(reader).Decode(&lc); err != nil {
+                log.Println(" 0. ERROR: PARSE", err)
+
 		return nil, err
 	}
 	if err := lc.Validate(); err != nil {
+		log.Println(" 1. ERROR: PARSE", err)
 		return nil, err
 	}
 	return &lc, nil

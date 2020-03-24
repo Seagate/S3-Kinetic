@@ -19,6 +19,7 @@ package lifecycle
 import (
 	"bytes"
 	"encoding/xml"
+	"log"
 )
 
 // Status represents lifecycle configuration status
@@ -81,6 +82,7 @@ func (r Rule) validateAction() error {
 }
 
 func (r Rule) validateFilter() error {
+	log.Println("VALIDATE FILTER")
 	return r.Filter.Validate()
 }
 

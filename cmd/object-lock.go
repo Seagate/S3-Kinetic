@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"log"
 	"path"
 
 	"github.com/minio/minio/cmd/logger"
@@ -125,6 +126,7 @@ func enforceRetentionBypassForPut(ctx context.Context, r *http.Request, bucket, 
 			return oi, ErrObjectLocked
 		}
 		if objRetention.RetainUntilDate.Before(t) {
+			log.Println("DATE ERROR")
 			return oi, ErrInvalidRetentionDate
 		}
 		return oi, ErrNone
@@ -133,6 +135,8 @@ func enforceRetentionBypassForPut(ctx context.Context, r *http.Request, bucket, 
 	if ret.Mode == objectlock.Governance {
 		if !objectlock.IsObjectLockGovernanceBypassSet(r.Header) {
 			if objRetention.RetainUntilDate.Before(t) {
+	                        log.Println( "1. DATE ERROR")
+
 				return oi, ErrInvalidRetentionDate
 			}
 			if objRetention.RetainUntilDate.Before((ret.RetainUntilDate.Time)) {

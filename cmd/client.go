@@ -22,6 +22,7 @@ import (
 
 //var mutexCmd = &sync.Mutex{}
 var SkinnyWaistIF bool = false
+var MetaSize int = 10*1024
 
 type Opts struct {
 	//Command         kinetic_proto.Command_MessageType
@@ -72,8 +73,9 @@ func (c *Client) Read(value []byte) (int, error) {
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
+	//log.Println(" READ SIZE", fsMeta.KoInfo.Size)
 	if len(fsMeta.Parts) == 0 {
-		cvalue, size, err := c.CGet(string(c.Key), 0, c.Opts)
+		cvalue, size, err := c.CGet(string(c.Key), int(fsMeta.KoInfo.Size), c.Opts)
                 if err != nil {
                         c.ReleaseConn(c.Idx)
                         return 0, err
@@ -496,7 +498,7 @@ func (c *Client) AbortBatch(cmd Opts) error {
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 	metaKey := "meta." + key
-	metaSize := 10*1024
+	metaSize := MetaSize
 	return c.CGet(metaKey, metaSize, acmd)
 }
 
@@ -519,7 +521,7 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 		bvalue = make([]byte,5*1048576)
 	}
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
-	//log.Println("CVALUE BVALUE", cvalue)
+	//log.Println("CVALUE BVALUE", cvalue, &bvalue[0])
 	var err error = nil
 	if status != 0 || cvalue == nil {
 		err =  errKineticNotFound //errors.New("NOT FOUND")

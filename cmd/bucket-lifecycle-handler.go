@@ -20,7 +20,7 @@ import (
 	"encoding/xml"
 	"io"
 	"net/http"
-
+	"log"
 	"github.com/gorilla/mux"
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
@@ -36,6 +36,7 @@ const (
 // PutBucketLifecycleHandler - This HTTP handler stores given bucket lifecycle configuration as per
 // https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lifecycle-mgmt.html
 func (api objectAPIHandlers) PutBucketLifecycleHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println(" PUT LIFECYCLE")
 	ctx := newContext(r, w, "PutBucketLifecycle")
 
 	defer logger.AuditLog(w, r, "PutBucketLifecycle", mustGetClaimsFromToken(r))
@@ -45,6 +46,7 @@ func (api objectAPIHandlers) PutBucketLifecycleHandler(w http.ResponseWriter, r 
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
 	}
+        log.Println("1. PUT LIFECYCLE")
 
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
@@ -54,28 +56,37 @@ func (api objectAPIHandlers) PutBucketLifecycleHandler(w http.ResponseWriter, r 
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentMD5), r.URL, guessIsBrowserReq(r))
 		return
 	}
+        log.Println(" 2. PUT LIFECYCLE")
+
 
 	if s3Error := checkRequestAuthType(ctx, r, policy.PutBucketLifecycleAction, bucket, ""); s3Error != ErrNone {
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
+        log.Println(" 3. PUT LIFECYCLE")
+
 
 	// Check if bucket exists.
 	if _, err := objAPI.GetBucketInfo(ctx, bucket); err != nil {
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
+        log.Println(" 4. PUT LIFECYCLE")
 
 	bucketLifecycle, err := lifecycle.ParseLifecycleConfig(io.LimitReader(r.Body, r.ContentLength))
 	if err != nil {
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
+        log.Println(" 5. PUT LIFECYCLE")
+
 
 	if err = objAPI.SetBucketLifecycle(ctx, bucket, bucketLifecycle); err != nil {
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
+
+        log.Println(" 6. PUT LIFECYCLE")
 
 	globalLifecycleSys.Set(bucket, *bucketLifecycle)
 	globalNotificationSys.SetBucketLifecycle(ctx, bucket, bucketLifecycle)

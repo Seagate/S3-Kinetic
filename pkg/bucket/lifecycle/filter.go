@@ -18,7 +18,7 @@ package lifecycle
 
 import (
 	"encoding/xml"
-
+	"log"
 	"github.com/minio/minio/pkg/bucket/object/tagging"
 )
 
@@ -54,7 +54,9 @@ func (f Filter) Validate() error {
 		}
 	}
 	if !f.Tag.IsEmpty() {
+		log.Println(" TAG VALIDATE")
 		if err := f.Tag.Validate(); err != nil {
+			log.Println("TAG: ERROR")
 			return err
 		}
 	}
