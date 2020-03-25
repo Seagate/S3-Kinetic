@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/minio/minio/cmd/logger"
@@ -53,7 +54,7 @@ func initDailyLifecycle() {
 func startDailyLifecycle() {
 	var objAPI ObjectLayer
 	var ctx = context.Background()
-
+	log.Println("START DAILY LIFECYCLE")
 	// Wait until the object API is ready
 	for {
 		objAPI = newObjectLayerWithoutSafeModeFn()
@@ -66,6 +67,7 @@ func startDailyLifecycle() {
 
 	// Calculate the time of the last lifecycle operation in all peers node of the cluster
 	computeLastLifecycleActivity := func(status []BgOpsStatus) time.Time {
+		log.Println(" CALCULATE TIME OF LAST LIFECYCLE")
 		var lastAct time.Time
 		for _, st := range status {
 			if st.LifecycleOps.LastActivity.After(lastAct) {
@@ -74,9 +76,10 @@ func startDailyLifecycle() {
 		}
 		return lastAct
 	}
-
+	
 	for {
 		// Check if we should perform lifecycle ops based on the last lifecycle activity, sleep one hour otherwise
+
 		allLifecycleStatus := []BgOpsStatus{
 			{LifecycleOps: getLocalBgLifecycleOpsStatus()},
 		}
@@ -87,7 +90,7 @@ func startDailyLifecycle() {
 		if !lastAct.IsZero() && time.Since(lastAct) < bgLifecycleInterval {
 			time.Sleep(bgLifecycleTick)
 		}
-
+		log.Println("PERFORM LIFECYCLE OP")
 		// Perform one lifecycle operation
 		err := lifecycleRound(ctx, objAPI)
 		switch err.(type) {

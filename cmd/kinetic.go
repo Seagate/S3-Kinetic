@@ -55,8 +55,8 @@ import (
 	"strconv"
 )
 
-var numberOfKinConns int = 20 
-var maxQueue int = 20
+var numberOfKinConns int = 2 
+var maxQueue int = 10
 
 type KConnsPool struct {
 	kcs		map[int]*Client
@@ -147,22 +147,21 @@ func GetKineticConnection() *Client {
 	kConnsPool.Lock()
 	var kc *Client = nil
 	//start := time.Now()
-	for true {
-		if kConnsPool.totalInUsed < maxQueue {
-			for i:=0; i< maxQueue; i++ {
-				if kConnsPool.inUsed[i] == false {
-					kc = kConnsPool.kcs[i]
-					kc.Idx = i
-					kc.ReleaseConn = func(x int) {
-						ReleaseConnection(x)
-					}
-					kConnsPool.inUsed[i] = true
-					kConnsPool.totalInUsed++;
-					break;
+	for kConnsPool.totalInUsed < maxQueue {
+		for i:=0; i< maxQueue; i++ {
+			if kConnsPool.inUsed[i] == false {
+				kc = kConnsPool.kcs[i]
+				kc.Idx = i
+				kc.ReleaseConn = func(x int) {
+					ReleaseConnection(x)
 				}
+				kConnsPool.inUsed[i] = true
+				kConnsPool.totalInUsed++;
+				break;
 			}
 		}
-		if kc == nil {
+	        if kc == nil {
+			log.Println("WAIT HERE")
 			kConnsPool.cond.Wait()
 		} else {
 			break;

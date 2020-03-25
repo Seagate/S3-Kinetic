@@ -505,7 +505,7 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) {
-        //log.Println(" CALL CGET ", key)
+        //log.Println(" CALL CGET ", key, size)
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
         psv.tag = C.CString(string(acmd.Tag))
@@ -518,6 +518,7 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 	if size > 0 {
 		bvalue = make([]byte, size)
 	} else {
+		log.Println("ALLOC 5MB")
 		bvalue = make([]byte,5*1048576)
 	}
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
