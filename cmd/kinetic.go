@@ -147,17 +147,19 @@ func GetKineticConnection() *Client {
 	kConnsPool.Lock()
 	var kc *Client = nil
 	//start := time.Now()
-	for kConnsPool.totalInUsed < maxQueue {
-		for i:=0; i< maxQueue; i++ {
-			if kConnsPool.inUsed[i] == false {
-				kc = kConnsPool.kcs[i]
-				kc.Idx = i
-				kc.ReleaseConn = func(x int) {
-					ReleaseConnection(x)
+	for true {
+		if kConnsPool.totalInUsed < maxQueue {
+			for i:=0; i< maxQueue; i++ {
+				if kConnsPool.inUsed[i] == false {
+					kc = kConnsPool.kcs[i]
+					kc.Idx = i
+					kc.ReleaseConn = func(x int) {
+						ReleaseConnection(x)
+					}
+					kConnsPool.inUsed[i] = true
+					kConnsPool.totalInUsed++;
+					break;
 				}
-				kConnsPool.inUsed[i] = true
-				kConnsPool.totalInUsed++;
-				break;
 			}
 		}
 	        if kc == nil {
