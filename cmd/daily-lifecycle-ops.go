@@ -18,7 +18,7 @@ package cmd
 
 import (
 	"context"
-	"log"
+	//"log"
 	"time"
 
 	"github.com/minio/minio/cmd/logger"
@@ -54,7 +54,7 @@ func initDailyLifecycle() {
 func startDailyLifecycle() {
 	var objAPI ObjectLayer
 	var ctx = context.Background()
-	log.Println("START DAILY LIFECYCLE")
+	//log.Println("START DAILY LIFECYCLE")
 	// Wait until the object API is ready
 	for {
 		objAPI = newObjectLayerWithoutSafeModeFn()
@@ -67,7 +67,7 @@ func startDailyLifecycle() {
 
 	// Calculate the time of the last lifecycle operation in all peers node of the cluster
 	computeLastLifecycleActivity := func(status []BgOpsStatus) time.Time {
-		log.Println(" CALCULATE TIME OF LAST LIFECYCLE")
+		//log.Println(" CALCULATE TIME OF LAST LIFECYCLE")
 		var lastAct time.Time
 		for _, st := range status {
 			if st.LifecycleOps.LastActivity.After(lastAct) {
@@ -90,39 +90,48 @@ func startDailyLifecycle() {
 		if !lastAct.IsZero() && time.Since(lastAct) < bgLifecycleInterval {
 			time.Sleep(bgLifecycleTick)
 		}
-		log.Println("PERFORM LIFECYCLE OP")
+		//log.Println("PERFORM LIFECYCLE OP")
 		// Perform one lifecycle operation
 		err := lifecycleRound(ctx, objAPI)
+                //log.Println("1. PERFORM LIFECYCLE OP", err)
+
 		switch err.(type) {
 		// Unable to hold a lock means there is another
 		// instance doing the lifecycle round round
 		case OperationTimedOut:
+                        //log.Println("2.1 PERFORM LIFECYCLE OP")
 			time.Sleep(bgLifecycleTick)
 		default:
 			logger.LogIf(ctx, err)
+                        //log.Println("2.2 PERFORM LIFECYCLE OP")
 			time.Sleep(time.Minute)
 			continue
 		}
 
 	}
+        //log.Println("3. PERFORM LIFECYCLE OP")
+
 }
 
 var lifecycleLockTimeout = newDynamicTimeout(60*time.Second, time.Second)
 
 func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
 	// Lock to avoid concurrent lifecycle ops from other nodes
+        //log.Println("LIFECYCLE ROUND")
+
 	sweepLock := objAPI.NewNSLock(ctx, "system", "daily-lifecycle-ops")
 	if err := sweepLock.GetLock(lifecycleLockTimeout); err != nil {
 		return err
 	}
 	defer sweepLock.Unlock()
-
+	//log.Println("1. LIFECYCLE ROUND")
 	buckets, err := objAPI.ListBuckets(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, bucket := range buckets {
+		//log.Println("CHECK BUCKET: ", bucket.Name)
 		// Check if the current bucket has a configured lifecycle policy, skip otherwise
 		l, ok := globalLifecycleSys.Get(bucket.Name)
 		if !ok {
@@ -130,11 +139,15 @@ func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
 		}
 
 		// Calculate the common prefix of all lifecycle rules
+		//log.Println("1. CHECK BUCKET: ", bucket.Name, l)
+
 		var prefixes []string
 		for _, rule := range l.Rules {
+			//log.Println(" PREFIX", rule.Prefix())
 			prefixes = append(prefixes, rule.Prefix())
 		}
 		commonPrefix := lcp(prefixes)
+                //log.Println("2. CHECK BUCKET: ", bucket.Name)
 
 		// Allocate new results channel to receive ObjectInfo.
 		objInfoCh := make(chan ObjectInfo)
@@ -143,10 +156,13 @@ func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
 		if err := objAPI.Walk(ctx, bucket.Name, commonPrefix, objInfoCh); err != nil {
 			return err
 		}
+                //log.Println("3. CHECK BUCKET: ", bucket.Name, objInfoCh)
 
 		for {
 			var objects []string
 			for obj := range objInfoCh {
+                	//log.Println("3.0 CHECK BUCKET: ", bucket.Name, obj)
+
 				if len(objects) == maxObjectList {
 					// Reached maximum delete requests, attempt a delete for now.
 					break
@@ -164,12 +180,16 @@ func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
 			}
 
 			waitForLowHTTPReq(int32(globalEndpoints.Nodes()))
+	                //log.Println("3.1 CHECK BUCKET DEL: ", bucket.Name, objects)
 
 			// Deletes a list of objects.
 			deleteErrs, err := objAPI.DeleteObjects(ctx, bucket.Name, objects)
+
 			if err != nil {
 				logger.LogIf(ctx, err)
 			} else {
+	                        //log.Println("3.2 CHECK BUCKET: ", bucket.Name)
+
 				for i := range deleteErrs {
 					if deleteErrs[i] != nil {
 						logger.LogIf(ctx, deleteErrs[i])
@@ -188,6 +208,7 @@ func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
 			}
 		}
 	}
+        //log.Println("4. CHECK BUCKET: ")
 
 	return nil
 }

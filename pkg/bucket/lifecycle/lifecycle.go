@@ -54,7 +54,7 @@ func (lc Lifecycle) IsEmpty() bool {
 
 // ParseLifecycleConfig - parses data in given reader to Lifecycle.
 func ParseLifecycleConfig(reader io.Reader) (*Lifecycle, error) {
-        log.Println(" PARSE")
+        log.Println(" PARSE LIFE CYCLE CONFIG")
 
 	var lc Lifecycle
 	if err := xml.NewDecoder(reader).Decode(&lc); err != nil {

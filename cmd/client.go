@@ -12,6 +12,7 @@ import (
 	"errors"
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"strings"
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
@@ -61,6 +62,8 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         //log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
+	runtime.GC()
+	//PrintMemUsage()
 	fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
@@ -89,7 +92,7 @@ func (c *Client) Read(value []byte) (int, error) {
                 c.ReleaseConn(c.Idx)
 		return 0, err
 	}
-
+	log.Println("READ PARTS")
 	for i, part := range  fsMeta.Parts {
 		///log.Println(" PARTS > 0")
 		if i == *(c.NextPartNumber) {
@@ -519,7 +522,7 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 		bvalue = make([]byte, size)
 	} else {
 		log.Println("ALLOC 5MB")
-		bvalue = make([]byte,5*1048576)
+		bvalue = make([]byte,1*1048576)
 	}
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
 	//log.Println("CVALUE BVALUE", cvalue, &bvalue[0])
@@ -772,7 +775,7 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 	cKeys :=  (*C.char)(unsafe.Pointer(&Keys[0]))
 	var size int
 	cSize := (*C.int)(unsafe.Pointer(&size))
-	C.GetKeyRange(1, cStartKey, cEndKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), 800, false, cKeys, cSize)
+	C.GetKeyRange(1, cStartKey, cEndKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), C.uint32_t(maxReturned), false, cKeys, cSize)
         Keys = (*[1 << 30 ]byte)(unsafe.Pointer(cKeys))[:size:size]
 	keyStrings := strings.Split(string(Keys[:size]), ":")
 	var keys [][]byte

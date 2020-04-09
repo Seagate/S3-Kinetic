@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/xml"
+	//"log"
 	"path"
 	"sync"
 
@@ -53,7 +54,9 @@ func (sys *LifecycleSys) Set(bucketName string, lifecycle lifecycle.Lifecycle) {
 
 // Get - gets lifecycle config associated to a given bucket name.
 func (sys *LifecycleSys) Get(bucketName string) (lc lifecycle.Lifecycle, ok bool) {
+	//log.Println("LIFECYCLE: GET", bucketName)
 	if globalIsGateway {
+	        //log.Println("1. LIFECYCLE: GET", bucketName)
 		// When gateway is enabled, no cached value
 		// is used to validate life cycle policies.
 		objAPI := newObjectLayerWithoutSafeModeFn()
@@ -65,13 +68,18 @@ func (sys *LifecycleSys) Get(bucketName string) (lc lifecycle.Lifecycle, ok bool
 		if err != nil {
 			return
 		}
+		//log.Println("2. LIFECYCLE: GET", bucketName)
+
 		return *l, true
 	}
+        //log.Println("3. LIFECYCLE: GET", bucketName)
 
 	sys.Lock()
 	defer sys.Unlock()
 	lc, ok = sys.bucketLifecycleMap[bucketName]
-	return
+        //log.Println("4. LIFECYCLE: GET", bucketName, lc)
+
+	return lc, true
 }
 
 func saveLifecycleConfig(ctx context.Context, objAPI ObjectLayer, bucketName string, bucketLifecycle *lifecycle.Lifecycle) error {

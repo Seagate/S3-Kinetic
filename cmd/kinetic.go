@@ -32,6 +32,7 @@ import (
 	"os"
 	//"os/user"
 	"path"
+	"runtime"
 	"sort"
 	"time"
 	"strings"
@@ -73,6 +74,22 @@ var hmacKey string = "asdfasdf"
 
 var wg = sync.WaitGroup{}
 var kineticMutex = &sync.Mutex{}
+
+
+func bToMb(b uint64) uint64 {
+	return b/1024/1024
+}
+
+func PrintMemUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	log.Println("Alloc: ", bToMb(m.Alloc))
+	log.Println("HeapAlloc: ", bToMb(m.HeapAlloc))
+	log.Println("NextGC: ", bToMb(m.NextGC))
+	log.Println("System: ", bToMb(m.Sys))
+	log.Println("NumForcedGC: ", m.NumForcedGC)
+	log.Println("PauseTotal(ms): ", m.PauseTotalNs/1000000)
+}
 
 func InitKineticd(storePartition []byte) {
         var cPtr *C.char
@@ -163,7 +180,7 @@ func GetKineticConnection() *Client {
 			}
 		}
 	        if kc == nil {
-			log.Println("WAIT HERE")
+			//log.Println("WAIT HERE")
 			kConnsPool.cond.Wait()
 		} else {
 			break;
@@ -291,6 +308,7 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 		nsMutex:  newNSLock(false),
 		listPool: NewTreeWalkPool(globalLookupTimeout),
 	}
+	//PrintMemUsage()
 	return Ko, nil
 }
 
@@ -486,26 +504,28 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
-
 	startKey := "meta.bucket."
 	endKey := "meta.bucket/"
+        var bucketInfos []BucketInfo
+        var value []byte
+        var lastKey []byte 
+for true {
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
+        ReleaseConnection(kc.Idx)
+        kineticMutex.Unlock()
 	if err != nil {
-		ReleaseConnection(kc.Idx)
-	        kineticMutex.Unlock()
 		return nil, err
 	}
-	var bucketInfos []BucketInfo
-	var value []byte
+	//var bucketInfos []BucketInfo
+	//var value []byte
 	for _, key := range keys {
 		var bucketInfo BucketInfo
 		if string(key[:12]) == "meta.bucket." && (string(key[:13]) != "meta.bucket..") {
-			cvalue, size, err := kc.CGet(string(key), 0, kopts)
+			cvalue, size, err := kc.CGet(string(key), 10*1024, kopts)
+			//log.Println("SIZE " , string(key),  size)
                         if err != nil {
-	                        ReleaseConnection(kc.Idx)
-			        kineticMutex.Unlock()
                                 return nil, err
                         }
 			if (cvalue != nil) {
@@ -519,9 +539,13 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			}
 		}
 	}
-        ReleaseConnection(kc.Idx)
-        kineticMutex.Unlock()
-	//log.Println("END: LIST BUCKET")
+	if len(keys) < 800 {
+		break
+	} else {
+		startKey = string(lastKey)
+		endKey = ""
+	}
+}
 	return bucketInfos, nil
 }
 
@@ -968,7 +992,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
-        cvalue, size, err := kc.CGet(key, 0, kopts)
+        cvalue, size, err := kc.CGet(key, 10*1024, kopts)
 	ReleaseConnection(kc.Idx)
 	if err != nil {
 		err = errFileNotFound
@@ -1165,6 +1189,9 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	}
 
 	// Success.
+	//Force Garbage Collection
+	//runtime.GC()
+	//PrintMemUsage()
 	return objectInfo, nil
 }
 
@@ -1275,8 +1302,13 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 
 	startKey := "meta." + bucket + "/" + prefix
 	endKey := "meta." + bucket + "0"
-	kineticMutex.Lock() 
-	kc := GetKineticConnection()
+	//kineticMutex.Lock() 
+	//kc := GetKineticConnection()
+	var lastKey []byte 
+	var kc *Client
+for true {
+        kineticMutex.Lock() 
+        kc = GetKineticConnection()
 	keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
         ReleaseConnection(kc.Idx)
 	kineticMutex.Unlock()
@@ -1284,6 +1316,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		return loi, err
 	}
 	for _, key := range keys {
+		lastKey = key
 		var objInfo ObjectInfo
                 //log.Println("KEY ", string(key), string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]))
 		if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
@@ -1329,6 +1362,13 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 			}
 		}
 	}
+        if len(keys) < 800 {
+                break
+        } else {
+		startKey = string(lastKey)
+		endKey = ""
+	}
+}
 	result := ListObjectsInfo{}
 	for _, objInfo := range objInfos {
 		if objInfo.IsDir && delimiter == SlashSeparator {

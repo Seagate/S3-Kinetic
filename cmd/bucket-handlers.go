@@ -152,7 +152,7 @@ func initFederatorBackend(buckets []BucketInfo, objLayer ObjectLayer) {
 // -------------------------
 // This operation returns bucket location.
 func (api objectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(" GET BUCKET LOCATION")
+	//fmt.Println(" GET BUCKET LOCATION")
 	ctx := newContext(r, w, "GetBucketLocation")
 
 	defer logger.AuditLog(w, r, "GetBucketLocation", mustGetClaimsFromToken(r))

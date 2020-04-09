@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"log"
 	"path"
 	"sync"
 
@@ -252,7 +253,7 @@ func fsWalk(ctx context.Context, obj ObjectLayer, bucket, prefix string, listDir
 		close(results)
 		return err
 	}
-
+	log.Println(" FSWALK")
 	walkResultCh := startTreeWalk(ctx, bucket, prefix, "", true, listDir, ctx.Done())
 
 	go func() {
