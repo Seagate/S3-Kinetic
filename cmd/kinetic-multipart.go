@@ -353,7 +353,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 
 	key := bucket + "/" + object + "." + fs.metaJSONFile
 	//log.Println(" GET JSON FILE FOR", key)
-        //kineticMutex.Lock()
+        kineticMutex.Lock()
         kc = GetKineticConnection()
         cvalue, size, err := kc.CGet(key, 0,  kopts)
         ReleaseConnection(kc.Idx)
@@ -374,7 +374,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 		}
 		result.UserDefined = fsMeta.Meta
 	}
-        ReleaseConnection(kc.Idx)
+        //ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
 	//log.Println("FSMETA", result.UserDefined)
 	return result, nil
