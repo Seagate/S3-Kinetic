@@ -1,0 +1,13 @@
+# Target labels
+ kinetic_cpp_client
+# Source files and their labels
+/home/thai/minio/kineticd/CMakeFiles/kinetic_cpp_client
+/home/thai/minio/kineticd/CMakeFiles/kinetic_cpp_client.rule
+/home/thai/minio/kineticd/CMakeFiles/kinetic_cpp_client-complete.rule
+/home/thai/minio/kineticd/vendor/src/kinetic_cpp_client-stamp/kinetic_cpp_client-install.rule
+/home/thai/minio/kineticd/vendor/src/kinetic_cpp_client-stamp/kinetic_cpp_client-mkdir.rule
+/home/thai/minio/kineticd/vendor/src/kinetic_cpp_client-stamp/kinetic_cpp_client-download.rule
+/home/thai/minio/kineticd/vendor/src/kinetic_cpp_client-stamp/kinetic_cpp_client-update.rule
+/home/thai/minio/kineticd/vendor/src/kinetic_cpp_client-stamp/kinetic_cpp_client-patch.rule
+/home/thai/minio/kineticd/vendor/src/kinetic_cpp_client-stamp/kinetic_cpp_client-configure.rule
+/home/thai/minio/kineticd/vendor/src/kinetic_cpp_client-stamp/kinetic_cpp_client-build.rule

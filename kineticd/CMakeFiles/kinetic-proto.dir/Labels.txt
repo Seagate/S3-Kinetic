@@ -1,0 +1,13 @@
+# Target labels
+ kinetic-proto
+# Source files and their labels
+/home/thai/minio/kineticd/CMakeFiles/kinetic-proto
+/home/thai/minio/kineticd/CMakeFiles/kinetic-proto.rule
+/home/thai/minio/kineticd/CMakeFiles/kinetic-proto-complete.rule
+/home/thai/minio/kineticd/vendor/src/kinetic-proto-stamp/kinetic-proto-install.rule
+/home/thai/minio/kineticd/vendor/src/kinetic-proto-stamp/kinetic-proto-mkdir.rule
+/home/thai/minio/kineticd/vendor/src/kinetic-proto-stamp/kinetic-proto-download.rule
+/home/thai/minio/kineticd/vendor/src/kinetic-proto-stamp/kinetic-proto-update.rule
+/home/thai/minio/kineticd/vendor/src/kinetic-proto-stamp/kinetic-proto-patch.rule
+/home/thai/minio/kineticd/vendor/src/kinetic-proto-stamp/kinetic-proto-configure.rule
+/home/thai/minio/kineticd/vendor/src/kinetic-proto-stamp/kinetic-proto-build.rule

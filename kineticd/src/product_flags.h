@@ -1,0 +1,83 @@
+#ifndef KINETIC_PRODUCT_FLAGS_H_
+#define KINETIC_PRODUCT_FLAGS_H_
+// For managing multiple product configs
+// Product specific settings and dependencies are configured here
+
+#if BUILD_FOR_ARM == 1
+
+// LOMBARDKV Product Defines
+#ifdef PRODUCT_LOMBARDKV
+#define SED_SUPPORTED
+#define PRODUCT_CAPACITY 4000000000000
+#define FIRMWARE_SIGNING_ENABLED
+#define VECTOR_PORZ
+#endif
+
+// LAMARR EMC Qual Product Defines
+#ifdef PRODUCT_LAMARRKV_QUAL
+#define QUAL
+#define SED_SUPPORTED
+#define FIRMWARE_SIGNING_ENABLED
+#define PRODUCT_CAPACITY 8000000000000
+#define VECTOR_PORZ
+#define LLDP_ENABLED
+#endif
+
+// LAMARR Product Defines
+#ifdef PRODUCT_LAMARRKV
+#define SED_SUPPORTED
+#define FIRMWARE_SIGNING_ENABLED
+#define PRODUCT_CAPACITY 8000000000000
+#define VECTOR_PORZ
+#define LLDP_ENABLED
+// #define QOS_ENABLED
+// #define DEFAULT_QOS 2
+// #define NO_SPACE_REPORTING
+#endif
+
+// Lamarr Interposer build for espresso bin
+#ifdef PRODUCT_LAMARRKV_ARMADALP
+//#define SED_SUPPORTED
+#define FIRMWARE_SIGNING_ENABLED
+#define PRODUCT_CAPACITY 8000000000000
+// #define VECTOR_PORZ
+#define LLDP_ENABLED
+// #define QOS_ENABLED
+// #define DEFAULT_QOS 2
+// #define NO_SPACE_REPORTING
+#endif
+
+// LOMBARD China Product Defines
+#ifdef PRODUCT_LOMBARDKV_CHINA
+#define SED_SUPPORTED
+#define PRODUCT_CAPACITY 4000000000000
+#define ISE_AND_LOCK_DISABLED
+#define FIRMWARE_SIGNING_ENABLED
+#define VECTOR_PORZ
+#endif
+
+// SSD Mule Product Defines
+#ifdef PRODUCT_SSD
+#undef SED_SUPPORTED
+#undef FIRMWARE_SIGNING_ENABLED
+#define PRODUCT_CAPACITY 240000000000
+#endif
+
+#else // BUILD_FOR_ARM
+
+#ifdef PRODUCT_X86
+#undef SED_SUPPORTED
+#ifdef SMR_ENABLED
+#define PRODUCT_CAPACITY 8000000000000
+#else
+#define PRODUCT_CAPACITY 4000000000000
+#endif
+#define FIRMWARE_SIGNING_ENABLED
+#undef VECTOR_PORZ
+// #define QOS_ENABLED
+// #define DEFAULT_QOS 2
+#endif
+
+#endif // BUILD_FOR_ARM
+
+#endif  // KINETIC_PRODUCT_FLAGS_H_

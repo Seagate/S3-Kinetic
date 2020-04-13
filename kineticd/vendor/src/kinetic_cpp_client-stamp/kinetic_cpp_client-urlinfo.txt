@@ -1,0 +1,3 @@
+repository='external project URL'
+module='/home/thai/minio/kineticd/kinetic_cpp_client'
+tag=''

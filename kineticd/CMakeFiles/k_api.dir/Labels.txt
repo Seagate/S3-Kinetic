@@ -1,0 +1,14 @@
+# Target labels
+ k_api
+# Source files and their labels
+/home/thai/minio/kineticd/CMakeFiles/k_api
+/home/thai/minio/kineticd/CMakeFiles/k_api.rule
+/home/thai/minio/kineticd/CMakeFiles/k_api-complete.rule
+/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-install.rule
+/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-mkdir.rule
+/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-download.rule
+/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-update.rule
+/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-patch.rule
+/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-configure.rule
+/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-build.rule
+/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-real_build.rule

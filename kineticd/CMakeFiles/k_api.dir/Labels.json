@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/thai/minio/kineticd/CMakeFiles/k_api"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/CMakeFiles/k_api.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/CMakeFiles/k_api-complete.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-install.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-mkdir.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-download.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-update.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-patch.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-configure.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-build.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/k_api-prefix/src/k_api-stamp/k_api-real_build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"k_api"
+		],
+		"name" : "k_api"
+	}
+}

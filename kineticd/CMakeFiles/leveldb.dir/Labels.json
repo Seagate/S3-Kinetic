@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/thai/minio/kineticd/CMakeFiles/leveldb"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/CMakeFiles/leveldb.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/CMakeFiles/leveldb-complete.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-install.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-mkdir.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-download.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-update.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-patch.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-configure.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-build.rule"
+		},
+		{
+			"file" : "/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-real_build.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"leveldb"
+		],
+		"name" : "leveldb"
+	}
+}

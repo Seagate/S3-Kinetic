@@ -1,0 +1,29 @@
+       How To Manually start up kinetid for LAMARR
+
+1. Get kernel modules:
+   memMgr_drv.ko
+   memMgr_drv_10.ko
+   (These Files will be stored in /mnt/util in the product)
+2. Change directory to /mnt/util.
+
+3. Do these commands:
+
+   a. insmod memMgr_drv.ko
+   b. insmod memMgr_drv_10.ko
+   c. cat /proc/devices | grep mem
+      it will show:
+         1 mem
+       248 memMgrdrv10
+       249 memMgrdrv
+   d.  mknod /dev/memMgr10 c 248 0
+   e.  mknod /dev/memMgr c 249 0
+
+4. Now start the kineticd:
+   cd /opt/kinetic
+   ./kineticd --store_partition=/dev/sda3 &> /dev/null
+
+
+
+
+
+

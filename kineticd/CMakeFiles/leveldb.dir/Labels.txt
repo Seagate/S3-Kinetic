@@ -1,0 +1,14 @@
+# Target labels
+ leveldb
+# Source files and their labels
+/home/thai/minio/kineticd/CMakeFiles/leveldb
+/home/thai/minio/kineticd/CMakeFiles/leveldb.rule
+/home/thai/minio/kineticd/CMakeFiles/leveldb-complete.rule
+/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-install.rule
+/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-mkdir.rule
+/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-download.rule
+/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-update.rule
+/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-patch.rule
+/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-configure.rule
+/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-build.rule
+/home/thai/minio/kineticd/leveldb-prefix/src/leveldb-stamp/leveldb-real_build.rule

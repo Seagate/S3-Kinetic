@@ -1,0 +1,369 @@
+101c101
+<         static const off_t SUPER_ZONE_SIZE = 2 * 1048576;           // 2 MB
+---
+>         static const off_t SUPER_ZONE_SIZE = 5 * 1048576;
+102a103,104
+>         static uint64_t SUPERBLOCK_0_ADDR;
+>         static uint64_t SUPERBLOCK_1_ADDR;
+111,117c113,114
+<             cout << *this << endl;
+<             cout << "--- LEVELS:" << endl;
+<             for (int i = 0; i < 10; ++i) {
+<                 cout << *(levels_[i]) << endl;
+<             }
+<             cout << endl;
+< 
+---
+>         cout << *this << endl;
+>         cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
+119c116
+<             for (int i = 0; i < 10; ++i) {
+---
+>             for (int i = 0; i < 9; ++i) {
+127,129d123
+< 	    if (type == kValueFile) {
+<                 return valueFileMap_.getFileInfo(number, type);	    
+< 	    }
+143c137
+<             for (int i = 0; i < 10; ++i) {
+---
+>             for (int i = 0; i < 9; ++i) {
+209c203,207
+<         inline Status getDiskInfo(const int fd);
+---
+>         Status loadSuperBlock(int fd, uint64_t addr);
+>         Status markSuperBlock(int fd, uint64_t addr, bool status);
+>         bool isSuperBlockGood(int fd, uint64_t addr);
+> //  Tri - Save      inline char *computeMD5(const char *str, int length);
+>         Status getDiskInfo(const int fd);
+218d215
+< 				cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": lastAllocatedZoneMapIdx_ = " << lastAllocatedZoneMapIdx_ << ", use zone = " << index << endl;
+233d229
+< 	FileMap valueFileMap_;
+238c234
+<         Level* levels_[10];
+---
+>         Level* levels_[9];
+240a237
+>         vector<uint64_t> superBlockAddresses_;
+244a242,262
+>     if(ioctl(fd, BLKGETSIZE64, &capacity_)<0) {
+>         close(fd);
+>         throw DiskError();
+>     }
+>     else if (capacity_ < 5*ZONE_SIZE) { //(SUPER_ZONE_SIZE + (3 * ZONE_SIZE))){
+>         close(fd);
+>         throw DiskError();
+>     }
+>     zoneStartAddr_ = ZONE_SIZE;
+>     zoneSize_ = ZONE_SIZE;
+>     numZones_ = (capacity_ / ZONE_SIZE) - 1;
+>     zoneUseMapSize_ = (numZones_ + (sizeof(unsigned int)* CHAR_BIT )- 1 )/ CHAR_BIT;
+>     zoneUseMap_ = (unsigned char *) calloc(zoneUseMapSize_, sizeof(char));
+>     int superZone = numZones_/2;
+>     setUsedZone(superZone);
+>     setUsedZone(superZone + 1);
+>     Disk::SUPERBLOCK_0_ADDR = superZone*ZONE_SIZE;
+>     Disk::SUPERBLOCK_1_ADDR = (superZone + 1)*ZONE_SIZE;
+>     superBlockAddresses_.push_back(Disk::SUPERBLOCK_0_ADDR);
+>     superBlockAddresses_.push_back(Disk::SUPERBLOCK_1_ADDR);
+> 
+252c270
+<     for (uint32_t i = 0; i < 10; ++i) {
+---
+>     for (uint32_t i = 0; i < 9; ++i) {
+254a273
+> 
+258a278,281
+> #ifndef NDEBUG
+>         cout << *this << endl;
+>         cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
+> #endif
+260a284
+> /*
+268,269c292,294
+<     }
+<     else {
+---
+>     } else
+> */
+>     if (superBlockAddresses_.size() == 0 && s.IsInvalidArgument()) {
+276d300
+<         cout << "#Zones = " << numZones_ << ", zoneUseMapSize_ " << zoneUseMapSize_ << ", CAPACITY " << capacity_ << endl;
+284,285d307
+<             cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": lastIntIdx = " << lastIntIdx << ", #Bit excess = " << nExcess << endl;
+<             cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Before *Ptr = " << std::hex << *uintPtr << endl;
+287,288d308
+< //    		*uintPtr <<= nExcess; // sizeof(unsigned int)*CHAR_BIT - nExccess;
+<             cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": After *Ptr = " << std::hex << *uintPtr << std::dec << endl;
+291a312,313
+>         superBlockAddresses_.push_back(Disk::SUPERBLOCK_0_ADDR);
+>         superBlockAddresses_.push_back(Disk::SUPERBLOCK_1_ADDR);
+300a323,325
+>     } else {
+>         cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": All superblocks are bad.  " << s << endl;
+>     	throw DiskError();
+305,306d329
+< /*
+<     cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": lastAllocatedZoneMapIdx_ = " << lastAllocatedZoneMapIdx_ << endl;
+309,312d331
+<     for (int k = 0; k < n; ++k) {
+<     	cout << std::hex << array[k] << " ";
+<     }
+<     cout << std::dec << endl;
+316c335
+<     for (int j = 0; j < 2; ++j) {
+---
+>     for (int j = 0; j < 2; ++j) {  // Loop back to begin of zoneMap_
+318,346d336
+<         cout << " j = " << j << ", i = " << i << ", n = " << n << endl;
+< 		for (; i < n; ++i) {
+< //			lastAllocatedZoneMapIdx_ = i;
+< 			result = __builtin_ffs(~array[i]);
+< 			if (result != 0) {
+< 				cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": free zone = " << ((i * sizeof(unsigned int) * CHAR_BIT) + result) << endl;
+< 				return (i * sizeof(unsigned int) * CHAR_BIT) + result;
+< 			}
+< 		}
+< //		lastAllocatedZoneMapIdx_ = n;
+<     }
+< 
+<     cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": free zone = " << result << endl;
+<     return result;
+< */
+< 
+<     cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": lastAllocatedZoneMapIdx_ = " << lastAllocatedZoneMapIdx_ << ", lastAllocatedZone_ = " << lastAllocatedZone_ << endl;
+<     int n = zoneUseMapSize_ / sizeof(unsigned int);
+<     unsigned int* array = reinterpret_cast<unsigned int*>(zoneUseMap_);
+<     for (int k = 0; k < n; ++k) {
+<     	cout << std::hex << array[k] << " ";
+<     }
+<     cout << std::dec << endl;
+<     int result = 0;
+<     int i = (lastAllocatedZoneMapIdx_ % n);
+< 
+<     for (int j = 0; j < 2; ++j) {
+<         i %= n;
+<         cout << " j = " << j << ", i = " << i << ", n = " << n << endl;
+349,350c339
+< 		    int bitIdx = lastAllocatedZone_ - (i * sizeof(unsigned int) * CHAR_BIT); //(lastAllocatedZoneMapIdx_ * sizeof(unsigned int) * CHAR_BIT);
+< 	    	cout << "Elmt initial: " << std::hex << arrElement << ", ";
+---
+> 		    int bitIdx = lastAllocatedZone_ - (i * sizeof(unsigned int) * CHAR_BIT);
+352d340
+< 	    	cout << "Elmt after negated: " << std::hex << arrElement << ", ";
+354d341
+< 	    	cout << "Elmt after shifted " << std::dec << bitIdx << " bits: " << std::hex << arrElement << std::dec << endl;
+358d344
+< 				cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": free zone = " << ((i * sizeof(unsigned int) * CHAR_BIT) + result) << endl;
+361d346
+< //			lastAllocatedZoneMapIdx_ = i; //(lastAllocatedZoneMapIdx_ + 1) % n;
+364c349
+< 		lastAllocatedZoneMapIdx_ = 0; //(lastAllocatedZoneMapIdx_ + 1) % n;
+---
+> 		lastAllocatedZoneMapIdx_ = 0;
+367,368d351
+< 
+<     cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": free zone = " << result << endl;
+371,443c354,370
+< inline Status Disk::getDiskInfo(const int fd) {
+<     char *buf;
+<     if (posix_memalign((void**)&buf, pageSize_, SUPER_ZONE_SIZE)) {
+<         return Status::IOError("Disk Error");
+<     }
+<     lseek(fd, 0, SEEK_SET);
+<     size_t read_in = 3 * pageSize_;
+<     int r = read(fd, buf, read_in);
+<     if ( r < 0 ){
+<         free(buf);
+<         return IOError("Disk_error", errno);
+<     }
+<     uint64_t magic_num;
+<     magic_num = DecodeFixed64(buf);
+<     if (magic_num != MAGIC_NUMBER){
+<         free(buf);
+<         cout << "MAGIC NUMBER WAS NOT CORRECT  " << endl;
+<         return Status::IOError("Disk Error");
+<     }
+<     uint64_t size;
+<     size = DecodeFixed64(buf + sizeof(uint64_t));
+<     uint64_t used = 2 * sizeof(uint64_t);
+<     //used 16 bytes
+< 
+<     if (size > (read_in - used)){
+<         int r = read(fd, buf + read_in, ROUNDUP(size - read_in, pageSize_));
+<         if ( r < 0 ){
+<             free(buf);
+<             return IOError("Disk_error", errno);
+<         }
+<     }
+<     // ********************************
+<     //  8 bytes Magic Number
+<     //  8 bytes size of important metadata following
+<     //  Metadata:
+<     //  8 bytes band_start_addr_
+<     //  4 bytes num_bands_
+<     //  8 bytes band_size_
+<     //    *current_
+<     //    size of manifest_bands_
+<     //    manifest tie <band number, head, tail> array
+<     //    size of filemap_
+<     //    file_map_ map<file number, FILEINFO> array
+<     Slice res(buf + used, size);
+<     GetVarint64(&res, reinterpret_cast<uint64_t *>(&zoneStartAddr_));
+<     GetVarint32(&res, reinterpret_cast<uint32_t *>(&numZones_));
+<     GetVarint64(&res, reinterpret_cast<uint64_t *>(&zoneSize_));
+<     Slice tmp;
+<     GetLengthPrefixedSlice(&res, &tmp);
+<     current_ = new std::string(tmp.ToString());
+<     GetLengthPrefixedSlice(&res, &tmp);
+<     zoneUseMapSize_ = tmp.size();
+<     zoneUseMap_ = (unsigned char *) calloc(zoneUseMapSize_, sizeof(char));
+<     memcpy(zoneUseMap_, tmp.ToString().c_str(), zoneUseMapSize_);
+<     cout << "NUMBER OF NBANDS " << numZones_ << " BAND MAP SIZE " << zoneUseMapSize_ << endl;
+<     manifestInfo_ = new FileInfo();
+<     manifestInfo_->deserialize(res, this);
+<     fileMap_.deserialize(res, this);
+<     valueFileMap_.deserialize(res, this);
+<     free(buf);
+<     FileInfo* finfo = fileMap_.getFileInfo(manifestInfo_->getNumber(), manifestInfo_->getType());
+<     delete manifestInfo_;
+<     if (finfo) {
+<         manifestInfo_ = finfo;
+<     } else {
+<         manifestInfo_ = NULL;
+<     }
+< #ifndef NDEBUG
+<     cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
+<     cout << *this << endl;
+<     cout << "--- LEVELS:" << endl;
+<     for (int i = 0; i < 10; ++i) {
+<         cout << *(levels_[i]) << endl;
+---
+> /* Tri - Save
+> inline char *Disk::computeMD5(const char *str, int length) {
+>     int n;
+>     MD5_CTX c;
+>     unsigned char digest[16];
+>     char *out = (char*)malloc(33);
+> 
+>     MD5_Init(&c);
+> 
+>     while (length > 0) {
+>         if (length > 512) {
+>             MD5_Update(&c, str, 512);
+>         } else {
+>             MD5_Update(&c, str, length);
+>         }
+>         length -= 512;
+>         str += 512;
+445d371
+<     cout << endl;
+447,449c373
+< #endif
+<     return Status::OK();
+< }
+---
+>     MD5_Final(digest, &c);
+450a375,381
+>     for (n = 0; n < 16; ++n) {
+>         snprintf(&(out[n*2]), 2*MD5_DIGEST_LENGTH, "%02x", (unsigned int)digest[n]);
+>     }
+>     cout << "MD5 = " << (void*)digest << endl;
+>     return out;
+> }
+> */
+452a384,386
+>     if (superBlockAddresses_.size() == 0) {
+>     	return Status::IOError("All superblocks are bad");
+>     }
+468d401
+< 
+470,472c403
+<     valueFileMap_.serialize(result);
+< 
+<     size_t sb_size = ROUNDUP((result.size() + (2 * sizeof(uint64_t))), pageSize_);
+---
+>     size_t sb_size = ROUNDUP((result.size() + (2 * sizeof(uint64_t) + 2*sizeof(uint32_t))), pageSize_);
+475c406
+<         return Status::IOError("Disk Error");
+---
+>         return Status::IOError("Disk Error", strerror(errno));
+479,484c410,442
+<     EncodeFixed64(sb_buf + sizeof(uint64_t), result.size());
+<     memcpy(sb_buf + (2 * sizeof(uint64_t)), result.c_str(), result.size());
+<     lseek(fd, 0, SEEK_SET);
+<     int written = write(fd, sb_buf, sb_size);
+<     if (written < 0)
+<         s = IOError("Disk_Sync", errno);
+---
+>     EncodeFixed32(sb_buf + sizeof(uint64_t), 1);  // Make super block good
+>     EncodeFixed64(sb_buf + sizeof(uint64_t) + sizeof(uint32_t), result.size());
+>     memcpy(sb_buf + (2 * sizeof(uint64_t) + sizeof(uint32_t)), result.data(), result.size());
+> 	uint32_t crc = crc32c::Value(result.data(), result.size());
+> 	EncodeFixed32(sb_buf + 2 * sizeof(uint64_t) + sizeof(uint32_t) + result.size(), crc);
+> 	/* Tri - Save
+> 	//    	char* md5 = computeMD5(result.data(), result.size());
+> 	//    	memcpy((sb_buf + 2 * sizeof(uint64_t) + sizeof(uint32_t) + result.size(), md5, 2*MD5_DIGEST_LENGTH);
+> 	//    	free(md5);
+> 	 */
+>     bool error = false;
+>     vector<uint64_t>::iterator it = superBlockAddresses_.begin();
+>     off_t opResult; // = lseek(fd, 0, SEEK_SET);
+>     while (it != superBlockAddresses_.end()) {
+>     	if (true) { //*it != 0) {
+>     		opResult = lseek(fd, *it, SEEK_SET);
+>     	}
+>     	if (opResult == -1) {
+>     		error = true;
+>     	} else {
+>             if (write(fd, sb_buf, sb_size) < 0) {
+>             	error = true;
+>             }
+>     	}
+>         if (error) {
+>            markSuperBlock(fd, *it, false);
+>            it = superBlockAddresses_.erase(it);
+>            error = false;
+>            continue;
+>         }
+>         sync_file_range(fd, *it, sb_size, SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE|SYNC_FILE_RANGE_WAIT_AFTER);
+>         ++it;
+>     }
+486c444,446
+<     sync_file_range(fd, 0, sb_size, SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE|SYNC_FILE_RANGE_WAIT_AFTER);
+---
+>     if (superBlockAddresses_.size() == 0) {
+>     	s = Status::IOError("All superblocks are bad", strerror(errno));
+>     }
+495c455
+<     state->options = 2;
+---
+>     state->options = 3;
+502,506c462
+<     if (type == kValueFile) {
+<         FileInfo* finfo = levels_[9]->allocateFile(number, type);    
+<         valueFileMap_.addFileInfo(finfo->getNumber(), finfo);
+<         return finfo;   
+<     } else if (type == kDescriptorFile) {
+---
+>     if (type == kDescriptorFile) {
+530,535c486
+<     FileInfo* finfo;
+<     if ( type == kValueFile) {
+<         finfo = valueFileMap_.getFileInfo(number, type);    
+<     } else {
+<         finfo = fileMap_.getFileInfo(number, type);
+<     }
+---
+>     FileInfo* finfo = fileMap_.getFileInfo(number, type);
+539,543d489
+<     if (type == kValueFile) {
+<         valueFileMap_.removeFileInfo(number, type);    
+<     } else {
+<         fileMap_.removeFileInfo(number, type);
+<     }
+546c492
+< //    fileMap_.removeFileInfo(number, type);
+---
+>     fileMap_.removeFileInfo(number, type);
