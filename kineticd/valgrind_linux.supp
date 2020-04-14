@@ -1,0 +1,108 @@
+{
+   gflags/DefaultArgValues
+   Memcheck:Leak
+   ...
+   fun:_ZNSs4_Rep9_S_create*SaIcE
+   ...
+   fun:_ZNSsC1EPKcRKSaIcE
+   ...
+   fun:_Z41__static_initialization_and_destruction_0ii
+   ...
+}
+{
+   gflags/logtostderr
+   Memcheck:Leak
+   ...
+   fun:_ZNSs4_Rep9_S_create*SaIcE
+   ...
+   fun:_GLOBAL__sub_I__ZN3fLB17FLAGS_logtostderrE
+   ...
+}
+{
+   leveldb/globals
+   Memcheck:Leak
+   fun:_Znw?
+   fun:_ZN7leveldbL14InitDefaultEnvEv
+   ...
+}
+{
+   gflags/datastructure
+   Memcheck:Leak
+   fun:_Znwj
+   fun:*_PN6google12_GLOBAL__N_115CommandLineFlagEESt10_Select1stIS8*
+   ...
+}
+{
+   gflags/ParseCmdLineFlags
+   Memcheck:Leak
+   fun:malloc
+   fun:strdup
+   fun:_ZN6google7SetArgvEiPPKc
+   fun:_ZN6googleL29ParseCommandLineFlagsInternalEPiPPPcbb
+   fun:main
+}
+{
+   gflags/SetUsageMessage
+   Memcheck:Leak
+   fun:malloc
+   fun:strdup
+   fun:_ZN6google15SetUsageMessageERKSs
+   fun:main
+}
+{
+   glog/SetTimeConflictingAccess
+   drd:ConflictingAccess
+   fun:_ZN6google19RawLog__SetLastTimeERK2tmi
+   fun:_ZN6google10LogMessage4InitEPKciiMS0_FvvE
+   fun:_ZN6google10LogMessageC1EPKci
+   ...
+}
+{
+   glog/SetTimeRace
+   Helgrind:Race
+   fun:_ZN6google19RawLog__SetLastTimeERK2tmi
+   fun:_ZN6google10LogMessage4InitEPKciiMS0_FvvE
+   fun:_ZN6google10LogMessageC1EPKci
+   ...
+}
+{
+   glog/SinksVectorLeak
+   Memcheck:Leak
+   ...
+   fun:_ZN6google10AddLogSink*
+   fun:main
+}
+{
+   leveldb/InitModule
+   Memcheck:Leak
+   ...
+   fun:_ZN7leveldbL10InitModuleEv
+   ...
+}
+{
+   leveldb/backgroundcall
+   Memcheck:Leak
+   ...
+   fun:*PosixEnv*Schedule*
+   fun:*BackgroundCallEv*
+   ...
+}
+{
+   pthread/thread_local_storage
+   Memcheck:Leak
+   fun:calloc
+   fun:_dl_allocate_tls
+   fun:pthread_create@@GLIBC_2.2.5
+   ...
+}
+{
+   openssl/SSL_COMP_get_compression_methods
+   Memcheck:Leak
+   fun:malloc
+   fun:CRYPTO_malloc
+   fun:sk_new
+   fun:load_builtin_compressions
+   fun:SSL_COMP_get_compression_methods
+   fun:SSL_library_init
+   ...
+}

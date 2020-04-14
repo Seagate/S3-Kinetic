@@ -1,0 +1,23 @@
+﻿
+Compile: 
+
+make all
+
+Put seagate.so in /lib/security    /*must be sudo */
+
+Configure:
+
+1) Add these lines into /etc/pam.d/sshd after “Standard UN*x authorization”
+
+auth      required   seagate.so DEVICE=/dev/sdX
+account   sufficient seagate.so DEVICE=/dev/sdX
+
+Where X or /dev/sdX is the drive identifier
+
+2) In /etc/ssh/sshd_config Make sure the following values are set
+
+ChallengeResponseAuthentication yes
+
+PasswordAuthentication no
+
+UsePAM  yes
