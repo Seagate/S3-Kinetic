@@ -27,7 +27,7 @@ case "$1" in
   "ARM" )
     echo "ARM"
     source ~/uboot-linux/envsetup.sh
-    cmake -DPRODUCT="$1"
+    cmake -DPRODUCT="$2"
     make
     ./cplib.sh ../libarm
     cd ../
