@@ -39,6 +39,7 @@ libarm/*.a
 kineticd/*.a
 kineticd/.libs/
 kineticd/.deps/
+kineticd/qual/qual_local
 kineticd/vendor
 kineticd/kinetic_test
 kineticd/print_device_information
