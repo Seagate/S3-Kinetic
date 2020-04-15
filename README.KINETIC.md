@@ -10,33 +10,74 @@ I. INSTALL MINIO:
       https://tecadmin.net/install-go-on-ubuntu
 
    B. INSTALL MINIO-KINETIC:
-      The Minio and kineticd are now under one roof for compiling. From now on, it will be called s3kinetic:
-         Clone s3kinetic
+      The Minio and kineticd are now under one roof for compiling.
+         Clone albany-minio
            - git clone ssh://git@lco-esd-cm01.colo.seagate.com:7999/in/albany-minio.git
-         (Will fix albany-minio to albany-s3kinetic)
 
-II. COMPILE AND RUN S3kinetic:
+II. COMPILE AND RUN  S3kinetic:
     A. COMPILE
       Under albany-minio, there is kineticd directory.
-      Any change in kineticd can be done normally like before, like 'git add -u', 'git commit..', except that no 'git push origin ...' is needed
-      Any change in albany-minio will be commited normally using git commands and kineticd also be commited (if there is any change in kineticd).
+      Any change in kineticd can be edited normally..
+      Any change in albany-minio and/or kineticd will be commited normally using git commands (add, commit...).
 
       To compile s3kinetic, assume that the following directories are under user's home directory:
         - albany-minio
         - uboot-linux (this is uboot for ARM)
 
-      do the following:
-        cd ~/albany-minio
-        ./s3kinetic ARM LAMARRKV  (for LAMARRKV using ARM processors).
-                    X86 NONSMR    (for non-smr drive using SATA interface (like standard SATA drive) using X86 processors).
-                    X86 SMR       (for smr drive using SATA interface).
+      If this is the 1st time do this (assume the current directory is ~/albany-minio)
+        - go to uboot-linux do: './build_embedded_image.sh -t ramdef'
+        - go to 'kineticd' directory under 'albany-minio' directoty:  cd kineticd
+        - install x86 pacakages                                    :  ./x86_package_installation.sh
 
-      An exectuable 'minio' will be created. (Should have different names later, like : s3kinetic-x86-srm or s3kinetic-x86-nonsmr 
+      To compile, do the following:
+        - Back to albany-minio directory:
+          cd ~/albany-minio
+        - Compils:
+          ./s3kinetic ARM LAMARRKV  (for LAMARRKV using ARM processors).
+                      X86 NONSMR    (for non-smr drive using SATA interface (like standard SATA drive), X86 processor).
+                      X86 SMR       (for smr drive using SATA interface, X86 processor).
+
+      An exectuable 'minio' will be created and is ready to run. (Should have different names later, like : s3kinetic-x86-srm or s3kinetic-x86-nonsmr 
                                               or s3kinetic-arm-lammarrkv).
-
+      
     B. RUN s3kinetic:
        1. UNDER INTERPOSER ARM:
-	  DO NOT TRY ARM YET. WE DO NOT HAVE ENOUGH MEMORY. IT RUNS AND FAILS
+          - Copy minio (ARM version) to the Lamarrkv drive under directory /mnt/util:
+            scp minio root@ip_address:/mnt/util/
+          - ssh into Lamarrkv drive
+            ssh root@ip_address
+          - Go to directory /mnt/util
+            cd /mnt/util
+          - Make sure certificate.pem and private.pem are in this directory
+            cp certificates/*.pem .
+          - Make sure there is directory metadata.db that has users.json.
+
+          - To save some memory, disable web browser by:
+            export MINIO_BROWSER=off
+
+          - start minio by typing:
+             ./minio server kinetic:skinny:sda
+          - Wait till these messages appear:
+
+          ********3. OBJECT LAYER
+          Endpoint:  http://172.16.1.59:9000  http://127.0.0.1:9000      
+          AccessKey: minioadmin 
+          SecretKey: minioadmin 
+
+          Command-line Access: https://docs.min.io/docs/minio-client-quickstart-guide
+          $ mc config host add myminio http://172.16.1.59:9000 minioadmin minioadmin
+
+          Object API (Amazon S3 compatible):
+          Go:         https://docs.min.io/docs/golang-client-quickstart-guide
+          Java:       https://docs.min.io/docs/java-client-quickstart-guide
+          Python:     https://docs.min.io/docs/python-client-quickstart-guide
+          JavaScript: https://docs.min.io/docs/javascript-client-quickstart-guide
+          .NET:       https://docs.min.io/docs/dotnet-client-quickstart-guide
+          Detected default credentials 'minioadmin:minioadmin', please change the credentials immediately using 'MINIO_ACCESS_KEY' and 'MINIO_SECRET_KEY'
+
+          - It is ready to accept commands.
+          - If those messages are not shown, using interactive python to do instant_secure_erase, then restart 'minio'
+            
        2. UNDER X86:
 	  - Make sure there is a spare disk drive available. Ex /dev/sdb
 
@@ -52,9 +93,9 @@ II. COMPILE AND RUN S3kinetic:
        Notes:
        If any openssl error, copy the below files to albany-minio:
          * certifcate.pem, private_key.pem from kineticd
-         * contents inside /metadata.db/
+         * contents inside ./metadata.db/users.json
        If any Store Corrupt Error
-         * ISE the drive using s3test/ISE and restart minio
+         * ISE the drive using s3test/ISE or python instant_secure_erase  and restart minio
            ./ISE 127.0.0.1
 
     C. USING s3cmd commands to test.
