@@ -5,9 +5,6 @@
 #include "locked_state.h"
 #include "hibernate_state.h"
 #include "shutdown_state.h"
-#ifdef QUAL
-#include "qualification_state.h"
-#endif
 
 namespace com {
 namespace seagate {
@@ -32,11 +29,6 @@ KineticState* StoreCorruptState::GetNextState(StateEvent event, bool success) {
         case StateEvent::SHUTDOWN:
             nextState = new ShutdownState(this);
             break;
-#ifdef QUAL
-        case StateEvent::QUALIFICATION:
-            nextState = new QualificationState(this);
-            break;
-#endif
         default:
             break;
     }

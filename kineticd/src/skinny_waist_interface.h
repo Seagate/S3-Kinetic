@@ -33,8 +33,7 @@ class SkinnyWaistInterface {
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
         RequestContext& request_context,
-        NullableOutgoingValue *value = NULL,
-	char* buff=NULL) = 0;
+        NullableOutgoingValue *value = NULL, char* buff=NULL) = 0;
     virtual StoreOperationStatus GetVersion(
         int64_t user_id,
         const std::string& key,

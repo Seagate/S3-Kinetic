@@ -38,13 +38,13 @@ const uint64_t PrimaryStore::kMinFreeSpace = smr::Disk::NO_SPACE_THRESHOLD;
 namespace {
 char* allocate_getvalue_buffer() {
     char* buff = NULL;
-    LOG(INFO) << " ALLOC KMEM IN PRIM" << endl;
+    //LOG(INFO) << " ALLOC KMEM IN PRIM" << endl;
     buff = (char*) KernelMemMgr::pInstance_->AllocMem();
     return buff;
 }
 
 void deallocate_getvalue_buffer(char* buff) {
-    LOG(INFO) << " DEALLOC KMEM IN PRIM" << endl;
+    //LOG(INFO) << " DEALLOC KMEM IN PRIM" << endl;
     KernelMemMgr::pInstance_->FreeMem((void*) buff);
 }
 } // namespace
@@ -259,12 +259,6 @@ bool PrimaryStore::InitUserDataStore(bool create_if_missing) {
         } else {
             VLOG(1) << "Initialized primary store";
         }
-#ifndef SMR_ENABLED
-    if (!file_system_store_.Init(true)) {
-        LOG(ERROR) << "Failed to initialize file system store";
-        return false;
-    }
-#endif
 
     return true;
 }
@@ -272,8 +266,7 @@ bool PrimaryStore::InitUserDataStore(bool create_if_missing) {
 StoreOperationStatus PrimaryStore::Get(
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
-        NullableOutgoingValue *value,
-	char* buff) {
+        NullableOutgoingValue *value, char* buff) {
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStoreGet, &e);
     char* packed_value;
@@ -459,41 +452,8 @@ StoreOperationStatus PrimaryStore::Put(
     myValue->memType = MEMORYType::MEM_FOR_CLIENT;
 
 
-#ifndef SMR_ENABLED
-//    std::string tmpFileName;
-//    bool fs_store_written = false;
-//    if (value->size() >= file_system_store_minimum_size_) {
-//        if (!file_system_store_.TemporarilyPut(key, value, guarantee_durable, tmpFileName)) {
-//            delete [] myValue->header;
-//            LOG(ERROR) << "Failed to persist value to file store ";
-//            return StoreOperationStatus_INTERNAL_ERROR;
-//        }
-//        fs_store_written = true;
-//    }
-#endif
     switch (key_value_store_.Put(key, (char*) myValue, guarantee_durable, token)) {
         case StoreOperationStatus_SUCCESS:
-#ifndef SMR_ENABLED
-            if (value->size() < file_system_store_minimum_size_) {
-//                if (oldDataFileExists == kTrue && !file_system_store_.Delete(key)) {
-                    // The data file becomes orphan, log the error but we should still report
-                    // successful PUT
-//                    LOG(WARNING) << "Failed to delete data file of key in PUT";
-//                }
-            } else {
-                // Rename tmp file to its final name
-                if (!file_system_store_.RenameFile(tmpFileName, key)) {
-                    file_system_store_.UnlinkFile(tmpFileName);
-                    LOG(ERROR) << "Failed to Rename File";
-                    // Put back old key/value because we failed to rename data file
-                    if (key_value_store_.Put(key, curPackedValue, true) !=
-                            StoreOperationStatus_SUCCESS) {
-                        LOG(ERROR) << "Failed to roll back to prev key/value ";//NO_SPELL
-                    }
-                    return StoreOperationStatus_INTERNAL_ERROR;
-                 }
-            }
-#endif
             return StoreOperationStatus_SUCCESS;
         case StoreOperationStatus_NO_SPACE:
             delete [] myValue->header;
@@ -513,11 +473,6 @@ StoreOperationStatus PrimaryStore::Put(
             delete [] myValue->header;
             delete myValue;
             LOG(ERROR) << "Failed to persist key/value in dbase ";//NO_SPELL
-#ifndef SMR_ENABLED
-            if (fs_store_written) {
-                file_system_store_.UnlinkFile(tmpFileName);
-            }
-#endif
             return StoreOperationStatus_INTERNAL_ERROR;
     }
 }
@@ -528,25 +483,11 @@ StoreOperationStatus PrimaryStore::Delete(const std::string& key,
     if (corrupt_) {
         return StoreOperationStatus_STORE_CORRUPT;
     }
-#ifndef SMR_ENABLED
-    BooleanOrError fileExists = FileExists(key);
-    if (fileExists == kError) {
-        LOG(ERROR) << "Failed to determine if data file exists";
-        return StoreOperationStatus_INTERNAL_ERROR;
-    }
-#endif
     StoreOperationStatus status = key_value_store_.Delete(key, guarantee_durable, token);
     if (status != StoreOperationStatus_SUCCESS) {
         LOG(ERROR) << "FAILED TO DELETE KEY " << key << endl;
         return status;
     }
-#ifndef SMR_ENABLED
-    if (fileExists == kTrue && !file_system_store_.Delete(key)) {
-        // The data file becomes orphan, log the error but we should still report
-        // successful key deletion because the key has been deleted from leveldb
-        LOG(WARNING) << "Failed to delete data file ";
-    }
-#endif
     return status;
 }
 
@@ -608,13 +549,6 @@ StoreOperationStatus PrimaryStore::Clear(std::string pin) {
         LOG(ERROR) << "IE Unable to mount file system";
         return StoreOperationStatus_INTERNAL_ERROR;
     }
-#ifndef SMR_ENABLED
-    if (!file_system_store_.Init(true)) {
-        LOG(ERROR) << "IE Unable to create or reopen filesystem store";//NO_SPELL
-        corrupt_ = true;
-        return StoreOperationStatus_INTERNAL_ERROR;
-    }
-#endif
     return store_operation_status;
 }
 

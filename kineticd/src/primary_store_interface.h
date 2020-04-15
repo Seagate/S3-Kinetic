@@ -65,8 +65,7 @@ class PrimaryStoreInterface {
     virtual StoreOperationStatus Get(
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
-        NullableOutgoingValue *value,
-	char* buff=NULL) = 0;
+        NullableOutgoingValue *value, char* buff=NULL) = 0;
     virtual StoreOperationStatus Put(
         const std::string& key,
         const PrimaryStoreValue& primary_store_value,

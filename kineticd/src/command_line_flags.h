@@ -53,6 +53,8 @@ DECLARE_string(key_size_log_file_path);
 DECLARE_string(old_key_size_log_file_path);
 DECLARE_string(value_size_log_file_path);
 DECLARE_string(old_value_size_log_file_path);
+DECLARE_string(proc_stat_path);
+DECLARE_string(sysfs_temperature_dir);
 
 DECLARE_int32(latency_threshold);
 

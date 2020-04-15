@@ -35,7 +35,8 @@ DeviceInformation::DeviceInformation(
     const std::string &storage_device,
     const std::string &sysfs_temperature_dir,
     const std::string &preused_file_path,
-    const std::string &kineticd_start_log) :
+    const std::string &kineticd_start_log,
+    uint64_t capacity_in_bytes) :
         authorizer_(authorizer),
         drive_wwn_(""),
         drive_sn_(""),
@@ -46,14 +47,15 @@ DeviceInformation::DeviceInformation(
         storage_device_(storage_device),
         sysfs_temperature_dir_(sysfs_temperature_dir),
         preused_file_path_(preused_file_path),
-        kineticd_start_log_(kineticd_start_log) {}
+        kineticd_start_log_(kineticd_start_log),
+        capacity_in_bytes_(capacity_in_bytes) {}
 
 bool DeviceInformation::Authorize(int64_t user_id, RequestContext& request_context) {
     return authorizer_.AuthorizeGlobal(user_id, Domain::kGetLog, request_context);
 }
 
 uint64_t DeviceInformation::GetNominalCapacityInBytes() {
-    return DeviceInformation::NOMINAL_CAPACITY;
+    return capacity_in_bytes_;
 }
 
 string DeviceInformation::GetKineticdStartLog() {
@@ -67,39 +69,7 @@ bool DeviceInformation::GetPortionFull(float* portionFull) {
         return false;
     }
 
-#ifndef SMR_ENABLED
-    uint64_t preUsedBytes;
-
-    // Read pre used space from fsize file
-    std::ifstream infile(preused_file_path_, std::ifstream::binary);
-    if (infile.is_open()) {
-        string preUsed;
-        getline(infile, preUsed);
-        infile.close();
-
-        if (!preUsed.empty()) {
-            preUsedBytes = strtoll(preUsed.c_str(), NULL, 0);
-            if (preUsedBytes > usedBytes) {
-                preUsedBytes = 0;
-                PLOG(ERROR) << "Pre-used space is greater than used bytes";//NO_SPELL
-            } else if (errno != 0) {
-                PLOG(ERROR) << "Invalid conversion was performed";
-            }
-        } else {
-            preUsedBytes = 0;
-            LOG(ERROR) << preused_file_path_ <<" is empty";
-        }
-    } else {
-        PLOG(ERROR) << "Failed to open " << preused_file_path_;
-        preUsedBytes = 0;
-    }
-
-    const uint64_t minFunctionalBytes = PrimaryStore::kMinFreeSpace + preUsedBytes;
-    usedBytes = usedBytes - preUsedBytes;
-#else
     const uint64_t minFunctionalBytes = PrimaryStore::kMinFreeSpace;
-#endif
-
     // Linear interpolation of space used relative to space allocated
     // for user data
     // need to subtract out used bytes from primary.db
@@ -108,42 +78,7 @@ bool DeviceInformation::GetPortionFull(float* portionFull) {
 }
 
 bool DeviceInformation::GetCapacity(uint64_t* total_bytes, uint64_t* used_bytes) {
-#ifndef SMR_ENABLED
-    struct statvfs stats;
-    memset(&stats, 0, sizeof(struct statvfs));
-
-    if (statvfs(storage_partition_path_.c_str(), &stats)) {
-        LOG(ERROR) << "Unable to read drive capacity at " << storage_partition_path_;
-        return false;
-    }
-
-    VLOG(2) << "statvfs() results about " << storage_partition_path_ <<//NO_SPELL
-                " f_bsize=" << stats.f_bsize <<//NO_SPELL
-                " f_frsize=" << stats.f_frsize <<//NO_SPELL
-                " f_blocks=" << stats.f_blocks <<//NO_SPELL
-                " f_bfree=" << stats.f_bfree <<//NO_SPELL
-                " f_bavail=" << stats.f_bavail <<//NO_SPELL
-                " f_files=" << stats.f_files <<//NO_SPELL
-                " f_ffree=" << stats.f_ffree <<//NO_SPELL
-                " f_favail=" << stats.f_favail <<//NO_SPELL
-                " f_fsid=" << stats.f_fsid <<//NO_SPELL
-                " f_flag=" << stats.f_flag <<//NO_SPELL
-                " f_namemax=" << stats.f_namemax;//NO_SPELL
-
-    // Using f_bfree instead of f_bavail because
-    //   - we are running as root
-    //   - we are setting aside 10G of reserve space, which should be enough margin
-    uint64_t free_b = (uint64_t)stats.f_bfree * stats.f_frsize;
-    uint64_t total_b = (uint64_t)stats.f_blocks * stats.f_frsize;
-
-    VLOG(2) << "statvfs reports " << free_b << " free out of " << total_b;//NO_SPELL
-
-    *total_bytes = total_b;
-    *used_bytes = total_b - free_b;
-#else
     smr::DriveEnv::getInstance()->GetCapacity(total_bytes, used_bytes);
-#endif
-
     return true;
 }
 

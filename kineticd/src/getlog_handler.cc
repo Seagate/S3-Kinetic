@@ -20,10 +20,6 @@ using ::kinetic::OutgoingStringValue;
 
 const std::regex GetLogHandler::LEVELDB_PATTERN("(leveldb.)(.*)");
 
-#ifdef QUAL
-const std::regex GetLogHandler::QUALIFICATION_PATTERN("(qual.)(.*)");
-#endif
-
 const char GetLogHandler::KINETIC_DEVICE_GEN1_NAME[] = "com.Seagate.Kinetic.HDD.Gen1";
 
 const char GetLogHandler::COMMAND_HISTORY[] = "command_history";
@@ -66,9 +62,6 @@ GetLogHandler::GetLogHandler(KeyValueStoreInterface& primary_data_store,
         port_(port),
         tls_port_(tls_port),
         limits_(limits),
-#ifdef QUAL
-        qualification_handler_(primary_data_store_, device_information_),
-#endif
         statistics_manager_(statistics_manager) {}
 
 bool GetLogHandler::SetUtilizations(Command *command_response) {
@@ -346,12 +339,6 @@ bool GetLogHandler::SetDevice(Command *command_response,
             // Not supported do not want to send anything back
             unknown = true;
         }
-#ifdef QUAL
-    } else if (std::regex_match(device_name, QUALIFICATION_PATTERN)) {
-        std::string value;
-        unknown = !qualification_handler_.HandleRequest(device_name, value);
-        json = value;
-#endif
     } else if (device_name == COMMAND_HISTORY) {
         ::std::vector<LogRingCommandEntry> entries;
         LogRingBuffer::Instance()->copyCommandBuffer(entries);
@@ -454,8 +441,6 @@ bool GetLogHandler::SetDevice(Command *command_response,
         }
         Json::FastWriter writer;
         json = writer.write(error_rates);
-
-#ifdef SMR_ENABLED
     } else if (device_name == ZONE_USAGE) {
         if (corrupt) {
             command_response->mutable_status()->
@@ -470,7 +455,6 @@ bool GetLogHandler::SetDevice(Command *command_response,
         } else {
             success = false;
         }
-#endif //SMR_ENABLED
 #ifdef KDEBUG
     } else if (device_name == FILL_DRIVE) {
         primary_data_store_.FillZoneMap();

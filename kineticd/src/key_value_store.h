@@ -80,11 +80,6 @@ class KeyValueStore : public KeyValueStoreInterface {
         return (db_ != NULL);
     }
     void CompactLevel(int level) {
-#ifndef SMR_ENABLED
-       if (db_ != NULL) {
-           db_->CompactLevel(level);
-       }
-#endif
     }
     leveldb::Status Flush(bool toSST = false, bool clearMems = false, bool toClose = false) {
         leveldb::Status s;

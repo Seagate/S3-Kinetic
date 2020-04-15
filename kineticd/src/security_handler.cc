@@ -195,7 +195,7 @@ const uint8_t SecurityHandler::KINETIC_MODULUS_KEY1[] = {
     0x26, 0x2b, 0xaf, 0xf0, 0x93, 0x77, 0x18, 0x0d
 };
 
-#elif PRODUCT_LAMARRKV || PRODUCT_LAMARRKV_QUAL || PRODUCT_LAMARRKV_ARMADALP || defined(PRODUCT_X86)
+#elif PRODUCT_LAMARRKV || PRODUCT_LAMARRKV_ARMADALP || defined(PRODUCT_X86)
 const uint8_t SecurityHandler::KINETIC_MODULUS_KEY0[] = {
     0xdf, 0xb7, 0xb7, 0x7b, 0xaa, 0x2f, 0xf9, 0xb4,
     0xaf, 0x76, 0x50, 0x82, 0xa3, 0x62, 0xd5, 0x19,
@@ -446,7 +446,7 @@ bool SecurityHandler::VerifySecuritySignature(struct LODHeader *thumbprint_lodHe
   std::vector<const uint8_t *> moduli;
   moduli.push_back(KINETIC_MODULUS_KEY0);
   moduli.push_back(KINETIC_MODULUS_KEY1);
-  #if defined(PRODUCT_LAMARRKV) || defined(PRODUCT_X86) || defined(PRODUCT_LAMARRKV_QUAL) || defined(PRODUCT_LAMARRKV_ARMADALP)
+  #if defined(PRODUCT_LAMARRKV) || defined(PRODUCT_X86) || defined(PRODUCT_LAMARRKV_ARMADALP)
   moduli.push_back(KINETIC_MODULUS);
   #endif
 

@@ -8,6 +8,7 @@
 #include "server.h"
 #include "mount_manager.h"
 #include "connection_handler.h"
+#include "command_line_flags.h"
 
 namespace com {
 namespace seagate {
@@ -121,7 +122,9 @@ void PinOpHandler::ProcessRequest(const proto::Command &command,
             if (mount_manager.Unmount(mount_point_)) {
                 sed_status = sed_manager.Lock(pin_auth.pin());
                 if (sed_status != PinStatus::PIN_SUCCESS) {
-                    if (remount_x86_) { is_mounted = mount_manager.MountExt4("/dev/sda3", mount_point_); } //NOLINT
+                    if (remount_x86_) {
+                        is_mounted = mount_manager.MountExt4(FLAGS_store_partition.data(), mount_point_);
+                    }
                     if (is_mounted && dbOpened) { skinny_waist_.InitUserDataStore();}
                     success = false;
                 }

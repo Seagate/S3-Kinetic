@@ -138,6 +138,7 @@ void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
     google::ParseCommandLineFlags(&argc, &argv, true);
 
     string dev = FLAGS_store_partition;
+    DriveEnv::getInstance()->storePartition(FLAGS_store_partition);
     int dev_pos = dev.find("sd");
     dev = dev.substr(dev_pos);
     string system_command = "echo 1024 > /sys/block/" + dev + "/queue/max_sectors_kb";
@@ -187,7 +188,6 @@ void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
                 new CautiousFileHandler(FLAGS_util_path, "launch_check.txt"));
     LaunchMonitor launch_monitor(std::move(launch_monitor_file_handler));
     launch_monitor.LoadMonitor();
-#ifdef SMR_ENABLED
     smr::Disk::initializeSuperBlockAddr(FLAGS_store_partition);
     VLOG(1) << "Superblock 0 zone# = " << smr::Disk::SUPERBLOCK_0_ADDR/(1024*1024);//NO_SPELL
     VLOG(1) << "Superblock 1 zone# = " << smr::Disk::SUPERBLOCK_1_ADDR/(1024*1024);//NO_SPELL
@@ -195,12 +195,6 @@ void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
                 FLAGS_table_cache_size,
                 FLAGS_block_size,
                 FLAGS_sst_size);
-#else
-    KeyValueStore primary_data_store(FLAGS_primary_db_path,
-            FLAGS_table_cache_size,
-            FLAGS_block_size,
-            FLAGS_sst_size);
-#endif
 
     // If we attempt to write to a socket whose peer has disconnected, we get a
     // SIGPIPE signal. We ignore it here, because it is much easier to check
@@ -225,8 +219,12 @@ void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
     FileSystemStore file_system_store(FLAGS_file_store_path);
     UserStore user_store(std::move(user_file_handler), limits);
     Authorizer authorizer(user_store, profiler, limits);
+
+    size_t idx = FLAGS_store_device.find_last_of('/');
+    string sDevice = FLAGS_store_device.substr(idx + 1);
     DeviceInformation device_information(authorizer, FLAGS_primary_db_path,
-        "/proc/stat", "sda", "/sys/class/hwmon/hwmon0/", FLAGS_preused_file_path, FLAGS_kineticd_start_log);
+        FLAGS_proc_stat_path, sDevice, FLAGS_sysfs_temperature_dir, FLAGS_preused_file_path, FLAGS_kineticd_start_log,
+        static_drive_info.drive_capacity_in_bytes);
     NetworkInterfaces network_interfaces;
 
 #if BUILD_FOR_ARM == 1
@@ -381,9 +379,6 @@ void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
             cluster_version_store, limits);
     primary_store.SetCommandValidator(&commandValidator);
     power_manager.SetServer(&server);
-#ifdef QUAL
-    get_log_handler.SetServer(&server);
-#endif
 
     Thread serverThread(&server);
     server.StateChanged(StateEvent::START_ANNOUNCER);
@@ -448,22 +443,16 @@ void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
 
     LOG(INFO) << endl;
 
-#ifdef SMR_ENABLED
-//    delete LogRingBuffer::Instance();
-#endif
+    delete LogRingBuffer::Instance();
     if (FLAGS_display_profiling) {
         profiler.LogResults();
     }
     free_openssl(ssl_context);
     google::protobuf::ShutdownProtobufLibrary();
     google::ShutdownGoogleLogging();
-#ifdef SMR_ENABLED
     delete LogRingBuffer::Instance();
-#endif
     google::ShutDownCommandLineFlags();
     cout << "END OF KINETICD" << endl;
     return(0);
-    //exit(0);
-    //pthread_exit(NULL);
 }
 

@@ -18,8 +18,6 @@ namespace kinetic {
 
 class DeviceInformation : public DeviceInformationInterface {
     public:
-        static const uint64_t NOMINAL_CAPACITY = PRODUCT_CAPACITY;  // Capacity in bytes
-
     DeviceInformation(
         AuthorizerInterface &authorizer,
         const std::string &storage_partition_path,
@@ -27,7 +25,8 @@ class DeviceInformation : public DeviceInformationInterface {
         const std::string &storage_device,
         const std::string &sysfs_temperature_dir,
         const std::string &preused_file_path,
-        const std::string &kineticd_start_log);
+        const std::string &kineticd_start_log,
+        uint64_t capacity_in_bytes);
 
     virtual bool Authorize(int64_t user_id, RequestContext& request_context);
 
@@ -77,6 +76,7 @@ class DeviceInformation : public DeviceInformationInterface {
     const std::string sysfs_temperature_dir_;
     const std::string preused_file_path_;
     const std::string kineticd_start_log_;
+    uint64_t capacity_in_bytes_;
 };
 
 } // namespace kinetic

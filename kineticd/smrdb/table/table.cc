@@ -79,7 +79,8 @@ Status Table::Open(const Options& options,
 
     AtaCmdHandler ataCmdHandler;
     ZacMediator zacMediator(&ataCmdHandler);
-    if (zacMediator.OpenDevice("/dev/sda") < 0) {
+
+    if (zacMediator.OpenDevice(DriveEnv::getInstance()->storePartition().c_str()) < 0) {
         cout << "Could not open device" << endl;
     } else {
         vector<Segment*>* segments = finfo->getSegments();

@@ -20,13 +20,15 @@ DeviceInformation::DeviceInformation(
     const std::string &storage_device,
     const std::string &sysfs_temperature_dir,
     const std::string &preused_file_path,
-    const std::string &kineticd_start_log) :
+    const std::string &kineticd_start_log,
+    uint64_t capacity_in_bytes) :
         authorizer_(authorizer),
         storage_partition_path_(storage_partition_path),
         proc_stat_path_(proc_stat_path),
         storage_device_(storage_device),
         sysfs_temperature_dir_(sysfs_temperature_dir),
-        kineticd_start_log_(kineticd_start_log) {
+        kineticd_start_log_(kineticd_start_log),
+        capacity_in_bytes_(capacity_in_bytes) {
     }
 
 bool DeviceInformation::Authorize(int64_t user_id, RequestContext& request_context) {
@@ -38,25 +40,15 @@ string DeviceInformation::GetKineticdStartLog() {
 }
 
 bool DeviceInformation::GetCapacity(uint64_t* total_bytes, uint64_t* used_bytes) {
-#ifndef SMR_ENABLED
-    VLOG(2) << "Returning canned capacity";
-    *total_bytes = 4000000000000L;
-    *used_bytes = 2000000000000L;
-#else
     smr::DriveEnv::getInstance()->GetCapacity(total_bytes, used_bytes);
-#endif
-
     return true;
 }
 
 uint64_t DeviceInformation::GetNominalCapacityInBytes() {
-    return DeviceInformation::NOMINAL_CAPACITY;
+    return capacity_in_bytes_;
 }
 
 bool DeviceInformation::GetPortionFull(float* portionFull) {
-#ifndef SMR_ENABLED
-    *portionFull = 0.5;
-#else
     uint64_t totalBytes;
     uint64_t usedBytes;
     if (!GetCapacity(&totalBytes, &usedBytes)) {
@@ -64,7 +56,6 @@ bool DeviceInformation::GetPortionFull(float* portionFull) {
     }
 
     *portionFull = std::min(double(usedBytes)/(totalBytes - PrimaryStore::kMinFreeSpace), 1.0);
-#endif
     return true;
 }
 

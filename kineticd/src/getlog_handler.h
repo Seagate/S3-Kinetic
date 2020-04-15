@@ -12,10 +12,6 @@
 #include "limits.h"
 #include "key_value_store.h"
 
-#ifdef QUAL
-#include "qualification_handler.h"
-#endif
-
 #include "outgoing_value.h"
 #define JSON_IS_AMALGAMATION
 #include "json/json.h"
@@ -30,9 +26,6 @@ using proto::Command;
 class GetLogHandler {
     public:
     static const std::regex LEVELDB_PATTERN;
-#ifdef QUAL
-    static const std::regex QUALIFICATION_PATTERN;
-#endif
     static const char KINETIC_DEVICE_GEN1_NAME[];
     static const char COMMAND_HISTORY[];
     static const char KEY_VALUE_HISTOGRAM[];
@@ -79,11 +72,6 @@ class GetLogHandler {
             proto::Command_GetLog_Type type,
             bool corrupt = false);
     void ParseAndSetMessageTypes(std::string message_types);
-#ifdef QUAL
-    void SetServer(Server* server) {
-        qualification_handler_.SetServer(server);
-    }
-#endif
 
     private:
     void SetSMARTAttributeJSON(Json::Value* attribute,
@@ -106,10 +94,6 @@ class GetLogHandler {
 
     // Threadsafe; immutable
     Limits& limits_;
-
-#ifdef QUAL
-    QualificationHandler qualification_handler_;
-#endif
 
     //common pointer for operation_counter, open_connections and maxlatency by optype methods
     StatisticsManager& statistics_manager_;

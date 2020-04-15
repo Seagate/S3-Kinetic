@@ -160,6 +160,12 @@ class DriveEnv: public Env {
         virtual int GetNumberFreeZones() {
             return smrEnv_->GetNumberFreeZones();
         }
+        void storePartition(string& partition) {
+            storePartition_ = partition;
+        }
+        string storePartition() {
+            return storePartition_;
+        }
 
     private:
         bool isSmrFile(const string& fname) const {
@@ -197,6 +203,7 @@ class DriveEnv: public Env {
     private:
         Env* smrEnv_;
         Env* posixEnv_;
+        string storePartition_;
 };
 
 } // namespace smr

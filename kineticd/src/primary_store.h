@@ -73,8 +73,7 @@ class PrimaryStore : public PrimaryStoreInterface {
     }
     StoreOperationStatus Get(const std::string& key,
         PrimaryStoreValue* primary_store_value,
-        NullableOutgoingValue *value,
-	char* buff=NULL);
+        NullableOutgoingValue *value, char* buff=NULL);
     StoreOperationStatus Put(
         const std::string& key,
         const PrimaryStoreValue& primary_store_value,

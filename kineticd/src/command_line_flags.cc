@@ -6,7 +6,9 @@ DEFINE_string(primary_db_path, "primary.db", "The primary database path");
 DEFINE_string(util_path, "/mnt/util", "Util path");
 DEFINE_string(metadata_db_path, "/mnt/metadata/metadata.db", "The metadata database path");
 DEFINE_string(file_store_path, "file_store", "The blob storage directory");
-#ifdef SMR_ENABLED
+DEFINE_string(proc_stat_path, "/proc/stat", "Path to process status");
+DEFINE_string(sysfs_temperature_dir, "/sys/class/hwmon/hwmon0/", "Directory to file system temperature");
+
 // do not set file_store_minimum_size above 500KB without changing memory allocation in block builder appropriately
 DEFINE_int32(file_store_minimum_size, 8 * 1024, "The minimum size for which values are stored outside the sst");
 DEFINE_int32(block_size, 256 * 1024, "SST block size");
@@ -14,12 +16,6 @@ DEFINE_int32(sst_size, 1 * 1024 * 1024, "Level 0 SST size");
 DEFINE_int32(write_buffer_size, 64 * 1024 * 1024, "Maximum write buffer size");
 DEFINE_int32(max_batch_size, 64 * 1024 * 1024, "Maximum batch size");
 DEFINE_int32(max_deletes_per_batch, 24000, " Maximum deletes per batch");
-#else
-DEFINE_int32(file_store_minimum_size, 32 * 1024,
-    "The minimum size for which values are stored in files");
-DEFINE_int32(block_size, 4 * 1024, "SST block size");
-DEFINE_int32(sst_size, 8 * 1048576, "SST size");
-#endif
 DEFINE_string(listen_ipv4_address, "0.0.0.0", "The ipv4 address to listen on");
 DEFINE_uint64(listen_port, 8123, "The ipv4 port to listen on");
 DEFINE_uint64(listen_ssl_port, 8443, "The ipv4 port to listen on for SSL connections");

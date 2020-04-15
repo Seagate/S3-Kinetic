@@ -774,11 +774,13 @@ Zone* Disk::allocateZone(FileType type) {
 //Assume that the drive is not SMR
 //We should define another product like X86_SMR
 #ifdef NONSMR
+    //cout << "**** NONSMR ****" << endl;
     setUsedZone(band);
     zone = new Zone(band);
     return zone;
 }
 #else
+    //cout << "**** SMR ****" << endl;
     int status = zac_kin_->AllocateZone(band, &lba);
     if (status != 0) {
         stringstream ss;

@@ -27,7 +27,7 @@ package main // import "github.com/minio/minio"
 
 import (
 // #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -Wall -Wextra -Werror -Wno-missing-field-initializers -Wno-sign-compare -Wno-unused-parameter -DGTEST_USE_OWN_TR1_TUPLE=1 -fPIC -Wno-unused-local-typedefs -D__STDC_FORMAT_MACROS -D_FILE_OFFSET_BITS=64 -DSMR_ENABLED -DLEVELDB_PLATFORM_POSIX -DBUILD_FOR_ARM=0 -Wno-psabi -Wno-enum-compare -Wno-shift-count-overflow 
-// #cgo LDFLAGS: libkinetic.a libseapubcmds.a kernel_mem_mgr.a libssl.a libcrypto.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a qual_kin.a libprotobuf.a libgflags.a -lpthread -ldl -lrt libglog.a
+// #cgo LDFLAGS: libkinetic.a libseapubcmds.a kernel_mem_mgr.a libssl.a libcrypto.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a libprotobuf.a libgflags.a -lpthread -ldl -lrt libglog.a
 	"C"
 	"os"
 	minio "github.com/minio/minio/cmd"

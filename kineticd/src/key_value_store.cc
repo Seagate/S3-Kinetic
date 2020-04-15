@@ -9,10 +9,8 @@
 #include "leveldb/mydata.h"
 #include "command_line_flags.h"
 
-#ifdef SMR_ENABLED
 #include "smrdisk/DriveEnv.h"
 #include "smrdisk/ValueFileCache.h"
-#endif
 #include "mem/DynamicMemory.h"
 
 using namespace std; // NOLINT
@@ -128,11 +126,6 @@ KeyValueStore::KeyValueStore(const std::string& name,
       sst_size(sstSize) {}
 
 bool KeyValueStore::Init(bool create_if_missing) {
-#ifndef SMR_ENABLED
-    if (!TurnOnSwap()) {
-        return false;
-    }
-#endif
     // fix for asolamarr-832
     MutexLock lock(&mu_);
     // fix for asolamarr-832
@@ -288,10 +281,8 @@ StoreOperationStatus KeyValueStore::DestroyDataBase() {
 void KeyValueStore::Close() {
     if (db_) {
         Flush(true, false);
-#ifdef SMR_ENABLED
         smr::CacheManager::clear();
         smr::DynamicMemory::getInstance()->unsubscribe(db_);
-#endif
         db_->unsubscribe();
         MutexLock lock(&mu_);
         delete db_;
@@ -301,9 +292,6 @@ void KeyValueStore::Close() {
         delete filter_;
         filter_ = NULL;
     }
-#ifndef SMR_ENABLED
-    TurnOffSwap();
-#endif
 }
 
 bool KeyValueStore::GetDBProperty(std::string property, std::string* value) {
@@ -316,66 +304,10 @@ void KeyValueStore::FillZoneMap() {
 }
 
 bool KeyValueStore::TurnOnSwap() {
-#if BUILD_FOR_ARM == 1
-#ifndef SMR_ENABLED
-    LOG(INFO) << "Turning on swap...";
-    string cmd;
-    string swapFile = store_mountpoint_ + "/swap";
-    if (access(swapFile.c_str(), F_OK) == -1) {
-        // file doesn't exists; create swap file of 3GB
-        int fd = open(swapFile.c_str(), O_RDWR | O_CREAT, 0666);
-        if (fd < 0) {
-            PLOG(ERROR) << "1. Failed to create swap file";
-            return false;
-        }
-        int status = fallocate(fd,  0, 0, SWAP_FILE_SIZE);
-
-        if (status == -1) {
-            PLOG(ERROR) << "2. Failed to create swap file";
-            close(fd);
-            return false;
-        }
-        close(fd);
-        // Create swap area in the swap file
-        cmd = "/sbin/mkswap " + swapFile;
-        if (system(cmd.c_str()) == -1) {
-            PLOG(ERROR) << "Fail to create swap area";
-            return false;
-        }
-    }
-    // Turn on swap
-    cmd = "/sbin/swapon " + swapFile;
-    if (system(cmd.c_str()) == -1) {
-        PLOG(ERROR) << "Failed to turn on swap";
-        return false;
-    }
-    LOG(INFO) << "Swap is on";
     return true;
-#else //SMR_ENABLED
-    return true;
-#endif //SMR_ENABLED
-#else // BUILD_FOR_ARM
-    return true;
-#endif //BUILD_FOR_ARM
 }
 
 bool KeyValueStore::TurnOffSwap() {
-#if BUILD_FOR_ARM == 1
-#ifndef SMR_ENABLED
-    LOG(INFO) << "Turning off swap...";
-    string swapFile = store_mountpoint_ + "/swap";
-    string cmd = "/sbin/swapoff " + swapFile;
-    if (system(cmd.c_str()) == -1) {
-        PLOG(WARNING) << "Failed to turn off swap";
-        return false;
-    }
-    LOG(INFO) << "Swap is off";
     return true;
-#else //SMR_ENABLED
-    return true;
-#endif //SMR_ENABLED
-#else // BUILD_FOR_ARM
-    return true;
-#endif //BUILD_FOR_ARM
 }
 

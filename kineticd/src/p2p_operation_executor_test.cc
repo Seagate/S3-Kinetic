@@ -17,6 +17,7 @@
 #include "p2p_request.h"
 #include "limits.h"
 #include "launch_monitor.h"
+#include "command_line_flags.h"
 
 namespace com {
 namespace seagate {
@@ -100,8 +101,8 @@ class P2POperationExecutorTest : public ::testing::Test {
             "fsize"),
     authorizer_(user_store_, profiler_),
     skinny_waist_("primary.db",
-            "/dev/sda3",
-            "/mnt/store",
+            FLAGS_store_partition,
+            FLAGS_store_mountpoint,
             authorizer_,
             user_store_,
             primary_store_,

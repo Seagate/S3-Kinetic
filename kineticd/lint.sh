@@ -5,7 +5,6 @@ LINT_DIRS=(
     './src'
     './ha_zac_cmds'
     './lldp'
-    './qual'
 )
 
 # Loop for linting all directories and capturing the exit status

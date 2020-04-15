@@ -67,34 +67,9 @@ UserDataStatus SkinnyWaist::InitUserDataStore(bool create_if_missing) {
 
 #if BUILD_FOR_ARM == 1
     MountManagerARM mount_manager = MountManagerARM();
-#else
-#ifndef SMR_ENABLED
-    MountManagerX86 mount_manager = MountManagerX86();
-#endif
 #endif
 
-#ifndef SMR_ENABLED
-    VLOG(1) << "Opening LevelDB DB at " << primary_db_path_ << "...";//NO_SPELL
-
-    if (!mount_manager.IsMounted(store_partition_, store_mountpoint_)) {
-        VLOG(1) << "Data partition is not yet mounted... Mounting Now";
-        if (!mount_manager.MountExt4(store_partition_, store_mountpoint_)) {
-            LOG(ERROR) << "Unable to mount data partition";
-            launch_monitor_.SuccessfulLoad();
-            return UserDataStatus::MOUNT_FAILED;
-        }
-    }
-
-    bool db_previously_created = true;
-    struct stat primary_db_stat;
-    if (stat(primary_db_path_.c_str(), &primary_db_stat) != 0 ||
-            access(primary_db_path_.c_str(), R_OK) != 0) {
-        db_previously_created = false;
-    }
-#else
     VLOG(1) << "Opening LevelDB DB for SMR";//NO_SPELL
-#endif
-
     if (!launch_monitor_.OperationAllowed(LaunchStep::INIT_USERS)) {
         launch_monitor_.WriteState(LaunchStep::INIT_USERS, false);
         LOG(ERROR) << "Launch monitor halted user load";
@@ -151,12 +126,6 @@ UserDataStatus SkinnyWaist::InitUserDataStore(bool create_if_missing) {
         return UserDataStatus::STORE_CORRUPT;
     }
 
-#ifndef SMR_ENABLED
-    if (!db_previously_created) {
-        VLOG(1) << "DB was created this run so set preused bytes";//NO_SPELL
-        primary_store_.SetPreUsedBytes();
-    }
-#endif
     launch_monitor_.SuccessfulLoad();
     return UserDataStatus::SUCCESSFUL_LOAD;
 }
@@ -166,8 +135,7 @@ StoreOperationStatus SkinnyWaist::Get(
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
         RequestContext& request_context,
-        NullableOutgoingValue *value,
-	char* buff) {
+        NullableOutgoingValue *value, char* buff) {
         PthreadsMutexGuard guard(&mutex_);
 
     if (!authorizer_.AuthorizeKey(user_id, Domain::kRead, key, request_context)) {
@@ -518,6 +486,7 @@ StoreOperationStatus SkinnyWaist::Put(
 
     switch (primary_store_.Put(key, primary_store_value, value, guarantee_durable, token)) {
         case StoreOperationStatus_SUCCESS:
+            VLOG(5) << "PUT succeeded";
             put_errors_ = 0;
             return StoreOperationStatus_SUCCESS;
         case StoreOperationStatus_NO_SPACE:
@@ -545,7 +514,7 @@ StoreOperationStatus SkinnyWaist::Put(
             if (mount_manager.CheckFileSystemReadonly(put_errors_,
                 store_mountpoint_, store_partition_)) {
                 LOG(ERROR) << "File system is read only need to power cycle drive";
-                #if !defined(PRODUCT_LAMARRKV) || !defined(PRODUCT_LAMARRKV_QUAL)
+                #if !defined(PRODUCT_LAMARRKV)
                 // Restart system by tripping the porz only if it is not LAMARRKV
                 #ifdef VECTOR_PORZ
                 syscall(SYS_pull_PORZ);
@@ -638,9 +607,6 @@ StoreOperationStatus SkinnyWaist::InstantSecureErase(std::string pin) {
     } else if (status == StoreOperationStatus_ISE_FAILED_VAILD_DB) {
         launch_monitor_.SuccessfulLoad();
     }
-#ifndef SMR_ENABLED
-    primary_store_.SetPreUsedBytes();
-#endif
     return status;
 }
 

@@ -3,7 +3,6 @@ cp kmem/*.a  $1
 cp ./K_api/Kinetic_Security/api/libksapi.a $1
 cp K_api/Kinetic_Security/external-libs/PBKDFlib/*.a $1
 cp  lldp/*.a  $1
-cp  qual/*.a  $1
 cp smrdb/*.a $1
 cp ha_zac_cmds/*.a $1
 cp K_api/tcg_api/transports/*.a $1

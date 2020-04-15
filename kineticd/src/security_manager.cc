@@ -1,3 +1,4 @@
+#include "command_line_flags.h"
 #include "product_flags.h"
 #include "security_manager.h"
 #include "manlocking_processor.h"
@@ -135,7 +136,7 @@ PinStatus SecurityManager::EraseTCG(std::string pin) {
     int Band_Number[16]; /* we can have up to 16 bands */
     int Band_Count;
 
-    strcpy(ise_device, "/dev/sda");   /* hardcoded device id */
+    strcpy(ise_device, FLAGS_store_device.c_str());
     VLOG(1) << "Calling erase code Ver 2";//NO_SPELL
     if (pin.length() == 0) {   /* use NULL as the pin */
         pin = "";
@@ -178,7 +179,7 @@ PinStatus SecurityManager::ManLockingCommand(std::string pin, LockRequest lock_r
     uint8_t lock_status;
     int Band_Number;
 
-    strcpy(ise_device, "/dev/sda");   /* hardcoded device id */
+    strcpy(ise_device, FLAGS_store_device.c_str());
     VLOG(1) << "Calling ManLocking code Ver 2";//NO_SPELL
     if (pin.length() == 0) {   /* use NULL as the pin */
         pin = "";
@@ -259,7 +260,7 @@ BitStatus SecurityManager::LockQueryCommand() {
     ks_status  ise_result;
     uint8_t  lock_status;
     int      Band_Number;
-    strcpy(ise_device, "/dev/sda");   /* hardcoded device id */
+    strcpy(ise_device, FLAGS_store_device.c_str());
     VLOG(1) << "Calling ManLocking code Ver 2";//NO_SPELL
 
     /* need to initialize our call to the drive */
@@ -367,7 +368,7 @@ PinStatus SecurityManager::SetPinTCG(std::string new_pin, std::string old_pin, P
     char   ise_device[32];  /* Holds device id string */
     ks_status  ise_result;
 
-    strcpy(ise_device, "/dev/sda");   /* hardcoded device id */
+    strcpy(ise_device, FLAGS_store_device.c_str());
     VLOG(1) << "Calling ks_setpin code Ver 2";//NO_SPELL
 
     /* need to initialize our call to the drive */

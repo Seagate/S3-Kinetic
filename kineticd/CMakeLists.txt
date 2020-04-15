@@ -21,47 +21,15 @@ SET(TEST_BINARY_PATH ${CMAKE_BINARY_DIR}/${TEST_BINARY})
 
 OPTION(KEY_COUNT "Leveldb key count" OFF)
 SET(PRODUCT "X86" CACHE STRING "Product build target")
-message("PRODUCT: ${PRODUCT}")
+
 MESSAGE ( ${PRODUCT} )
 
 set(LEGACY_COMPILER_SETTINGS ON)
 
-if(PRODUCT STREQUAL "LOMBARDKV")
-  message(STATUS "Building LombardKV config")
-  add_definitions(-DPRODUCT_LOMBARDKV)
-  set(BUILD_FOR_ARM ON)
-  set(BUILD_FOR_SMR OFF)
-endif()
-
-if(PRODUCT STREQUAL "SSD")
-  message(STATUS "Building SSD config")
-  add_definitions(-DPRODUCT_SSD)
-  set(BUILD_FOR_ARM ON)
-endif()
-
-if(PRODUCT STREQUAL "LOMBARDKV_CHINA")
-  message(STATUS "Building LombardKV China config")
-  add_definitions(-DPRODUCT_LOMBARDKV_CHINA)
-  set(BUILD_FOR_ARM ON)
-endif()
-
 if(PRODUCT STREQUAL "LAMARRKV")
   message(STATUS "Building LamarrKV config")
-  SET(PLATFORM_PREPROCESSOR_DEFINE "-DPRODUCT_LAMARRKV -DSMR_ENABLED")
-  #add_definitions(-DPRODUCT_LAMARRKV)
-  #add_definitions(-DSMR_ENABLED)
+  add_definitions(-DPRODUCT_LAMARRKV)
   set(BUILD_FOR_ARM ON)
-  set(BUILD_FOR_SMR ON)
-  set(BUILD_FOR_ARM64 OFF)
-  set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/a382.cmake)
-endif()
-
-if(PRODUCT STREQUAL "LAMARRKV_QUAL")
-  message(STATUS "Building LamarrKV Qualification config")
-  add_definitions(-DPRODUCT_LAMARRKV_QUAL)
-  add_definitions(-DSMR_ENABLED)
-  set(BUILD_FOR_ARM ON)
-  set(BUILD_FOR_SMR ON)
   set(BUILD_FOR_ARM64 OFF)
   set(CMAKE_TOOLCHAIN_FILE ${CMAKE_SOURCE_DIR}/a382.cmake)
 endif()
@@ -69,19 +37,9 @@ endif()
 if(PRODUCT STREQUAL "LAMARRKV_LP")
   message(STATUS "Building ArmadaLP based Interposer config")
   add_definitions(-DPRODUCT_LAMARRKV_ARMADALP)
-  add_definitions(-DSMR_ENABLED)
   set(BUILD_FOR_ARM ON)
-  set(BUILD_FOR_SMR ON)
   set(BUILD_FOR_ARM64 ON)
   set(LEGACY_COMPILER_SETTINGS OFF)
-endif()
-
-if(PRODUCT STREQUAL "X86")
-  message(STATUS "Building for X86")
-  SET(PLATFORM_PREPROCESSOR_DEFINE "-DPRODUCT_X86")
-  add_definitions(-DPRODUCT_X86)
-  set(BUILD_FOR_ARM OFF)
-  set(BUILD_FOR_SMR ON)
 endif()
 
 if(PRODUCT STREQUAL "X86NONSMR")
@@ -89,7 +47,6 @@ if(PRODUCT STREQUAL "X86NONSMR")
   SET(PLATFORM_PREPROCESSOR_DEFINE "-DPRODUCT_X86 -DNONSMR")
   add_definitions(-DPRODUCT_X86 -DNONSMR)
   set(BUILD_FOR_ARM OFF)
-  set(BUILD_FOR_SMR ON)
 endif()
 
 if(PRODUCT STREQUAL "X86SMR")
@@ -97,7 +54,6 @@ if(PRODUCT STREQUAL "X86SMR")
   SET(PLATFORM_PREPROCESSOR_DEFINE "-DPRODUCT_X86 -DSMR")
   add_definitions(-DPRODUCT_X86 -DSMR)
   set(BUILD_FOR_ARM OFF)
-  set(BUILD_FOR_SMR ON)
 endif()
 
 set(OS_SUFFIX "linux")
@@ -111,18 +67,19 @@ if(NOT ${BUILD_FOR_ARM})
     set(CMAKE_C_COMPILER "gcc")
     set(CMAKE_CXX_COMPILER "g++")
     set(NO_UNUSED_LOCAL_TYPEDEFS "-Wno-unused-local-typedefs")
-    set(PLATFORM_PREPROCESSOR_DEFINE "${PLATFORM_PREPROCESSOR_DEFINE} -DBUILD_FOR_ARM=0" )
+    set(PLATFORM_PREPROCESSOR_DEFINE "${PLATFORM_PREPROCESSOR_DEFINE} -DBUILD_FOR_ARM=0")
     message("Build set for x86")
+    message("${PLATFORM_PREPROCESSOR_DEFINE}")
 else(NOT ${BUILD_FOR_ARM})
     set(FILE_SUFFIX "arm")
     if(${BUILD_FOR_ARM64})
         set(ARCH_SUFFIX "arm64")
-        set(PLATFORM_PREPROCESSOR_DEFINE "${PLATFORM_PREPROCESSOR_DEFINE} -DBUILD_FOR_ARM=1 -DBUILD_FOR_ARM64=1")
+        set(PLATFORM_PREPROCESSOR_DEFINE "-DBUILD_FOR_ARM=1 -DBUILD_FOR_ARM64=1")
         set(NO_UNUSED_LOCAL_TYPEDEFS "-Wno-unused-local-typedefs")
         message("Build set for 64 bit arm")
     else(NOT ${BUILD_FOR_ARM64})
         set(ARCH_SUFFIX "arm")
-        set(PLATFORM_PREPROCESSOR_DEFINE "${PLATFORM_PREPROCESSOR_DEFINE} -DBUILD_FOR_ARM=1")
+        set(PLATFORM_PREPROCESSOR_DEFINE "-DBUILD_FOR_ARM=1")
         set(NO_UNUSED_LOCAL_TYPEDEFS "-Wno-unused-local-typedefs")
         message("Build set for 32 bit arm")
     endif(${BUILD_FOR_ARM64})
@@ -135,7 +92,6 @@ endif(NOT ${BUILD_FOR_ARM})
 set(CMAKE_ARCH_LIB_PATH $ENV{C_ARCH_LIB_PATH})
 set(CMAKE_ARCH_BIN_PATH $ENV{C_ARCH_BIN_PATH})
 
-message("CMAKE_ARCH_LIB_PATH: ${CMAKE_ARCH_LIB_PATH}")
 message("Using C Compiler: ${CMAKE_C_COMPILER}")
 message("Using CXX Compiler: ${CMAKE_CXX_COMPILER}")
 message("Using RANLIB: ${CMAKE_RANLIB}")
@@ -144,7 +100,7 @@ message("Setting child make flags")
 
 set(CHILD_FLAG_SETTINGS " --std=c++0x -DNDEBUG -Wall -Wextra -Werror -Wno-missing-field-initializers -Wno-sign-compare -Wno-unused-parameter -DGTEST_USE_OWN_TR1_TUPLE=1 -fPIC ${NO_UNUSED_LOCAL_TYPEDEFS}")
 message("Testing child flags: ${CHILD_FLAG_SETTINGS}")
-set(CMAKE_CXX_FLAGS "${CHILD_FLAG_SETTINGS} -D__STDC_FORMAT_MACROS -D_FILE_OFFSET_BITS=64 -DSMR_ENABLED -DLEVELDB_PLATFORM_POSIX ${PLATFORM_PREPROCESSOR_DEFINE} -Wno-psabi -Wno-enum-compare -Wno-shift-count-overflow -Wno-unused-function -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "${CHILD_FLAG_SETTINGS} -D__STDC_FORMAT_MACROS -D_FILE_OFFSET_BITS=64 -DLEVELDB_PLATFORM_POSIX ${PLATFORM_PREPROCESSOR_DEFINE} -Wno-psabi -Wno-enum-compare -Wno-shift-count-overflow -Wno-unused-function -Wno-deprecated-declarations")
 message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 
 # This makes it easy to force XCode to always dump binaries in the working directory to be
@@ -190,7 +146,6 @@ ExternalProject_add(
 
 ADD_DEPENDENCIES(kinetic_cpp_client kmem kinetic-proto)
 
-if(${BUILD_FOR_SMR})
 ExternalProject_add(
     leveldb
     DOWNLOAD_COMMAND ""
@@ -206,35 +161,6 @@ ExternalProject_Add_Step(
     DEPENDEES build
     ALWAYS 1
 )
-else(${BUILD_FOR_SMR})
-ExternalProject_add(
-    leveldb
-    DOWNLOAD_COMMAND ""
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
-)
-
-if(${KEY_COUNT})
-    message(STATUS "Building with debug on")
-    ExternalProject_Add_Step(
-    leveldb real_build
-    COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/leveldb-1.16 && make clean libleveldb.a CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} OPT=-g2 OPT+=-DKEY_COUNT
-    COMMENT "Building leveldb"
-    DEPENDEES build
-    ALWAYS 1
-)
-else(${KEY_COUNT})
-    message(STATUS "Building with debug off")
-    ExternalProject_Add_Step(
-    leveldb real_build
-    COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/leveldb-1.16 && make clean libleveldb.a CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER}
-    COMMENT "Building leveldb"
-    DEPENDEES build
-    ALWAYS 1
-)
-endif(${KEY_COUNT})
-endif(${BUILD_FOR_SMR})
 
 ExternalProject_add(
     k_api
@@ -294,24 +220,6 @@ ExternalProject_Add_Step(
     ALWAYS 1
 )
 
-ExternalProject_add(
-    qual
-    DOWNLOAD_COMMAND ""
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
-)
-
-ExternalProject_Add_Step(
-    qual real_build
-    COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/qual && make clean all CXX=${CMAKE_CXX_COMPILER}
-    COMMENT "== Building Qualification Tests =="
-    DEPENDEES build
-    ALWAYS 1
-)
-
-ADD_DEPENDENCIES(qual ha_cmd)
-
 add_custom_target(leveldb_test
     COMMENT "Running leveldb tests"
     COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/leveldb-1.16 && make check
@@ -322,7 +230,6 @@ set(OPENSSL_USE_STATIC_LIBS TRUE)
 set(OPENSSL_ROOT_DIR ${CMAKE_ARCH_LIB_PATH})
 find_package(OpenSSL REQUIRED)
 
-if(${BUILD_FOR_SMR})
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/kmem
     ${CMAKE_CURRENT_SOURCE_DIR}/smrdb/include
@@ -342,7 +249,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/smrdb/util
     ${CMAKE_CURRENT_SOURCE_DIR}/ha_zac_cmds/includes
     ${CMAKE_CURRENT_SOURCE_DIR}/lldp/includes
-    ${CMAKE_CURRENT_SOURCE_DIR}/qual/includes
     jsoncpp
 )
 
@@ -351,7 +257,7 @@ include_directories(
     ${CMAKE_ARCH_LIB_PATH}/include
     ${OPENSSL_INCLUDE_DIR}
 )
-message(" CMAKE ARCH LIB PATH: ${CMAKE_ARCH_LIB_PATH}")
+
 set(LIBRARY_DEPENDENCIES
 #    ${CMAKE_BINARY_DIR}/kinetic_cpp_client/libkinetic_client.a
     ${CMAKE_CURRENT_SOURCE_DIR}/K_api/tcg_api/transports/libseapubcmds.a
@@ -366,63 +272,12 @@ set(LIBRARY_DEPENDENCIES
     ${CMAKE_BINARY_DIR}/vendor/src/kinetic_cpp_client/libkinetic_client.a
     ${CMAKE_CURRENT_SOURCE_DIR}/ha_zac_cmds/zac_kin.a
     ${CMAKE_CURRENT_SOURCE_DIR}/lldp/lldp_kin.a
-    ${CMAKE_CURRENT_SOURCE_DIR}/qual/qual_kin.a
     ${CMAKE_ARCH_LIB_PATH}/lib/libprotobuf.a
     ${CMAKE_ARCH_LIB_PATH}/lib/libgflags.a
     ${CMAKE_THREAD_LIBS_INIT}
     dl
     ${RT_LIBRARY}
 )
-else(${BUILD_FOR_SMR})
-include_directories(
-#    ${CMAKE_CURRENT_SOURCE_DIR}/kmem
-    ${CMAKE_CURRENT_SOURCE_DIR}/leveldb-1.16/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/leveldb-1.16
-    ${CMAKE_CURRENT_SOURCE_DIR}/smrdb/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/smrdb
-    ${CMAKE_CURRENT_SOURCE_DIR}/smrdb/smrdisk
-    ${CMAKE_BINARY_DIR}/vendor/src/kinetic_cpp_client/include
-    ${CMAKE_BINARY_DIR}/vendor/src/kinetic_cpp_client/vendor/include
-    ${CMAKE_BINARY_DIR}/vendor/src/kinetic_cpp_client/include
-    ${CMAKE_BINARY_DIR}/vendor/src/kinetic_cpp_client/src/main
-    ${CMAKE_BINARY_DIR}/vendor/src/kinetic_cpp_client/src/main/generated
-    ${CMAKE_CURRENT_SOURCE_DIR}/K_api/Kinetic_Security/api
-    ${CMAKE_CURRENT_SOURCE_DIR}/K_api/Kinetic_Security/external_libs/PBKDFlib
-    ${CMAKE_CURRENT_SOURCE_DIR}/K_api/tcg_api/api
-    ${CMAKE_CURRENT_SOURCE_DIR}/K_api/tcg_api/transports
-    ${CMAKE_CURRENT_SOURCE_DIR}/K_api/tcg_api/transports/SeaCPublic/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/ha_zac_cmds/includes
-    ${CMAKE_CURRENT_SOURCE_DIR}/lldp/includes
-    ${CMAKE_CURRENT_SOURCE_DIR}/qual/includes
-    jsoncpp
-)
-
-include_directories(
-    SYSTEM
-    ${CMAKE_ARCH_LIB_PATH}/include
-    ${OPENSSL_INCLUDE_DIR}
-)
-
-set(LIBRARY_DEPENDENCIES
-#    ${CMAKE_BINARY_DIR}/vendor/src/kinetic_cpp_client/libkinetic_client.a
-#    ${CMAKE_BINARY_DIR}/kmem/kernel_mem_mgr.a
-    ${CMAKE_CURRENT_SOURCE_DIR}/K_api/tcg_api/transports/libseapubcmds.a
-    ${OPENSSL_LIBRARIES}
-    ${CMAKE_ARCH_LIB_PATH}/lib/libglog.a
-    ${CMAKE_ARCH_LIB_PATH}/lib/libgtest.a
-    ${CMAKE_ARCH_LIB_PATH}/lib/libgmock.a
-    ${CMAKE_CURRENT_SOURCE_DIR}/leveldb-1.16/libleveldb.a
-    ${CMAKE_BINARY_DIR}/vendor/src/kinetic_cpp_client/libkinetic_client.a
-    ${CMAKE_ARCH_LIB_PATH}/lib/libprotobuf.a
-    ${CMAKE_ARCH_LIB_PATH}/lib/libgflags.a
-    ${CMAKE_BINARY_DIR}/ha_zac_cmds/zac_kin.a
-    ${CMAKE_BINARY_DIR}/lldp/lldp_kin.a
-    ${CMAKE_BINARY_DIR}/qual/qual_kin.a
-    ${CMAKE_THREAD_LIBS_INIT}
-    dl
-    ${RT_LIBRARY}
-)
-endif(${BUILD_FOR_SMR})
 
 if(${BUILD_FOR_ARM})
 set(SECURITY_DEPENDENCIES
@@ -477,7 +332,7 @@ add_library(kinetic
     src/std_map_key_value_store.cc
     src/user.cc
     src/user_store.cc
-    #src/value_factory_${ARCH_SUFFIX}.cc
+#    src/value_factory_${ARCH_SUFFIX}.cc
     src/value_factory_x86.cc
     src/log_ring_buffer.cc
     src/ring_buffer_log_sink.cc
@@ -511,7 +366,6 @@ add_library(kinetic
     src/unlocked_state.cc
     src/restore_drive_state.cc
     src/start_server_state.cc
-    src/qualification_state.cc
     src/manlocking_processor.cc
     src/security_manager.cc
     src/download_state.cc
@@ -527,7 +381,6 @@ add_library(kinetic
     src/aging_timer.cc
     src/uboot_processor.cc
     src/kinetic_alarms.cc
-    src/qualification_handler.cc
     src/key_generator.cc
     src/net_processor.cc
     src/BatchCmd.cc
@@ -548,7 +401,6 @@ add_dependencies(kinetic
     k_api
     ha_cmd
     lldp
-    qual
     Version
 )
 
@@ -557,12 +409,6 @@ add_custom_target(Version ALL
 
 #add_executable(kineticd src/cmain.c)
 #store_build_products_in_working_dir(kineticd)
-
-add_executable(print_device_information src/print_device_information.cc)
-store_build_products_in_working_dir(print_device_information)
-
-add_executable(drive_filler_upper src/drive_filler_upper.cc)
-store_build_products_in_working_dir(drive_filler_upper)
 
 add_executable(manifest_stress src/manifest_stress.cc)
 store_build_products_in_working_dir(manifest_stress)
@@ -638,16 +484,12 @@ target_link_libraries(${TEST_BINARY} kinetic ${LIBRARY_DEPENDENCIES})
 endif(NOT ${BUILD_FOR_ARM})
 
 #target_link_libraries(kineticd kinetic ${LIBRARY_DEPENDENCIES})
-target_link_libraries(print_device_information kinetic ${LIBRARY_DEPENDENCIES} ${LIBRARY_DEPENDENCIES})
-target_link_libraries(drive_filler_upper kinetic ${LIBRARY_DEPENDENCIES})
 target_link_libraries(manifest_stress kinetic ${LIBRARY_DEPENDENCIES} ${LIBRARY_DEPENDENCIES})
 target_link_libraries(zac_ha_exercise_drive kinetic ${LIBRARY_DEPENDENCIES})
 target_link_libraries(bond_manager kinetic ${LIBRARY_DEPENDENCIES})
 
 if(${BUILD_FOR_ARM})
 #target_link_libraries(kineticd kinetic ${SECURITY_DEPENDENCIES})
-target_link_libraries(print_device_information kinetic ${SECURITY_DEPENDENCIES})
-target_link_libraries(drive_filler_upper kinetic ${SECURITY_DEPENDENCIES})
 target_link_libraries(manifest_stress kinetic ${SECURITY_DEPENDENCIES})
 target_link_libraries(zac_ha_exercise_drive kinetic ${LIBRARY_DEPENDENCIES})
 target_link_libraries(bond_manager kinetic ${LIBRARY_DEPENDENCIES})
