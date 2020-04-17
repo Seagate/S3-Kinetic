@@ -34,4 +34,4 @@ case "$1" in
     make -f Makefile.arm
     ;;
 esac
-mv minio s3kinetic.$1.$2
+cp minio s3kinetic.$1.$2
