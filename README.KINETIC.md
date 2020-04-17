@@ -1,5 +1,5 @@
 		HOW TO INSTALL AND RUN MINIO-KINETIC
-			Ver 1.5
+			Ver 1.6
 
 NOTE: - This procedures will work for ubuntu 16.04, 18.04.
       - Also work for g++ gcc compiler 5 and 7
@@ -14,22 +14,40 @@ I. INSTALL MINIO:
          Clone albany-minio
            - git clone ssh://git@lco-esd-cm01.colo.seagate.com:7999/in/albany-minio.git
 
-II. COMPILE AND RUN minio (will renamed later to s3kinetic):
+II. COMPILE AND RUN minio (will berename later to s3kinetic):
+    The script s3kinetic.sh will be used to start the compiling.  The command is following:
+      ./s3kinetic.sh arg1 arg2
+      arg1 = X86 or ARM
+      arg2 = NONSMR or SMR or LAMARRKV
+     
+      The NONSMR or SMR is the disk drive type. NONSMR is implied the standard SATA disk drive. SMR is for the standard SMR SATA interface drive with zac media management.
+
+    There will be two executable files exactly the same, but they have different names as shown below:
+      - minio
+      - s3kinetic.arg1.arg2
+
+    EX: s3kinetic.ARM.LAMARRKV
+        s3kinetic.X86.NONSMR
+        s3kinetic.X86.SMR
+    
+    The above examples are the only valid combinations.
+    (Please do not enter the invalid combinations).
+           
     A. COMPILE
       Under albany-minio, there is kineticd directory.
-      Any change in kineticd can be edited normally..
-      Any change in albany-minio and/or kineticd will be commited normally using git commands (add, commit...).
+      Any change in kineticd can be edited normally.
+      Any change in albany-minio and/or kineticd will be committed normally using git commands (add, commit...).
 
-      To compile minio (s3kinetic), assume that the following directories are under user's home directory:
+      To compile minio (s3kinetic.x.y), assume that the following directories are under user's home directory:
         - albany-minio
         - uboot-linux (this is uboot for ARM)
 
-      If this is the 1st time do this (assume the current directory is ~/albany-minio)
+      If this is the 1st time, do the followings (assume the current directory is ~/albany-minio):
         - go to uboot-linux do: './build_embedded_image.sh -t ramdef'
         - go to 'kineticd' directory under 'albany-minio' directoty:  cd kineticd
         - install x86 pacakages                                    :  ./x86_package_installation.sh
 
-      To compile, do the following:
+      To compile, do the followings:
         - Back to albany-minio directory:
           cd ~/albany-minio
         - To Compile:
@@ -37,17 +55,18 @@ II. COMPILE AND RUN minio (will renamed later to s3kinetic):
                       X86 NONSMR    (for non-smr drive using SATA interface (like standard SATA drive), X86 processor).
                       X86 SMR       (for smr drive using SATA interface, X86 processor).
 
-      An exectuable 'minio' will be created and is ready to run. (Should have different names later, like : s3kinetic-x86-srm or s3kinetic-x86-nonsmr 
-                                              or s3kinetic-arm-lammarrkv).
+      An exectuable 'minio' and s3kinetic.x.y  will be created and are ready to run.
       
     B. RUN s3kinetic:
        1. UNDER INTERPOSER ARM:
-          - Copy minio (ARM version) to the Lamarrkv drive under directory /mnt/util:
+          - Copy minio or s3kinetic.x.y (ARM version) to the Lamarrkv drive under directory /mnt/util:
             scp minio root@ip_address:/mnt/util/
           - ssh into Lamarrkv drive
             ssh root@ip_address
           - Go to directory /mnt/util
             cd /mnt/util
+          - Kill the running kineticd:
+            killkv
           - Make sure certificate.pem and private.pem are in this directory
             cp certificates/*.pem .
           - Make sure there is directory metadata.db that has users.json.
