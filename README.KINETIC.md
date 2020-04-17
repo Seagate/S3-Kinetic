@@ -14,13 +14,13 @@ I. INSTALL MINIO:
          Clone albany-minio
            - git clone ssh://git@lco-esd-cm01.colo.seagate.com:7999/in/albany-minio.git
 
-II. COMPILE AND RUN  S3kinetic:
+II. COMPILE AND RUN minio (will renamed later to s3kinetic):
     A. COMPILE
       Under albany-minio, there is kineticd directory.
       Any change in kineticd can be edited normally..
       Any change in albany-minio and/or kineticd will be commited normally using git commands (add, commit...).
 
-      To compile s3kinetic, assume that the following directories are under user's home directory:
+      To compile minio (s3kinetic), assume that the following directories are under user's home directory:
         - albany-minio
         - uboot-linux (this is uboot for ARM)
 
@@ -32,7 +32,7 @@ II. COMPILE AND RUN  S3kinetic:
       To compile, do the following:
         - Back to albany-minio directory:
           cd ~/albany-minio
-        - Compils:
+        - To Compile:
           ./s3kinetic ARM LAMARRKV  (for LAMARRKV using ARM processors).
                       X86 NONSMR    (for non-smr drive using SATA interface (like standard SATA drive), X86 processor).
                       X86 SMR       (for smr drive using SATA interface, X86 processor).
