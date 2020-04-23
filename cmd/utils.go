@@ -39,6 +39,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+        "log"
 
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/cmd/logger"
@@ -627,3 +628,24 @@ func isWORMEnabled(bucket string) bool {
 	}
 	return globalWORMEnabled
 }
+
+func chopPackageName(fullName string) string {
+    elements := strings.Split(fullName, ".")
+    return elements[len(elements) - 1]
+}
+
+func KTrace(msg string) string {
+    function, file, line, _ := runtime.Caller(1)
+    funcName := runtime.FuncForPC(function).Name()
+    funcName = chopPackageName(funcName)
+    log.Printf("%s:%d:%s: %s", file, line, funcName, msg)
+    return ""
+}
+
+func KUntrace(unused string) {
+    function, file, line, _ := runtime.Caller(1)
+    funcName := runtime.FuncForPC(function).Name()
+    funcName = chopPackageName(funcName)
+    log.Printf("%s:%d:%s: Exit", file, line, funcName)
+}
+

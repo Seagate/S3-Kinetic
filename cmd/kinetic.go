@@ -81,6 +81,7 @@ func bToMb(b uint64) uint64 {
 }
 
 func PrintMemUsage() {
+        defer KUntrace(KTrace("Enter"))
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	log.Println("Alloc: ", bToMb(m.Alloc))
@@ -92,6 +93,7 @@ func PrintMemUsage() {
 }
 
 func InitKineticd(storePartition []byte) {
+        defer KUntrace(KTrace("Enter"))
         var cPtr *C.char
         cPtr = (*C.char)(unsafe.Pointer(&storePartition[0]))
 
@@ -100,6 +102,7 @@ func InitKineticd(storePartition []byte) {
 }
 
 func InitKineticConnection(IP string, tls bool, kc *Client) error {
+        defer KUntrace(KTrace("Enter"))
         var err error = nil
 	kc.ConnectionID = 0
 	kc.Identity = identity
@@ -150,6 +153,7 @@ type KVInfo struct {
 }
 
 func ReleaseConnection(ix int) {
+        defer KUntrace(KTrace("Enter"))
 	kConnsPool.Lock()
 	kConnsPool.inUsed[ix] = false
 	kConnsPool.totalInUsed--
@@ -161,6 +165,7 @@ func ReleaseConnection(ix int) {
 }
 
 func GetKineticConnection() *Client {
+        defer KUntrace(KTrace("Enter"))
 	kConnsPool.Lock()
 	var kc *Client = nil
 	//start := time.Now()
@@ -205,12 +210,14 @@ func (ki KVInfo) Sys() interface{}   { return nil }
 
 
 func allocateValBuf(bufSize int) []byte {
+        defer KUntrace(KTrace("Enter"))
 	buf := C.allocate_pvalue_buffer(C.int(bufSize))
         goBuf := (*[1 << 30 ]byte)(unsafe.Pointer(buf))[:bufSize:bufSize]
 	return goBuf
 }
 
 func initKineticMeta(kc *Client) error {
+        defer KUntrace(KTrace("Enter"))
 	value := allocateValBuf(0)
 	bucketKey := "bucket." + minioMetaBucket
 	kopts := Opts{
@@ -268,6 +275,7 @@ func initKineticMeta(kc *Client) error {
 }
 
 func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
+        defer KUntrace(KTrace("Enter"))
 	var err error = nil
 	if IP[:6] == "skinny" {
 		SkinnyWaistIF =  true
@@ -336,6 +344,7 @@ func (ko *KineticObjects) waitForLowActiveIO() {
 
 // CrawlAndGetDataUsage returns data usage stats of the current FS deployment
 func (ko *KineticObjects) CrawlAndGetDataUsage(ctx context.Context, endCh <-chan struct{}) DataUsageInfo {
+        defer KUntrace(KTrace("Enter"))
         dataUsageInfo := updateUsage(ko.fsPath, endCh, ko.waitForLowActiveIO, func(item Item) (int64, error) {
                 // Get file size, symlinks which cannot bex
                 // followed are automatically filtered by fastwalk.
@@ -358,6 +367,7 @@ func (ko *KineticObjects) CrawlAndGetDataUsage(ctx context.Context, endCh <-chan
 // corresponding valid bucket names on the backend in a platform
 // compatible way for all operating systems.
 func (ko *KineticObjects) getBucketDir(ctx context.Context, bucket string) (string, error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" GET BUCKET DIR ", bucket)
 	if bucket == "" || bucket == "." || bucket == ".." {
 		return "", errVolumeNotFound
@@ -367,6 +377,7 @@ func (ko *KineticObjects) getBucketDir(ctx context.Context, bucket string) (stri
 }
 
 func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KVInfo, error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" STAT BUCKET DIR: ", bucket)
         kopts := Opts{
                 ClusterVersion:  0,
@@ -408,6 +419,7 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
 //MakeBucketWithLocation - create a new bucket, returns if it
 // already exists.
 func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, location string) error {
+        defer KUntrace(KTrace("Enter"))
 	//log.Printf(" CREATE NEW BUCKET %s LOCATION %s\n", bucket, location)
 	bucketLock := ko.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
@@ -457,6 +469,7 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 }
 
 func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi BucketInfo, err error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" GET BUCKET INFO ", bucket)
         bucketLock := ko.NewNSLock(ctx, bucket, "")
         if e := bucketLock.GetRLock(globalObjectTimeout); e != nil {
@@ -494,6 +507,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 }
 
 func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println("LIST BUCKET")
 	kopts := Opts{
 		ClusterVersion:  0,
@@ -553,6 +567,7 @@ for true {
 // DeleteBucket - delete a bucket and all the metadata associated
 // with the bucket including pending multipart, object metadata.
 func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println("*** DELETE BUCKET *** ", bucket)
 	bucketLock := ko.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
@@ -595,6 +610,7 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
 // if source object and destination object are same we only
 // update metadata.
 func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (oi ObjectInfo, e error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" COPY OBJECTS", srcInfo)
         cpSrcDstSame := isStringEqual(pathJoin(srcBucket, srcObject), pathJoin(dstBucket, dstObject))
         if !cpSrcDstSame {
@@ -690,6 +706,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 
 //THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
+        defer KUntrace(KTrace("Enter"))
         //log.Println("***GetObjectNInfo***", object)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
@@ -771,6 +788,7 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 
 // Used to return default etag values when a pre-existing object's meta data is queried.
 func (ko *KineticObjects) defaultFsJSON(object string) fsMetaV1 {
+        defer KUntrace(KTrace("Enter"))
 	fsMeta := newFSMetaV1()
 	fsMeta.Meta = make(map[string]string)
 	fsMeta.Meta["etag"] = defaultEtag
@@ -781,6 +799,7 @@ func (ko *KineticObjects) defaultFsJSON(object string) fsMetaV1 {
 
 // Create a new fs.json file, if the existing one is corrupt. Should happen very rarely.
 func (ko *KineticObjects) createFsJSON(object, fsMetaPath string) error {
+        defer KUntrace(KTrace("Enter"))
 	fsMeta := newFSMetaV1()
 	fsMeta.Meta = make(map[string]string)
 	fsMeta.Meta["etag"] = GenETag()
@@ -797,6 +816,7 @@ func (ko *KineticObjects) createFsJSON(object, fsMetaPath string) error {
 
 // getObjectInfo - wrapper for reading object metadata and constructs ObjectInfo.
 func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object string) (oi ObjectInfo, e error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" GETOBJECTINFO META", bucket, " ", object)
 	fsMeta := fsMetaV1{}
 /*
@@ -896,6 +916,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 
 // getObjectInfoWithLock - reads object metadata and replies back ObjectInfo.
 func (ko *KineticObjects) getObjectInfoWithLock(ctx context.Context, bucket, object string) (oi ObjectInfo, e error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" GET OBJ INFO WITH LOCK ", object)
 	// Lock the object before reading.
 	objectLock := ko.NewNSLock(ctx, bucket, object)
@@ -916,6 +937,7 @@ func (ko *KineticObjects) getObjectInfoWithLock(ctx context.Context, bucket, obj
 
 // GetObjectInfo - reads object metadata and replies back ObjectInfo.
 func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object string, opts ObjectOptions) (oi ObjectInfo, e error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" GET OBJ INFO: ", object)
 	oi, err := ko.getObjectInfoWithLock(ctx, bucket, object)
 	if err == errCorruptedFormat || err == io.EOF {
@@ -940,6 +962,7 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 
 //THAI:
 func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" GET OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
@@ -957,6 +980,7 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 
 //getObject - wrapper for GetObject
 func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" GETOBJECT ", bucket, object, length)
 	if _, err = ko.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
@@ -1054,6 +1078,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 // Additionally writes `ko.json` which carries the necessary metadata
 // for future object operations.
 func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" PutObject ", object, bucket, r)
 	if err := checkPutObjectArgs(ctx, bucket, object, ko, r.Size()); err != nil {
 		return ObjectInfo{}, err
@@ -1071,6 +1096,7 @@ func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object s
 
 // putObject - wrapper for PutObject
 func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" putObject ", object)
 	data := r.Reader
 
@@ -1198,6 +1224,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 // DeleteObjects - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (ko *KineticObjects) DeleteObjects(ctx context.Context, bucket string, objects []string) ([]error, error) {
+        defer KUntrace(KTrace("Enter"))
 	errs := make([]error, len(objects))
 	for idx, object := range objects {
 		errs[idx] = ko.DeleteObject(ctx, bucket, object)
@@ -1208,6 +1235,7 @@ func (ko *KineticObjects) DeleteObjects(ctx context.Context, bucket string, obje
 // DeleteObject - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object string) error {
+        defer KUntrace(KTrace("Enter"))
 	// Acquire a write lock before deleting the object.
 	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetLock(globalOperationTimeout); err != nil {
@@ -1286,6 +1314,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 }
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println("LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
 	var objInfos []ObjectInfo
 	//var eof bool
@@ -1385,6 +1414,7 @@ for true {
 // isLeaf - is used by listDir function to check if an entry
 // is a leaf or non-leaf entry.
 func (ko *KineticObjects) listDirFactory() ListDirFunc {
+        defer KUntrace(KTrace("Enter"))
         // listDir - lists all the entries at a given prefix and given entry in the prefix.
         listDir := func(bucket, prefixDir, prefixEntry string) (emptyDir bool, entries []string) {
                 var err error
@@ -1408,6 +1438,7 @@ func (ko *KineticObjects) listDirFactory() ListDirFunc {
 // and the prefix represents an empty directory. An S3 empty directory
 // is also an empty directory in the FS backend.
 func (ko *KineticObjects) isObjectDir(bucket, prefix string) bool {
+        defer KUntrace(KTrace("Enter"))
         entries, err := readDirN(pathJoin(ko.fsPath, bucket, prefix), 1)
         if err != nil {
                 return false
@@ -1419,6 +1450,7 @@ func (ko *KineticObjects) isObjectDir(bucket, prefix string) bool {
 
 // GetObjectTag - get object tags from an existing object
 func (ko *KineticObjects) GetObjectTag(ctx context.Context, bucket, object string) (tagging.Tagging, error) {
+        defer KUntrace(KTrace("Enter"))
         oi, err := ko.GetObjectInfo(ctx, bucket, object, ObjectOptions{})
         if err != nil {
                 return tagging.Tagging{}, err
@@ -1435,17 +1467,20 @@ func (ko *KineticObjects) GetObjectTag(ctx context.Context, bucket, object strin
 
 // PutObjectTag - replace or add tags to an existing object
 func (ko *KineticObjects) PutObjectTag(ctx context.Context, bucket, object string, tags string) error {
+        defer KUntrace(KTrace("Enter"))
 	return nil
 }
 
 
 // DeleteObjectTag - delete object tags from an existing object
 func (ko *KineticObjects) DeleteObjectTag(ctx context.Context, bucket, object string) error {
+        defer KUntrace(KTrace("Enter"))
         return ko.PutObjectTag(ctx, bucket, object, "")
 }
 
 
 func (ko *KineticObjects) ReloadFormat(ctx context.Context, dryRun bool) error {
+        defer KUntrace(KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return NotImplemented{}
 }
@@ -1453,12 +1488,14 @@ func (ko *KineticObjects) ReloadFormat(ctx context.Context, dryRun bool) error {
 
 // HealObjects - no-op for fs. Valid only for XL.
 func (ko *KineticObjects) HealObjects(ctx context.Context, bucket, prefix string, fn healObjectFn) (e error) {
+        defer KUntrace(KTrace("Enter"))
         logger.LogIf(ctx, NotImplemented{})
         return NotImplemented{}
 }
 
 // GetMetrics - no op
 func (ko *KineticObjects) GetMetrics(ctx context.Context) (*Metrics, error) {
+        defer KUntrace(KTrace("Enter"))
         logger.LogIf(ctx, NotImplemented{})
         return &Metrics{}, NotImplemented{}
 }
@@ -1466,12 +1503,14 @@ func (ko *KineticObjects) GetMetrics(ctx context.Context) (*Metrics, error) {
 
 // ListBucketsHeal - list all buckets to be healed. Valid only for XL
 func (ko *KineticObjects) ListBucketsHeal(ctx context.Context) ([]BucketInfo, error) {
+        defer KUntrace(KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return []BucketInfo{}, NotImplemented{}
 }
 
 // ListObjectsHeal - list all objects to be healed. Valid only for XL
 func (ko *KineticObjects) ListObjectsHeal(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (result ListObjectsInfo, err error) {
+        defer KUntrace(KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return ListObjectsInfo{}, NotImplemented{}
 }
@@ -1479,6 +1518,7 @@ func (ko *KineticObjects) ListObjectsHeal(ctx context.Context, bucket, prefix, m
 // HealObject - no-op for ko. Valid only for XL.
 func (ko *KineticObjects) HealObject(ctx context.Context, bucket, object string, dryRun, remove bool, scanMode madmin.HealScanMode) (
 	res madmin.HealResultItem, err error) {
+        defer KUntrace(KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return res, NotImplemented{}
 }
@@ -1486,6 +1526,7 @@ func (ko *KineticObjects) HealObject(ctx context.Context, bucket, object string,
 // HealBucket - no-op for ko, Valid only for XL.
 func (ko *KineticObjects) HealBucket(ctx context.Context, bucket string, dryRun, remove bool) (madmin.HealResultItem,
 	error) {
+        defer KUntrace(KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return madmin.HealResultItem{}, NotImplemented{}
 }
@@ -1496,62 +1537,74 @@ func (ko *KineticObjects) HealBucket(ctx context.Context, bucket string, dryRun,
 // error walker returns error. Optionally if context.Done() is received
 // then Walk() stops the walker.
 func (ko *KineticObjects) Walk(ctx context.Context, bucket, prefix string, results chan<- ObjectInfo) error {
+        defer KUntrace(KTrace("Enter"))
         return fsWalk(ctx, ko, bucket, prefix, ko.listDirFactory(), results, ko.getObjectInfo, ko.getObjectInfo)
 }
 
 
 // HealFormat - no-op for ko, Valid only for XL.
 func (ko *KineticObjects) HealFormat(ctx context.Context, dryRun bool) (madmin.HealResultItem, error) {
+        defer KUntrace(KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return madmin.HealResultItem{}, NotImplemented{}
 }
 
 func (ko *KineticObjects) SetBucketPolicy(ctx context.Context, bucket string, policy *policy.Policy) error {
+        defer KUntrace(KTrace("Enter"))
 	return savePolicyConfig(ctx, ko, bucket, policy)
 }
 
 // GetBucketPolicy will get policy on bucket
 func (ko *KineticObjects) GetBucketPolicy(ctx context.Context, bucket string) (*policy.Policy, error) {
+        defer KUntrace(KTrace("Enter"))
 	return getPolicyConfig(ko, bucket)
 }
 
 // DeleteBucketPolicy deletes all policies on bucket
 func (ko *KineticObjects) DeleteBucketPolicy(ctx context.Context, bucket string) error {
+        defer KUntrace(KTrace("Enter"))
 	return nil
 }
 
 // SetBucketLifecycle sets lifecycle on bucket
 func (ko *KineticObjects) SetBucketLifecycle(ctx context.Context, bucket string, lifecycle *lifecycle.Lifecycle) error {
+        defer KUntrace(KTrace("Enter"))
 	return saveLifecycleConfig(ctx, ko, bucket, lifecycle)
 }
 
 // GetBucketLifecycle will get lifecycle on bucket
 func (ko *KineticObjects) GetBucketLifecycle(ctx context.Context, bucket string) (*lifecycle.Lifecycle, error) {
+        defer KUntrace(KTrace("Enter"))
 	return getLifecycleConfig(ko, bucket)
 }
 
 // DeleteBucketLifecycle deletes all lifecycle on bucket
 func (ko *KineticObjects) DeleteBucketLifecycle(ctx context.Context, bucket string) error {
+        defer KUntrace(KTrace("Enter"))
 	return removeLifecycleConfig(ctx, ko, bucket)
 }
 
 // GetBucketSSEConfig returns bucket encryption config on given bucket
 func (ko *KineticObjects) GetBucketSSEConfig(ctx context.Context, bucket string) (*bucketsse.BucketSSEConfig, error) {
+        defer KUntrace(KTrace("Enter"))
         return getBucketSSEConfig(ko, bucket)
 }
 
 // SetBucketSSEConfig sets bucket encryption config on given bucket
 func (ko *KineticObjects) SetBucketSSEConfig(ctx context.Context, bucket string, config *bucketsse.BucketSSEConfig) error {
+        defer KUntrace(KTrace("Enter"))
         return saveBucketSSEConfig(ctx, ko, bucket, config)
 }
 
 // DeleteBucketSSEConfig deletes bucket encryption config on given bucket
 func (ko *KineticObjects) DeleteBucketSSEConfig(ctx context.Context, bucket string) error {
+        defer KUntrace(KTrace("Enter"))
         return removeBucketSSEConfig(ctx, ko, bucket)
 }
 
 
 func (ko *KineticObjects) ListObjectsV2(ctx context.Context, bucket, prefix, continuationToken, delimiter string, maxKeys int, fetchOwner bool, startAfter string) (result ListObjectsV2Info, err error) {
+        defer KUntrace(KTrace("Enter"))
 	//log.Println(" KINETIC: LIST OBJS V2 ", continuationToken, " ", startAfter)
 	marker := continuationToken
 	if marker == "" {
@@ -1596,6 +1649,7 @@ func (ko *KineticObjects) IsCompressionSupported() bool {
 
 // IsReady - Check if the backend disk is ready to accept traffic.
 func (ko *KineticObjects) IsReady(_ context.Context) bool {
+        defer KUntrace(KTrace("Enter"))
         _, err := os.Stat(ko.fsPath)
         return err == nil
 }

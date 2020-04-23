@@ -78,7 +78,7 @@ VERSION:
 `
 
 func newApp(name string) *cli.App {
-	fmt.Println("newApp ", name)
+        defer KUntrace(KTrace("Enter"))
 	// Collection of minio commands currently supported are.
 	commands := []cli.Command{}
 
@@ -87,12 +87,14 @@ func newApp(name string) *cli.App {
 
 	// registerCommand registers a cli command.
 	registerCommand := func(command cli.Command) {
+                defer KUntrace(KTrace("Enter"))
 		//fmt.Println("Command %T %v ", command, command)
 		commands = append(commands, command)
 		commandsTree.Insert(command.Name)
 	}
 
 	findClosestCommands := func(command string) []string {
+                defer KUntrace(KTrace("Enter"))
 		fmt.Println("findClosestCommands")
 		var closestCommands []string
 		for _, value := range commandsTree.PrefixMatch(command) {
@@ -156,6 +158,7 @@ func newApp(name string) *cli.App {
 
 // Main main for minio server.
 func Main(args []string) {
+        defer KUntrace(KTrace("Enter"))
 	// Set the minio app name.
 	appName := filepath.Base(args[0])
 	fmt.Println(" APP NAME ", appName)
