@@ -402,7 +402,6 @@ func serverMain(ctx *cli.Context) {
 	globalSafeMode = true
 	globalObjectAPI = newObject
 	globalObjLayerMutex.Unlock()
-        fmt.Println("********1. OBJECT LAYER")
 
 	// Calls New() and initializes all sub-systems.
 	newAllSubsystems()
@@ -414,11 +413,13 @@ func serverMain(ctx *cli.Context) {
 		initGlobalHeal()
 	}
 
+        KTrace("Calling ListBuckets()")
 	buckets, err := newObject.ListBuckets(context.Background())
+        KTrace("Return from ListBuckets()")
 	if err != nil {
+            KTrace("Error")
 		logger.Fatal(err, "Unable to list buckets")
 	}
-        fmt.Println("********2 OBJECT LAYER")
 
 	logger.FatalIf(initSafeMode(buckets), "Unable to initialize server switching into safe-mode")
 

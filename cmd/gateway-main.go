@@ -46,6 +46,7 @@ var (
 
 // RegisterGatewayCommand registers a new command for gateway.
 func RegisterGatewayCommand(cmd cli.Command) error {
+        defer KUntrace(KTrace("Enter"))
 	cmd.Flags = append(append(cmd.Flags, ServerFlags...), GlobalFlags...)
 	gatewayCmd.Subcommands = append(gatewayCmd.Subcommands, cmd)
 	return nil
@@ -53,6 +54,7 @@ func RegisterGatewayCommand(cmd cli.Command) error {
 
 // ParseGatewayEndpoint - Return endpoint.
 func ParseGatewayEndpoint(arg string) (endPoint string, secure bool, err error) {
+        defer KUntrace(KTrace("Enter"))
 	schemeSpecified := len(strings.Split(arg, "://")) > 1
 	if !schemeSpecified {
 		// Default connection will be "secure".
@@ -76,6 +78,7 @@ func ParseGatewayEndpoint(arg string) (endPoint string, secure bool, err error) 
 
 // ValidateGatewayArguments - Validate gateway arguments.
 func ValidateGatewayArguments(serverAddr, endpointAddr string) error {
+        defer KUntrace(KTrace("Enter"))
 	if err := CheckLocalServerAddr(serverAddr); err != nil {
 		return err
 	}
@@ -95,6 +98,7 @@ func ValidateGatewayArguments(serverAddr, endpointAddr string) error {
 
 // StartGateway - handler for 'minio gateway <name>'.
 func StartGateway(ctx *cli.Context, gw Gateway) {
+        defer KUntrace(KTrace("Enter"))
 	if gw == nil {
 		logger.FatalIf(errUnexpected, "Gateway implementation not initialized")
 	}
@@ -239,6 +243,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 		logger.FatalIf(globalConfigSys.Init(newObject), "Unable to initialize config system")
 		buckets, err := newObject.ListBuckets(context.Background())
 		if err != nil {
+                        KTrace("ERROR")
 			logger.Fatal(err, "Unable to list buckets")
 		}
 
@@ -279,6 +284,7 @@ func StartGateway(ctx *cli.Context, gw Gateway) {
 	if globalDNSConfig != nil {
 		buckets, err := newObject.ListBuckets(context.Background())
 		if err != nil {
+                        KTrace("ERROR")
 			logger.Fatal(err, "Unable to list buckets")
 		}
 		initFederatorBackend(buckets, newObject)

@@ -75,6 +75,7 @@ const (
 
 // setHeadGetRespHeaders - set any requested parameters as response headers.
 func setHeadGetRespHeaders(w http.ResponseWriter, reqParams url.Values) {
+        defer KUntrace(KTrace("Enter"))
 	for k, v := range reqParams {
 		if header, ok := supportedHeadGetReqParams[k]; ok {
 			w.Header()[header] = v
@@ -88,6 +89,7 @@ func setHeadGetRespHeaders(w http.ResponseWriter, reqParams url.Values) {
 // on an SQL expression. In the request, along with the sql expression, you must
 // also specify a data serialization format (JSON, CSV) of the object.
 func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "SelectObject")
 
 	defer logger.AuditLog(w, r, "SelectObject", mustGetClaimsFromToken(r))
@@ -195,6 +197,7 @@ func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 		getObjectNInfo = api.CacheAPI().GetObjectNInfo
 	}
 	getObject := func(offset, length int64) (rc io.ReadCloser, err error) {
+                defer KUntrace(KTrace("Enter"))
 		isSuffixLength := false
 		if offset < 0 {
 			isSuffixLength = true
@@ -257,6 +260,7 @@ func (api objectAPIHandlers) SelectObjectContentHandler(w http.ResponseWriter, r
 // This implementation of the GET operation retrieves object. To use GET,
 // you must have READ access to the object.
 func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "GetObject")
 
 	defer logger.AuditLog(w, r, "GetObject", mustGetClaimsFromToken(r))
@@ -441,6 +445,7 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 // -----------
 // The HEAD operation retrieves metadata from an object without returning the object itself.
 func (api objectAPIHandlers) HeadObjectHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "HeadObject")
 
 	defer logger.AuditLog(w, r, "HeadObject", mustGetClaimsFromToken(r))
@@ -605,6 +610,7 @@ func (api objectAPIHandlers) HeadObjectHandler(w http.ResponseWriter, r *http.Re
 // Extract metadata relevant for an CopyObject operation based on conditional
 // header values specified in X-Amz-Metadata-Directive.
 func getCpObjMetadataFromHeader(ctx context.Context, r *http.Request, userMeta map[string]string) (map[string]string, error) {
+        defer KUntrace(KTrace("Enter"))
 	// Make a copy of the supplied metadata to avoid
 	// to change the original one.
 	defaultMeta := make(map[string]string, len(userMeta))
@@ -634,6 +640,7 @@ func getCpObjMetadataFromHeader(ctx context.Context, r *http.Request, userMeta m
 // Extract tags relevant for an CopyObject operation based on conditional
 // header values specified in X-Amz-Tagging-Directive.
 func getCpObjTagsFromHeader(ctx context.Context, r *http.Request, tags string) (string, error) {
+        defer KUntrace(KTrace("Enter"))
 	// if x-amz-tagging-directive says REPLACE then
 	// we extract tags from the input headers.
 	if isDirectiveReplace(r.Header.Get(xhttp.AmzTagDirective)) {
@@ -652,6 +659,7 @@ func getCpObjTagsFromHeader(ctx context.Context, r *http.Request, tags string) (
 // Returns a minio-go Client configured to access remote host described by destDNSRecord
 // Applicable only in a federated deployment
 var getRemoteInstanceClient = func(r *http.Request, host string) (*miniogo.Core, error) {
+        defer KUntrace(KTrace("Enter"))
 	cred := getReqAccessCred(r, globalServerRegion)
 	// In a federated deployment, all the instances share config files
 	// and hence expected to have same credentials.
@@ -670,6 +678,7 @@ var getRemoteInstanceClient = func(r *http.Request, host string) (*miniogo.Core,
 // if destination and source are same we do not need to check for destnation bucket
 // to exist locally.
 func isRemoteCopyRequired(ctx context.Context, srcBucket, dstBucket string, objAPI ObjectLayer) bool {
+        defer KUntrace(KTrace("Enter"))
 	if srcBucket == dstBucket {
 		return false
 	}
@@ -678,6 +687,7 @@ func isRemoteCopyRequired(ctx context.Context, srcBucket, dstBucket string, objA
 
 // Check if the bucket is on a remote site, this code only gets executed when federation is enabled.
 func isRemoteCallRequired(ctx context.Context, bucket string, objAPI ObjectLayer) bool {
+        defer KUntrace(KTrace("Enter"))
 	if globalDNSConfig == nil {
 		return false
 	}
@@ -698,6 +708,7 @@ func isRemoteCallRequired(ctx context.Context, bucket string, objAPI ObjectLayer
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
 func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "CopyObject")
 
 	defer logger.AuditLog(w, r, "CopyObject", mustGetClaimsFromToken(r))
@@ -1135,6 +1146,7 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
 func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "PutObject")
 	defer logger.AuditLog(w, r, "PutObject", mustGetClaimsFromToken(r))
 
@@ -1428,6 +1440,7 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 //   - X-Amz-Server-Side-Encryption-Customer-Key
 //   - X-Amz-Copy-Source-Server-Side-Encryption-Customer-Key
 func (api objectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "NewMultipartUpload")
 
 	defer logger.AuditLog(w, r, "NewMultipartUpload", mustGetClaimsFromToken(r))
@@ -1552,6 +1565,7 @@ func (api objectAPIHandlers) NewMultipartUploadHandler(w http.ResponseWriter, r 
 
 // CopyObjectPartHandler - uploads a part by copying data from an existing object as data source.
 func (api objectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "CopyObjectPart")
 
 	defer logger.AuditLog(w, r, "CopyObjectPart", mustGetClaimsFromToken(r))
@@ -1873,6 +1887,7 @@ func (api objectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 
 // PutObjectPartHandler - uploads an incoming part for an ongoing multipart operation.
 func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "PutObjectPart")
 
 	defer logger.AuditLog(w, r, "PutObjectPart", mustGetClaimsFromToken(r))
@@ -2135,6 +2150,7 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 
 // AbortMultipartUploadHandler - Abort multipart upload
 func (api objectAPIHandlers) AbortMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "AbortMultipartUpload")
 
 	defer logger.AuditLog(w, r, "AbortMultipartUpload", mustGetClaimsFromToken(r))
@@ -2174,6 +2190,7 @@ func (api objectAPIHandlers) AbortMultipartUploadHandler(w http.ResponseWriter, 
 
 // ListObjectPartsHandler - List object parts
 func (api objectAPIHandlers) ListObjectPartsHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "ListObjectParts")
 
 	defer logger.AuditLog(w, r, "ListObjectParts", mustGetClaimsFromToken(r))
@@ -2282,6 +2299,7 @@ func (w *whiteSpaceWriter) WriteHeader(statusCode int) {
 // is quick. Only in a rare case where parts would be out of order will
 // FS:completeMultiPartUpload() take a longer time.
 func sendWhiteSpace(w http.ResponseWriter) <-chan bool {
+        defer KUntrace(KTrace("Enter"))
 	doneCh := make(chan bool)
 	go func() {
 		ticker := time.NewTicker(time.Second * 10)
@@ -2312,6 +2330,7 @@ func sendWhiteSpace(w http.ResponseWriter) <-chan bool {
 
 // CompleteMultipartUploadHandler - Complete multipart upload.
 func (api objectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "CompleteMultipartUpload")
 
 	defer logger.AuditLog(w, r, "CompleteMultipartUpload", mustGetClaimsFromToken(r))
@@ -2515,6 +2534,7 @@ func (api objectAPIHandlers) CompleteMultipartUploadHandler(w http.ResponseWrite
 
 // DeleteObjectHandler - delete an object
 func (api objectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "DeleteObject")
 
 	defer logger.AuditLog(w, r, "DeleteObject", mustGetClaimsFromToken(r))
@@ -2577,6 +2597,7 @@ func (api objectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.
 
 // PutObjectLegalHoldHandler - set legal hold configuration to object,
 func (api objectAPIHandlers) PutObjectLegalHoldHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "PutObjectLegalHold")
 
 	defer logger.AuditLog(w, r, "PutObjectLegalHold", mustGetClaimsFromToken(r))
@@ -2665,6 +2686,7 @@ func (api objectAPIHandlers) PutObjectLegalHoldHandler(w http.ResponseWriter, r 
 
 // GetObjectLegalHoldHandler - get legal hold configuration to object,
 func (api objectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "GetObjectLegalHold")
 
 	defer logger.AuditLog(w, r, "GetObjectLegalHold", mustGetClaimsFromToken(r))
@@ -2733,6 +2755,7 @@ func (api objectAPIHandlers) GetObjectLegalHoldHandler(w http.ResponseWriter, r 
 
 // PutObjectRetentionHandler - set object hold configuration to object,
 func (api objectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "PutObjectRetention")
 
 	defer logger.AuditLog(w, r, "PutObjectRetention", mustGetClaimsFromToken(r))
@@ -2817,6 +2840,7 @@ func (api objectAPIHandlers) PutObjectRetentionHandler(w http.ResponseWriter, r 
 
 // GetObjectRetentionHandler - get object retention configuration of object,
 func (api objectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "GetObjectRetention")
 	defer logger.AuditLog(w, r, "GetObjectRetention", mustGetClaimsFromToken(r))
 
@@ -2877,6 +2901,7 @@ func (api objectAPIHandlers) GetObjectRetentionHandler(w http.ResponseWriter, r 
 
 // GetObjectTaggingHandler - GET object tagging
 func (api objectAPIHandlers) GetObjectTaggingHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "GetObjectTagging")
 	defer logger.AuditLog(w, r, "GetObjectTagging", mustGetClaimsFromToken(r))
 
@@ -2912,6 +2937,7 @@ func (api objectAPIHandlers) GetObjectTaggingHandler(w http.ResponseWriter, r *h
 
 // PutObjectTaggingHandler - PUT object tagging
 func (api objectAPIHandlers) PutObjectTaggingHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "PutObjectTagging")
 	defer logger.AuditLog(w, r, "PutObjectTagging", mustGetClaimsFromToken(r))
 
@@ -2953,6 +2979,7 @@ func (api objectAPIHandlers) PutObjectTaggingHandler(w http.ResponseWriter, r *h
 
 // DeleteObjectTaggingHandler - DELETE object tagging
 func (api objectAPIHandlers) DeleteObjectTaggingHandler(w http.ResponseWriter, r *http.Request) {
+        defer KUntrace(KTrace("Enter"))
 	ctx := newContext(r, w, "DeleteObjectTagging")
 	defer logger.AuditLog(w, r, "DeleteObjectTagging", mustGetClaimsFromToken(r))
 

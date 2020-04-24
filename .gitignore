@@ -2,6 +2,8 @@
 cover.out
 *~
 minio
+s3kinetic.X86.NONSMR
+s3kinetic.X86.SMR
 !*/
 site/
 **/*.test

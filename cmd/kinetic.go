@@ -97,8 +97,10 @@ func InitKineticd(storePartition []byte) {
         var cPtr *C.char
         cPtr = (*C.char)(unsafe.Pointer(&storePartition[0]))
 
+       KTrace("Scheduling C.CInitMain()")
 	go C.CInitMain(cPtr)
-        time.Sleep(5 * time.Second)
+       KTrace("Return from scheduling C.CInitMain()")
+       time.Sleep(5 * time.Second)
 }
 
 func InitKineticConnection(IP string, tls bool, kc *Client) error {
@@ -281,8 +283,16 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 		SkinnyWaistIF =  true
 		storePartition := []byte(IP[7:])
 		InitKineticd(storePartition)
+                // Wait until ready
+                /*  TRI TODO
+                while {
+                    client :=  new(Client)
+                    err := client.NoOp(cmd Opts)
+                */
 	}
+        KTrace("1")
 	if err != nil {
+                KTrace("In if")
 		return nil, err
 	}
 	kConnsPool.kcs = make(map[int]*Client, maxQueue)
@@ -290,6 +300,7 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	kConnsPool.totalInUsed = 0
 	kConnsPool.totalInUsedMax = 0
 	kConnsPool.cond = sync.NewCond(&kConnsPool)
+        KTrace("Before FOR loop")
 	for i := 0; i < maxQueue; i++ {
 		kc := new(Client)
 		kc.Idx = i
@@ -307,6 +318,7 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 			return nil, err
 		}
 	}
+        KTrace("After FOR loop")
 	initKineticMeta(kConnsPool.kcs[0])
 	Ko := &KineticObjects{
 		metaJSONFile: fsMetaJSONFile,

@@ -37,6 +37,7 @@ import (
 )
 
 func init() {
+        defer KUntrace(KTrace("Enter"))
 	logger.Init(GOPATH, GOROOT)
 	logger.RegisterError(config.FmtError)
 
@@ -48,6 +49,7 @@ func init() {
 }
 
 func verifyObjectLayerFeatures(name string, objAPI ObjectLayer) {
+        defer KUntrace(KTrace("Enter"))
 	if (globalAutoEncryption || GlobalKMS != nil) && !objAPI.IsEncryptionSupported() {
 		logger.Fatal(errInvalidArgument,
 			"Encryption support is requested but '%s' does not support encryption", name)
@@ -68,6 +70,7 @@ func verifyObjectLayerFeatures(name string, objAPI ObjectLayer) {
 
 // Check for updates and print a notification message
 func checkUpdate(mode string) {
+        defer KUntrace(KTrace("Enter"))
 	// Its OK to ignore any errors during doUpdate() here.
 	if updateMsg, _, currentReleaseTime, latestReleaseTime, err := getUpdateInfo(2*time.Second, mode); err == nil {
 		if updateMsg == "" {
@@ -82,6 +85,7 @@ func checkUpdate(mode string) {
 }
 
 func newConfigDirFromCtx(ctx *cli.Context, option string, getDefaultDir func() string) (*ConfigDir, bool) {
+        defer KUntrace(KTrace("Enter"))
 	var dir string
 	var dirSet bool
 
@@ -123,7 +127,7 @@ func newConfigDirFromCtx(ctx *cli.Context, option string, getDefaultDir func() s
 }
 
 func handleCommonCmdArgs(ctx *cli.Context) {
-
+        defer KUntrace(KTrace("Enter"))
 	// Get "json" flag from command line argument and
 	// enable json and quite modes if json flag is turned on.
 	globalCLIContext.JSON = ctx.IsSet("json") || ctx.GlobalIsSet("json")
@@ -170,6 +174,7 @@ func handleCommonCmdArgs(ctx *cli.Context) {
 }
 
 func handleCommonEnvVars() {
+        defer KUntrace(KTrace("Enter"))
 	var err error
 	globalBrowserEnabled, err = config.ParseBool(env.Get(config.EnvBrowser, config.EnableOn))
 	if err != nil {
@@ -233,6 +238,7 @@ func handleCommonEnvVars() {
 }
 
 func logStartupMessage(msg string) {
+        defer KUntrace(KTrace("Enter"))
 	if globalConsoleSys != nil {
 		globalConsoleSys.Send(msg, string(logger.All))
 	}
@@ -240,6 +246,7 @@ func logStartupMessage(msg string) {
 }
 
 func getTLSConfig() (x509Certs []*x509.Certificate, c *certs.Certs, secureConn bool, err error) {
+        defer KUntrace(KTrace("Enter"))
 	if !(isFile(getPublicCertFile()) && isFile(getPrivateKeyFile())) {
 		return nil, nil, false, nil
 	}

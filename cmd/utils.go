@@ -629,7 +629,7 @@ func isWORMEnabled(bucket string) bool {
 	return globalWORMEnabled
 }
 
-func chopPackageName(fullName string) string {
+func removePackageName(fullName string) string {
     elements := strings.Split(fullName, ".")
     return elements[len(elements) - 1]
 }
@@ -637,7 +637,7 @@ func chopPackageName(fullName string) string {
 func KTrace(msg string) string {
     function, file, line, _ := runtime.Caller(1)
     funcName := runtime.FuncForPC(function).Name()
-    funcName = chopPackageName(funcName)
+    funcName = removePackageName(funcName)
     log.Printf("%s:%d:%s: %s", file, line, funcName, msg)
     return ""
 }
@@ -645,7 +645,7 @@ func KTrace(msg string) string {
 func KUntrace(unused string) {
     function, file, line, _ := runtime.Caller(1)
     funcName := runtime.FuncForPC(function).Name()
-    funcName = chopPackageName(funcName)
+    funcName = removePackageName(funcName)
     log.Printf("%s:%d:%s: Exit", file, line, funcName)
 }
 
