@@ -105,6 +105,7 @@ var globalCLIContext = struct {
 	Anonymous      bool
 	Addr           string
 	StrictS3Compat bool
+        Trace          bool
 }{}
 
 var (

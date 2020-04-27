@@ -19,6 +19,7 @@ import (
 	"github.com/minio/minio/pkg/kinetic_proto"
 	"log" //"github.com/sirupsen/logrus"
 	"net"
+	"github.com/minio/minio/common"
 )
 
 //var mutexCmd = &sync.Mutex{}
@@ -61,7 +62,7 @@ type Client struct {
 }
 
 func (c *Client) Read(value []byte) (int, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
         //log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
 	runtime.GC()
 	//PrintMemUsage()
@@ -122,20 +123,20 @@ func (c *Client) Read(value []byte) (int, error) {
 
 
 func (c *Client) Write(p []byte, size int) (int, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	n, err := c.Put(string(c.Key), p, size, c.Opts)
 	return int(n), err
 }
 
 //Close: close socket
 func (c *Client) Close() {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	c.socket.Close()
 }
 
 //ComputeHMAC: 
 func ComputeHMAC(msg, HmacKey []byte) []byte {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	var msgSize uint32 = uint32(len(msg))
 	size := make([]byte, 4, 5)
 	binary.BigEndian.PutUint32(size[1:5], msgSize)
@@ -148,7 +149,7 @@ func ComputeHMAC(msg, HmacKey []byte) []byte {
 
 //Send: 
 func (c *Client) Send(msg *kinetic_proto.Message, value []byte, size int) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	if *msg.AuthType == kinetic_proto.Message_HMACAUTH {
 		khmac := ComputeHMAC(msg.CommandBytes, []byte(c.HmacKey))
 		messageHMACauth := &kinetic_proto.Message_HMACauth{
@@ -178,7 +179,7 @@ func (c *Client) Send(msg *kinetic_proto.Message, value []byte, size int) error 
 }
 
 func Read(socket net.Conn, buffer []byte, size uint32) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	var bytesRead uint32
 	var err error
 	for bytesRead < size {
@@ -197,7 +198,7 @@ func Read(socket net.Conn, buffer []byte, size uint32) error {
 }
 
 func Write(socket net.Conn, buffer []byte, size uint32) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	var bytesWritten uint32
 	var err error
 	for bytesWritten < size {
@@ -214,7 +215,7 @@ func Write(socket net.Conn, buffer []byte, size uint32) error {
 }
 
 func (c *Client) Connect(address string) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("Starting client...")
 	var err error
 	conn, err := net.Dial("tcp", address)
@@ -227,7 +228,7 @@ func (c *Client) Connect(address string) error {
 }
 
 func (c *Client) TLSConnect(address string) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println(" TLS connection")
 	var err error
 	cert, err := tls.LoadX509KeyPair("selfsigned.crt", "selfsigned.key")
@@ -251,7 +252,7 @@ func (c *Client) TLSConnect(address string) error {
 }
 
 func SetCmdInHeader(c *Client, header *kinetic_proto.Command_Header, cmdtype kinetic_proto.Command_MessageType, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//cmdHeader := &kinetic_proto.Command_Header{
 	//              ClusterVersion: 0,
 	//              ConnectionID: &c.ConnectionID,
@@ -301,7 +302,7 @@ func SetCmdInHeader(c *Client, header *kinetic_proto.Command_Header, cmdtype kin
 }
 
 func SetCmdKeyValue(kv *kinetic_proto.Command_KeyValue, key []byte, algorithm kinetic_proto.Command_Algorithm, sync kinetic_proto.Command_Synchronization) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	// Keep these comments:
 	//cmdKeyValue := &kinetic_proto.Command_KeyValue
 	//	NewVersion	[]byte
@@ -346,7 +347,7 @@ func SetCmdKeyValue(kv *kinetic_proto.Command_KeyValue, key []byte, algorithm ki
 }
 
 func SetCmdRange(rng *kinetic_proto.Command_Range, startKey string, endKey string, startKeyInclusive bool, endKeyInclusive bool, maxReturned uint32, reverse bool) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	rng.StartKey = []byte(startKey)
 	rng.EndKey = []byte(endKey)
 	rng.StartKeyInclusive = new(bool)
@@ -360,7 +361,7 @@ func SetCmdRange(rng *kinetic_proto.Command_Range, startKey string, endKey strin
 }
 
 func (c *Client) SetLockPin(oldpin, newpin []byte, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD SET LOCK PIN: ")
 	var err error
 	authType := kinetic_proto.Message_HMACAUTH
@@ -396,7 +397,7 @@ func (c *Client) SetLockPin(oldpin, newpin []byte, cmd Opts) error {
 }
 
 func (c *Client) SetErasePin(oldpin, newpin []byte, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD SET ERASE PIN: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -435,7 +436,7 @@ func (c *Client) SetErasePin(oldpin, newpin []byte, cmd Opts) error {
 }
 
 func (c *Client) StartBatch(cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD START BATCH: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -460,7 +461,7 @@ func (c *Client) StartBatch(cmd Opts) error {
 }
 
 func (c *Client) EndBatch(count uint32, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD END BATCH: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -492,7 +493,7 @@ func (c *Client) EndBatch(count uint32, cmd Opts) error {
 }
 
 func (c *Client) AbortBatch(cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD ABORT BATCH: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -517,7 +518,7 @@ func (c *Client) AbortBatch(cmd Opts) error {
 }
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	metaKey := "meta." + key
 	metaSize := MetaSize
 	return c.CGet(metaKey, metaSize, acmd)
@@ -526,7 +527,7 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
         //log.Println(" CALL CGET ", key, size)
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
@@ -556,7 +557,7 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 
 //Use this for Kinetic API 
 func (c *Client) Get(key string, value []byte, cmd Opts) (uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
         //log.Println(" NORMAL GET")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -598,7 +599,7 @@ func (c *Client) Get(key string, value []byte, cmd Opts) (uint32, error) {
 
 //CDelete: 
 func (c *Client) CDelete(key string, cmd Opts)  error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
         currentVersion := "1"
         cKey := C.CString(key)
 	var status C.int 
@@ -650,14 +651,14 @@ func (c *Client) Delete(key string, cmd Opts) error {
 }
 
 func (c *Client) CPutMeta(key string, value []byte, size int, cmd Opts) (uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	metaKey := "meta." + key
 	return c.CPut(metaKey, value, size, cmd)
 
 }
 
 func (c *Client) CPut(key string, value []byte, size int, cmd Opts) (uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//start := time.Now()
 	var psv C._CPrimaryStoreValue
 	psv.version = C.CString(string(cmd.NewVersion))
@@ -679,7 +680,7 @@ func (c *Client) CPut(key string, value []byte, size int, cmd Opts) (uint32, err
 
 
 func (c *Client) Put(key string, value []byte, size int, cmd Opts) (uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
         if SkinnyWaistIF {
 		return c.CPut(key, value, size, cmd)
 	}
@@ -725,7 +726,7 @@ func (c *Client) Put(key string, value []byte, size int, cmd Opts) (uint32, erro
 
 
 func (c *Client) PutB(key string, value []byte, size int, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD PUT BATCH: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -756,7 +757,7 @@ func (c *Client) PutB(key string, value []byte, size int, cmd Opts) error {
 }
 
 func (c *Client) GetNext(key string, value []byte, cmd Opts) (uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD GETNEXT: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -795,7 +796,7 @@ func (c *Client) GetNext(key string, value []byte, cmd Opts) (uint32, error) {
 
 // TODO: Use this to interface to Skinny Waist
 func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive bool, endKeyInclusive bool, maxReturned uint32, reverse bool, cmd Opts) ([][]byte, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	cStartKey := C.CString(startKey)
 	cEndKey := C.CString(endKey)
 	Keys  := make([]byte, 1024*1024)
@@ -818,7 +819,7 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 
 
 func (c *Client) GetKeyRange(startKey string, endKey string, startKeyInclusive bool, endKeyInclusive bool, maxReturned uint32, reverse bool, cmd Opts) ([][]byte, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("CMD GETKEYRANGE: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -853,7 +854,7 @@ func (c *Client) GetKeyRange(startKey string, endKey string, startKeyInclusive b
 }
 
 func (c *Client) GetLog(ltype []kinetic_proto.Command_GetLog_Type, value []byte, cmd Opts) (uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD GETLOG: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -901,7 +902,7 @@ func (c *Client) GetLog(ltype []kinetic_proto.Command_GetLog_Type, value []byte,
 }
 
 func (c *Client) NoOp(cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD NOOP: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -925,7 +926,7 @@ func (c *Client) NoOp(cmd Opts) error {
 
 func (c *Client) MediaScan(startkey, endkey []byte, startKeyInclusive,
 	endKeyInclusive bool, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD MEDIA SCAN: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -958,7 +959,7 @@ func (c *Client) MediaScan(startkey, endkey []byte, startKeyInclusive,
 }
 
 func (c *Client) MediaOptimize(cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD MEDIA OPTIMIZE: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -981,7 +982,7 @@ func (c *Client) MediaOptimize(cmd Opts) error {
 }
 
 func (c *Client) FlushAllData(cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD FLUSH ALL DATA: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -1004,7 +1005,7 @@ func (c *Client) FlushAllData(cmd Opts) error {
 }
 
 func (c *Client) UnlockPin(pin []byte, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD UNLOCK PIN: ")
 	authType := kinetic_proto.Message_PINAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -1042,7 +1043,7 @@ func (c *Client) UnlockPin(pin []byte, cmd Opts) error {
 }
 
 func (c *Client) LockPin(pin []byte, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD LOCK PIN: ")
 	authType := kinetic_proto.Message_PINAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -1075,7 +1076,7 @@ func (c *Client) LockPin(pin []byte, cmd Opts) error {
 }
 
 func (c *Client) ErasePin(pin []byte, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD ERASE PIN: ")
 	authType := kinetic_proto.Message_PINAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -1116,7 +1117,7 @@ func (c *Client) ErasePin(pin []byte, cmd Opts) error {
 }
 
 func (c *Client) InstantSecureErase(pin []byte, cmd Opts) error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD ERASE: ")
 	authType := kinetic_proto.Message_PINAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -1155,7 +1156,7 @@ func (c *Client) InstantSecureErase(pin []byte, cmd Opts) error {
 }
 
 func (c *Client) GetPrevious(key string, value []byte, cmd Opts) (uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\nCMD GETPREVIOUS: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
@@ -1201,7 +1202,7 @@ func (c *Client) GetPrevious(key string, value []byte, cmd Opts) (uint32, error)
 }
 
 func (c *Client) GetStatus() ([][]byte, uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("***GetStatus****")
 	message := &kinetic_proto.Message{}
 	valueSize, err := c.GetMessage(message)
@@ -1315,7 +1316,7 @@ func (c *Client) GetStatus() ([][]byte, uint32, error) {
 }
 
 func (c *Client) GetHeader() (uint32, uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	header := make([]byte, 9)
 	err := Read(c.socket, header, 9)
 	//log.Println(" READ HEADER")
@@ -1330,7 +1331,7 @@ func (c *Client) GetHeader() (uint32, uint32, error) {
 }
 
 func (c *Client) GetMessage(message *kinetic_proto.Message) (uint32, error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	// IGNORE CALCULATE HMAC TO MAKE SURE MESSAGE is OK
 	//log.Println(" GET HEADER")
 	messageSize, valueSize, err := c.GetHeader()
@@ -1354,7 +1355,7 @@ func (c *Client) GetMessage(message *kinetic_proto.Message) (uint32, error) {
 }
 
 func (c *Client) GetSignOnMessageFor() error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("GET SIGN ON MESSAGE")
 	message := &kinetic_proto.Message{}
 	_, err := c.GetMessage(message)
@@ -1391,7 +1392,7 @@ func (c *Client) GetSignOnMessageFor() error {
 }
 
 func (c *Client) GetSignOnMessage() error {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("\n SIGN ON MESSAGE: ")
 	messageSize, valueSize, err := c.GetHeader()
 	if err != nil {

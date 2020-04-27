@@ -34,12 +34,11 @@ import (
 
 	// Import gateway
 	_ "github.com/minio/minio/cmd/gateway"
-        "log"
+        "github.com/minio/minio/common"
 )
 
 func main() {
-        log.SetPrefix("=== S3-KINETICD: ")
-        log.SetFlags(log.Ldate | log.Lmicroseconds) // | log.Llongfile)
-        defer minio.KUntrace(minio.KTrace("Enter"))
-	minio.Main(os.Args)
+    common.EnableTrace()
+    defer common.KUntrace(common.KTrace("Enter"))
+    minio.Main(os.Args)
 }

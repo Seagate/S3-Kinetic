@@ -25,6 +25,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"github.com/minio/minio/common"
 	//"time"
 	"github.com/minio/cli"
 	"github.com/minio/minio/cmd/config"
@@ -89,13 +90,13 @@ EXAMPLES:
 // Checks if endpoints are either available through environment
 // or command line, returns false if both fails.
 func endpointsPresent(ctx *cli.Context) bool {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	endpoints := env.Get(config.EnvEndpoints, strings.Join(ctx.Args(), config.ValueSeparator))
 	return len(endpoints) != 0
 }
 
 func serverHandleCmdArgs(ctx *cli.Context) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	// Handle common command args.
 	handleCommonCmdArgs(ctx)
 
@@ -130,13 +131,13 @@ func serverHandleCmdArgs(ctx *cli.Context) {
 }
 
 func serverHandleEnvVars() {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	// Handle common environment variables.
 	handleCommonEnvVars()
 }
 
 func newAllSubsystems() {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	// Create new notification system and initialize notification targets
 	globalNotificationSys = NewNotificationSys(globalEndpoints)
 
@@ -157,7 +158,7 @@ func newAllSubsystems() {
 }
 
 func initSafeMode(buckets []BucketInfo) (err error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	newObject := newObjectLayerWithoutSafeModeFn()
 
 	// Construct path to config/transaction.lock for locking
@@ -243,7 +244,7 @@ func initSafeMode(buckets []BucketInfo) (err error) {
 }
 
 func initAllSubsystems(buckets []BucketInfo, newObject ObjectLayer) (err error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	// Initialize config system.
 	fmt.Println("INIT ALL SUB SYSTEMS")
 	if err = globalConfigSys.Init(newObject); err != nil {
@@ -293,7 +294,7 @@ func initAllSubsystems(buckets []BucketInfo, newObject ObjectLayer) (err error) 
 
 // serverMain handler called for 'minio server' command.
 func serverMain(ctx *cli.Context) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	if ctx.Args().First() == "help" || !endpointsPresent(ctx) {
 		cli.ShowCommandHelpAndExit(ctx, "server", 1)
 	}
@@ -413,11 +414,8 @@ func serverMain(ctx *cli.Context) {
 		initGlobalHeal()
 	}
 
-        KTrace("Calling ListBuckets()")
 	buckets, err := newObject.ListBuckets(context.Background())
-        KTrace("Return from ListBuckets()")
 	if err != nil {
-            KTrace("Error")
 		logger.Fatal(err, "Unable to list buckets")
 	}
 
@@ -464,7 +462,7 @@ func serverMain(ctx *cli.Context) {
 
 // Initialize object layer with the supplied disks, objectLayer is nil upon any error.
 func newObjectLayer(endpointZones EndpointZones) (newObject ObjectLayer, err error) {
-        defer KUntrace(KTrace("Enter"))
+        defer common.KUntrace(common.KTrace("Enter"))
 	// For FS only, directly use the disk.
 
 	if endpointZones.Nodes() == 1 {
