@@ -49,7 +49,8 @@ void CInitMain(int argc, char* argv[]) {
 		   };
     printf(" AFTER ARRV %s %s %s %s\n", argvv[0], argvv[1], argvv[2], argvv[3]);
 */
-    for (int i=0; i < argc; i++) {
+    int i = 0;
+    for (i=0; i < argc; i++) {
         printf(" ARGV[%d] %s\n", i, argv[i]);
     }
     InitMain(argc, argv);
