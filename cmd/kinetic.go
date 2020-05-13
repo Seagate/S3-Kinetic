@@ -91,11 +91,33 @@ func PrintMemUsage() {
 	log.Println("PauseTotal(ms): ", m.PauseTotalNs/1000000)
 }
 
-func InitKineticd(storePartition []byte) {
-        var cPtr *C.char
-        cPtr = (*C.char)(unsafe.Pointer(&storePartition[0]))
+//func InitKineticd(storePartition []byte) {
+func InitKineticd(argv []string) {
 
-	go C.CInitMain(cPtr)
+	log.Println("LEN OF ARGS ", len(argv))
+        argc := C.int(len(argv))
+        //var cPtr *C.char
+        //Up to 10 arguments
+/*        var argv [10]*C.char //= make([]*C.char,0,10)
+        for i, v := range args {
+            log.Println(" Argv ", i, " ", v)
+            //argv.append(argv, (*C.char)(unsafe.Pointer(&v)))
+	    argv[i] = (*C.char)(unsafe.Pointer(&v))
+            log.Println(" Argv ", argv[i])
+        }
+        
+*/
+
+    //argv := os.Args
+    c_argv := (*[0xfff]*C.char)(C.allocArgv(argc))
+    defer C.free(unsafe.Pointer(c_argv))
+
+    for i, arg := range argv {
+        c_argv[i] = C.CString(arg)
+        defer C.free(unsafe.Pointer(c_argv[i]))
+    }
+    C.printArgs(argc,(**C.char)(unsafe.Pointer(c_argv)))
+	go C.CInitMain(argc, (**C.char)(unsafe.Pointer(c_argv)))
         time.Sleep(5 * time.Second)
 }
 
@@ -271,8 +293,8 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	var err error = nil
 	if IP[:6] == "skinny" {
 		SkinnyWaistIF =  true
-		storePartition := []byte(IP[7:])
-		InitKineticd(storePartition)
+		//storePartition := []byte(IP[7:])
+		//InitKineticd(storePartition)
 	}
 	if err != nil {
 		return nil, err

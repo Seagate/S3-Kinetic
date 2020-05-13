@@ -18,9 +18,10 @@
 
 extern void* InitMain(int argc, char* argv[]);
 
-void CInitMain(char* store_partition) {
-    printf(" IN CINITMAIN\n");
-    int argcc = 4;
+//void CInitMain(char* store_partition) {
+void CInitMain(int argc, char* argv[]) {
+    printf(" IN CINITMAIN %s\n");
+/*    int argcc = 4;
     int i = 0;
     char dev[4];
     for (i = 0; i< 4;  i++) {
@@ -47,7 +48,11 @@ void CInitMain(char* store_partition) {
 		    NULL
 		   };
     printf(" AFTER ARRV %s %s %s %s\n", argvv[0], argvv[1], argvv[2], argvv[3]);
-    InitMain(argcc, argvv);
+*/
+    for (int i=0; i < argc; i++) {
+        printf(" ARGV[%d] %s\n", i, argv[i]);
+    }
+    InitMain(argc, argv);
 }
 
 //For stand alone kineticd, uncomment the lines below.
