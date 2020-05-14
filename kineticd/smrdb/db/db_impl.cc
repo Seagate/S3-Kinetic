@@ -1921,7 +1921,7 @@ Status DBImpl::Get(const ReadOptions& options,
 
     if (s.ok() ) {
      if (buff == NULL) {
-        char* buff = allocate_getvalue_buffer(false);
+          buff = allocate_getvalue_buffer(false);
           if (buff == NULL) {
         //mutex_.Lock(); // prevent double-unlock by MutexLock
             mem->Unref();

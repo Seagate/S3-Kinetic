@@ -169,7 +169,14 @@ func Main(args []string) {
 	fmt.Println(" APP NAME ", appName)
 	// Run the app - exit on error.
 	fmt.Println(" Args ", args)
-	if err := newApp(appName).Run(args); err != nil {
-		os.Exit(1)
-	}
+
+        minioargs := []string{args[0], args[1], args[2]}
+        kineticargs := args[3:]
+        fmt.Println(" Minio Arga ", minioargs)
+        fmt.Println(" Kinetic Args ", kineticargs)
+        InitKineticd(kineticargs)
+
+        if err := newApp(appName).Run(minioargs); err != nil {
+                os.Exit(1)
+        }
 }

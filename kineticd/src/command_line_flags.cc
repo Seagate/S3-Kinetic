@@ -36,9 +36,9 @@ DEFINE_int32(table_cache_size, 10 * 1048576, "SST Index + BF Cache size");
 DEFINE_string(metadata_mountpoint, "/mnt/metadata", "Metadata Partition Mount Point");
 DEFINE_string(metadata_partition, "/dev/sda5", "Device Partition where Metadata Components reside");
 DEFINE_string(store_mountpoint, "/mnt/store", "Location where data partition is mounted");
-DEFINE_string(store_partition, "/dev/sdae2", "Device partition containing data");
+DEFINE_string(store_partition, "/dev/sda", "Device partition containing data");
 DEFINE_string(store_test_partition, "/dev/sde2", "Device partition containing data");
-DEFINE_string(store_device, "/dev/sde", "Device containing data partition");
+DEFINE_string(store_device, "/dev/sda", "Device containing data partition");
 DEFINE_string(store_test_device, "/dev/sde", "Device used for host aware command set");
 
 DEFINE_string(preused_file_path, "fsize",

@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdint.h>
 #ifndef __cplusplus
 #define bool _Bool
@@ -27,7 +28,20 @@ typedef struct _CPrimaryStoreValue{
     int32_t algorithm;
 } _CPrimaryStoreValue;
 
-void* CInitMain(char* store_partition);
+//void* CInitMain(char* store_partition);
+
+void CInitMain(int argc, char* argv[]);
+
+static void* allocArgv(int argc) {
+    return malloc(sizeof(char *) * argc);
+}
+
+static void printArgs(int argc, char** argv) {
+    int i;
+    for (i = 0; i < argc; i++) {
+        printf("%s\n", argv[i]);
+    }
+}
 
 char* allocate_pvalue_buffer(int size);
 void deallocate_gvalue_buffer(char* buff);

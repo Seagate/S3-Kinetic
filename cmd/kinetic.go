@@ -58,7 +58,7 @@ import (
 )
 
 var numberOfKinConns int = 2 
-var maxQueue int = 10
+var maxQueue int = 40
 
 type KConnsPool struct {
 	kcs		map[int]*Client
@@ -93,13 +93,19 @@ func PrintMemUsage() {
 	log.Println("PauseTotal(ms): ", m.PauseTotalNs/1000000)
 }
 
-func InitKineticd(storePartition []byte) {
+func InitKineticd(argv []string) {
         defer common.KUntrace(common.KTrace("Enter"))
-        var cPtr *C.char
-        cPtr = (*C.char)(unsafe.Pointer(&storePartition[0]))
 
-	go C.CInitMain(cPtr)
-       time.Sleep(5 * time.Second)
+	log.Println("LEN OF ARGS ", len(argv))
+        argc := C.int(len(argv))
+	c_argv := (*[0xfff]*C.char)(C.allocArgv(argc))
+	defer C.free(unsafe.Pointer(c_argv))
+	for i, arg := range argv {
+            c_argv[i] = C.CString(arg)
+            defer C.free(unsafe.Pointer(c_argv[i]))
+        }
+	go C.CInitMain(argc, (**C.char)(unsafe.Pointer(c_argv)))
+        time.Sleep(5 * time.Second)
 }
 
 func InitKineticConnection(IP string, tls bool, kc *Client) error {
@@ -280,8 +286,8 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 	var err error = nil
 	if IP[:6] == "skinny" {
 		SkinnyWaistIF =  true
-		storePartition := []byte(IP[7:])
-		InitKineticd(storePartition)
+		//storePartition := []byte(IP[7:])
+		//InitKineticd(storePartition)
 	}
 	if err != nil {
 		return nil, err

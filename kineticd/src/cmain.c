@@ -18,42 +18,19 @@
 
 extern void* InitMain(int argc, char* argv[]);
 
-void CInitMain(char* store_partition) {
-    printf(" IN CINITMAIN\n");
-    int argcc = 4;
+void CInitMain(int argc, char* argv[]) {
+    printf(" IN CINITMAIN \n");
     int i = 0;
-    char dev[4];
-    for (i = 0; i< 4;  i++) {
-	if (store_partition[i] ==  0x00) {
-		break;
-	}
-	if (i == 3) {
-	   dev[i] = '\0';
-	   break;
-	} else {
-	   dev[i] = store_partition[i];
-	}
+    for (i=0; i < argc; i++) {
+        printf(" ARGV[%d] %s\n", i, argv[i]);
     }
-    char store_part[50] = "--store_partition=/dev/";
-    char store_dev[50] = "--store_device=/dev/";
-    char *argvv[] = {(char*)"./minio",
-		    strcat(store_part, store_partition),
-#ifdef PRODUCT_X86
-		    strcat(store_dev, dev),
-#else
-		    strcat(store_dev, store_partition),
-#endif
-		    (char*)"--metadata_db_path=./metadata.db",
-		    NULL
-		   };
-    printf(" AFTER ARRV %s %s %s %s\n", argvv[0], argvv[1], argvv[2], argvv[3]);
-    InitMain(argcc, argvv);
+    InitMain(argc, argv);
 }
 
 //For stand alone kineticd, uncomment the lines below.
 /*
 int main(int argc, char* argv[]) {
-    CInitMain(argv[1]);
+    CInitMain(argcm argv[]);
     return 0;
 }
 */
