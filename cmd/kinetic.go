@@ -57,7 +57,7 @@ import (
 )
 
 var numberOfKinConns int = 2 
-var maxQueue int = 10
+var maxQueue int = 40
 
 type KConnsPool struct {
 	kcs		map[int]*Client
