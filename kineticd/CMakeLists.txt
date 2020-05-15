@@ -275,6 +275,7 @@ set(LIBRARY_DEPENDENCIES
     ${CMAKE_ARCH_LIB_PATH}/lib/libprotobuf.a
     ${CMAKE_ARCH_LIB_PATH}/lib/libgflags.a
     ${CMAKE_THREAD_LIBS_INIT}
+    unwind
     dl
     ${RT_LIBRARY}
 )
