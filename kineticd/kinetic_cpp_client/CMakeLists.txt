@@ -124,7 +124,6 @@ set(LIBRARY_DEPENDENCIES
     ${CMAKE_ARCH_LIB_PATH}/lib/libgtest.a
     ${CMAKE_ARCH_LIB_PATH}/lib/libgmock.a
     ${CMAKE_THREAD_LIBS_INIT}
-    unwind
     dl
 )
 

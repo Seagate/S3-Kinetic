@@ -275,7 +275,6 @@ set(LIBRARY_DEPENDENCIES
     ${CMAKE_ARCH_LIB_PATH}/lib/libprotobuf.a
     ${CMAKE_ARCH_LIB_PATH}/lib/libgflags.a
     ${CMAKE_THREAD_LIBS_INIT}
-    unwind
     dl
     ${RT_LIBRARY}
 )
@@ -333,7 +332,7 @@ add_library(kinetic
     src/std_map_key_value_store.cc
     src/user.cc
     src/user_store.cc
-#    src/value_factory_${ARCH_SUFFIX}.cc
+    #src/value_factory_${ARCH_SUFFIX}.cc
     src/value_factory_x86.cc
     src/log_ring_buffer.cc
     src/ring_buffer_log_sink.cc

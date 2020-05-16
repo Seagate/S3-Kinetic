@@ -18,7 +18,8 @@ package cmd
 
 import (
 // #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
-// #cgo LDFLAGS: libkinetic.a kernel_mem_mgr.a libssl.a libcrypto.a libglog.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a lldp_kin.a  libprotobuf.a libgflags.a  libgflags_nothreads.a libprotoc.a libksapi.a libpbkdf.a libapi.a libtransports.a  libseapubcmds.a libapi.a -lpthread -ldl -lrt 
+// #cgo LDFLAGS: libkinetic.a libseapubcmds.a kernel_mem_mgr.a libssl.a libcrypto.a libgmock.a libgtest.a libsmrenv.a libleveldb.a libmemenv.a libkinetic_client.a zac_kin.a libprotobuf.a libgflags.a -lpthread -ldl -lrt libglog.a
+
 // #include "minio_skinny_waist.h"
         "C"
         "unsafe"
