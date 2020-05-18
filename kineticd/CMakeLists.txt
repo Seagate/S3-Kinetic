@@ -42,17 +42,10 @@ if(PRODUCT STREQUAL "LAMARRKV_LP")
   set(LEGACY_COMPILER_SETTINGS OFF)
 endif()
 
-if(PRODUCT STREQUAL "X86NONSMR")
-  message(STATUS "Building for X86NONSMR")
-  SET(PLATFORM_PREPROCESSOR_DEFINE "-DPRODUCT_X86 -DNONSMR")
-  add_definitions(-DPRODUCT_X86 -DNONSMR)
-  set(BUILD_FOR_ARM OFF)
-endif()
 
-if(PRODUCT STREQUAL "X86SMR")
-  message(STATUS "Building for X86SMR")
-  SET(PLATFORM_PREPROCESSOR_DEFINE "-DPRODUCT_X86 -DSMR")
-  add_definitions(-DPRODUCT_X86 -DSMR)
+if(PRODUCT STREQUAL "X86")
+  message(STATUS "Building for X86")
+  add_definitions(-DPRODUCT_X86)
   set(BUILD_FOR_ARM OFF)
 endif()
 
@@ -67,9 +60,8 @@ if(NOT ${BUILD_FOR_ARM})
     set(CMAKE_C_COMPILER "gcc")
     set(CMAKE_CXX_COMPILER "g++")
     set(NO_UNUSED_LOCAL_TYPEDEFS "-Wno-unused-local-typedefs")
-    set(PLATFORM_PREPROCESSOR_DEFINE "${PLATFORM_PREPROCESSOR_DEFINE} -DBUILD_FOR_ARM=0")
+    set(PLATFORM_PREPROCESSOR_DEFINE "-DBUILD_FOR_ARM=0")
     message("Build set for x86")
-    message("${PLATFORM_PREPROCESSOR_DEFINE}")
 else(NOT ${BUILD_FOR_ARM})
     set(FILE_SUFFIX "arm")
     if(${BUILD_FOR_ARM64})
@@ -156,7 +148,7 @@ ExternalProject_add(
 
 ExternalProject_Add_Step(
     leveldb real_build
-    COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/smrdb && make clean libleveldb.a libsmrenv.a libmemenv.a CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DIR=${CMAKE_CURRENT_SOURCE_DIR}/ha_zac_cmds/includes LIBS=${CMAKE_CURRENT_SOURCE_DIR}/ha_zac_cmds/zac_kin.a KMEM=${CMAKE_CURRENT_SOURCE_DIR}/kmem PP_DEFS=${PLATFORM_PREPROCESSOR_DEFINE}
+    COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/smrdb && make clean libleveldb.a libsmrenv.a libmemenv.a CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER} DIR=${CMAKE_CURRENT_SOURCE_DIR}/ha_zac_cmds/includes LIBS=${CMAKE_CURRENT_SOURCE_DIR}/ha_zac_cmds/zac_kin.a KMEM=${CMAKE_CURRENT_SOURCE_DIR}/kmem
     COMMENT "Building leveldb and smrdb"
     DEPENDEES build
     ALWAYS 1
@@ -170,7 +162,6 @@ ExternalProject_add(
     INSTALL_COMMAND ""
 )
 
-if(${BUILD_FOR_ARM})
 ExternalProject_Add_Step(
     k_api real_build
     COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/K_api && make kclean kinetic CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER}
@@ -178,15 +169,6 @@ ExternalProject_Add_Step(
     DEPENDEES build
     ALWAYS 1
 )
-else(${BUILD_FOR_ARM})
-ExternalProject_Add_Step(
-    k_api real_build
-    COMMAND cd ${CMAKE_CURRENT_SOURCE_DIR}/K_api && make xkclean xkinetic CC=${CMAKE_C_COMPILER} CXX=${CMAKE_CXX_COMPILER}
-    COMMENT "Building xK_api"
-    DEPENDEES build
-    ALWAYS 1
-)
-endif(${BUILD_FOR_ARM})
 
 ExternalProject_add(
     ha_cmd
@@ -279,7 +261,6 @@ set(LIBRARY_DEPENDENCIES
     ${RT_LIBRARY}
 )
 
-if(${BUILD_FOR_ARM})
 set(SECURITY_DEPENDENCIES
     #Security API libraries
     ${CMAKE_CURRENT_SOURCE_DIR}/K_api/Kinetic_Security/api/libksapi.a
@@ -290,7 +271,6 @@ set(SECURITY_DEPENDENCIES
     ${CMAKE_CURRENT_SOURCE_DIR}/K_api/tcg_api/api/libapi.a
     #end Security API library list
 )
-endif(${BUILD_FOR_ARM})
 
 add_library(kinetic
     jsoncpp/jsoncpp.cpp
@@ -315,7 +295,6 @@ add_library(kinetic
     src/key_value_store_interface.cc
     src/kinetic.pb.cc
     src/key_value_store.cc
-    src/minio_skinny_waist.cc
     src/message_processor.cc
     src/openssl_initialization.cc
     src/outgoing_value.cc
@@ -332,7 +311,7 @@ add_library(kinetic
     src/std_map_key_value_store.cc
     src/user.cc
     src/user_store.cc
-    #src/value_factory_${ARCH_SUFFIX}.cc
+#    src/value_factory_${ARCH_SUFFIX}.cc
     src/value_factory_x86.cc
     src/log_ring_buffer.cc
     src/ring_buffer_log_sink.cc
@@ -390,8 +369,6 @@ add_library(kinetic
     src/PriorityRequestQueue.cc
     src/CommandValidator.cc
     src/common/event/EventService.cc
-    src/kineticd.cc
-    src/cmain.c
 )
 
 add_dependencies(kinetic
@@ -407,8 +384,8 @@ add_dependencies(kinetic
 add_custom_target(Version ALL
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/generate_version_info.sh ${KINETIC_PROTO_VERSION} ${KINETIC_PROTO_GIT_HASH})
 
-#add_executable(kineticd src/cmain.c)
-#store_build_products_in_working_dir(kineticd)
+add_executable(kineticd src/kineticd.cc)
+store_build_products_in_working_dir(kineticd)
 
 add_executable(manifest_stress src/manifest_stress.cc)
 store_build_products_in_working_dir(manifest_stress)
@@ -480,16 +457,15 @@ add_executable(${TEST_BINARY}
     src/smrdb_write_batch_test.cc
 )
 store_build_products_in_working_dir(${TEST_BINARY})
-target_link_libraries(${TEST_BINARY} kinetic ${LIBRARY_DEPENDENCIES})
+target_link_libraries(${TEST_BINARY} kinetic ${LIBRARY_DEPENDENCIES} ${SECURITY_DEPENDENCIES})
 endif(NOT ${BUILD_FOR_ARM})
 
-#target_link_libraries(kineticd kinetic ${LIBRARY_DEPENDENCIES})
+target_link_libraries(kineticd kinetic ${LIBRARY_DEPENDENCIES} ${SECURITY_DEPENDENCIES})
 target_link_libraries(manifest_stress kinetic ${LIBRARY_DEPENDENCIES} ${LIBRARY_DEPENDENCIES})
 target_link_libraries(zac_ha_exercise_drive kinetic ${LIBRARY_DEPENDENCIES})
 target_link_libraries(bond_manager kinetic ${LIBRARY_DEPENDENCIES})
 
 if(${BUILD_FOR_ARM})
-#target_link_libraries(kineticd kinetic ${SECURITY_DEPENDENCIES})
 target_link_libraries(manifest_stress kinetic ${SECURITY_DEPENDENCIES})
 target_link_libraries(zac_ha_exercise_drive kinetic ${LIBRARY_DEPENDENCIES})
 target_link_libraries(bond_manager kinetic ${LIBRARY_DEPENDENCIES})

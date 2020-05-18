@@ -37,9 +37,9 @@ DEFINE_string(metadata_mountpoint, "/mnt/metadata", "Metadata Partition Mount Po
 DEFINE_string(metadata_partition, "/dev/sda5", "Device Partition where Metadata Components reside");
 DEFINE_string(store_mountpoint, "/mnt/store", "Location where data partition is mounted");
 DEFINE_string(store_partition, "/dev/sda", "Device partition containing data");
-DEFINE_string(store_test_partition, "/dev/sde2", "Device partition containing data");
+DEFINE_string(store_test_partition, "/dev/sdb1", "Device partition containing data");
 DEFINE_string(store_device, "/dev/sda", "Device containing data partition");
-DEFINE_string(store_test_device, "/dev/sde", "Device used for host aware command set");
+DEFINE_string(store_test_device, "/dev/sdb", "Device used for host aware command set");
 
 DEFINE_string(preused_file_path, "fsize",
     "File used to store the amount of preused space");

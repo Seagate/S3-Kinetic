@@ -22,8 +22,10 @@
 #include "command_line_flags.h"
 #include "instant_secure_eraser.h"
 #include "smrdisk/Disk.h"
+#include "drive_info.h"
 
 using namespace com::seagate::kinetic::proto; //NOLINT
+using com::seagate::kinetic::STATIC_DRIVE_INFO;
 
 namespace com {
 namespace seagate {
@@ -35,6 +37,7 @@ using ::testing::_;
 using ::testing::Return;
 using ::testing::SetArgPointee;
 using ::testing::NiceMock;
+STATIC_DRIVE_INFO static_drive_info_;
 
 class MessageProcessorTest : public ::testing::Test {
     protected:
@@ -78,7 +81,7 @@ class MessageProcessorTest : public ::testing::Test {
         security_handler_(),
         setup_handler_(authorizer_, skinny_waist_, mock_cluster_version_store_,
             "/tmp", security_handler_, device_information_),
-        pinop_handler_(skinny_waist_, FLAGS_metadata_mountpoint, FLAGS_metadata_partition),
+        pinop_handler_(skinny_waist_, FLAGS_metadata_mountpoint, FLAGS_metadata_partition, static_drive_info_),
         power_manager_(skinny_waist_, FLAGS_store_test_partition),
         message_processor_(authorizer_,
                 skinny_waist_,
@@ -92,6 +95,7 @@ class MessageProcessorTest : public ::testing::Test {
                 pinop_handler_,
                 power_manager_,
                 limits_,
+                static_drive_info_,
                 user_store_),
         mock_skinny_waist_(),
         message_processor_with_mocks_(
@@ -107,6 +111,7 @@ class MessageProcessorTest : public ::testing::Test {
                 pinop_handler_,
                 power_manager_,
                 limits_,
+                static_drive_info_,
                 user_store_),
         empty_value_("") {}
 
@@ -1924,7 +1929,7 @@ TEST_F(MessageProcessorTest, GetReturnsFailureIfUserUnauthorized) {
     message.set_commandbytes(serialized_command);
     SetUserAndHmac(&message);
 
-    EXPECT_CALL(mock_skinny_waist_, Get(42, "key", _, _, _, _))
+    EXPECT_CALL(mock_skinny_waist_, Get(42, "key", _, _, _))
         .WillOnce(Return(StoreOperationStatus_AUTHORIZATION_FAILURE));
     Command command_response;
     NullableOutgoingValue response_value;
@@ -2084,7 +2089,7 @@ TEST_F(MessageProcessorTest, GetReturnsDetailedErrorForCorruption) {
     message.set_commandbytes(serialized_command);
     SetUserAndHmac(&message);
 
-    EXPECT_CALL(mock_skinny_waist_, Get(42, "key", _, _, _, _))
+    EXPECT_CALL(mock_skinny_waist_, Get(42, "key", _, _, _))
                 .WillOnce(Return(StoreOperationStatus_STORE_CORRUPT));
 
     Command command_response;

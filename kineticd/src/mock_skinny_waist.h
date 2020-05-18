@@ -14,13 +14,12 @@ class MockSkinnyWaist : public SkinnyWaistInterface {
     public:
     MockSkinnyWaist() {}
     bool CloseDB() {return true;}
-    MOCK_METHOD6(Get, StoreOperationStatus(
+    MOCK_METHOD5(Get, StoreOperationStatus(
         int64_t user_id,
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
         RequestContext& request_context,
-        NullableOutgoingValue *value,
-	char* bvalue));
+        NullableOutgoingValue *value));
     MOCK_METHOD4(GetVersion, StoreOperationStatus(
         int64_t user_id,
         const std::string& key,

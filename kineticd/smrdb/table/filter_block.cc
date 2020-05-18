@@ -30,7 +30,7 @@ FilterBlockBuilder::~FilterBlockBuilder() {
 FilterBlockBuilder::FilterBlockBuilder(const FilterPolicy* policy)
     : policy_(policy) {
   keys_ = NULL;
-  int s = posix_memalign((void**)&keys_, 4096, ALIGNED_MEM_SIZE_1M);
+  int s = posix_memalign((void**)&keys_, 4096, ALIGNED_MEM_SIZE);
   if (keys_ == NULL || s != 0) {
       stringstream ss;
       ss << __FILE__ << ":" << __LINE__ << ":" << __func__

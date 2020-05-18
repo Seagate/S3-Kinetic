@@ -10,11 +10,11 @@ extern "C" {
 
 using std::string;
 
-
 namespace com {
 namespace seagate {
 namespace kinetic {
-
+// 34 sectors are needed for MBR, primary GPT header, partition entries
+#define FIRST_POSSIBLE_NON_SED_PIN_INFO_SECTOR 34
 
 typedef struct _STATIC_DRIVE_INFO {
     // drive descriptions and revisions
@@ -34,6 +34,7 @@ typedef struct _STATIC_DRIVE_INFO {
     int logical_sectors_per_physical_sector;
     uint64_t drive_capacity_in_bytes;
     uint64_t sectors_read_at_poweron;
+    uint64_t non_sed_pin_info_sector_num;
 } STATIC_DRIVE_INFO;
 
 int populate_identify_info(DEVICE* device, STATIC_DRIVE_INFO* sdinfo);

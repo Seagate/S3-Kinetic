@@ -21,6 +21,7 @@
 #include "limits.h"
 #include "request_context.h"
 #include "security_manager.h"
+#include "drive_info.h"
 
 namespace com {
 namespace seagate {
@@ -28,6 +29,7 @@ namespace kinetic {
 
 using proto::Command_MessageType;
 using proto::Command_Security_ACL_Scope;
+using com::seagate::kinetic::STATIC_DRIVE_INFO;
 
 class MessageProcessor : public MessageProcessorInterface {
     public:
@@ -44,6 +46,7 @@ class MessageProcessor : public MessageProcessorInterface {
         PinOpHandler& pinop_handler,
         PowerManager& power_manager,
         Limits& limits,
+        STATIC_DRIVE_INFO static_drive_info,
         UserStoreInterface& user_store);
     ~MessageProcessor();
      void ProcessMessage(ConnectionRequestResponse& reqResp,
@@ -102,6 +105,7 @@ class MessageProcessor : public MessageProcessorInterface {
     PowerManager& power_manager_;
 
     Limits& limits_;
+    STATIC_DRIVE_INFO static_drive_info_;
 
     UserStoreInterface& user_store_;
 

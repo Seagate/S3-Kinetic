@@ -6,7 +6,6 @@
  */
 
 
-#include "../../src/product_flags.h"
 #include "Disk.h"
 
 #include <iostream>
@@ -759,7 +758,6 @@ bool Disk::zoneUsageLogBuilder(std::string &usage_str) {
     return true;
 }
 
-
 Zone* Disk::allocateZone(FileType type) {
     MutexLock l(mu_);
     uint64_t lba = 0;
@@ -771,16 +769,6 @@ Zone* Disk::allocateZone(FileType type) {
         Status::IOError(ss.str());
         return NULL;
     }
-//Assume that the drive is not SMR
-//We should define another product like X86_SMR
-#ifdef NONSMR
-    //cout << "**** NONSMR ****" << endl;
-    setUsedZone(band);
-    zone = new Zone(band);
-    return zone;
-}
-#else
-    //cout << "**** SMR ****" << endl;
     int status = zac_kin_->AllocateZone(band, &lba);
     if (status != 0) {
         stringstream ss;
@@ -803,7 +791,7 @@ Zone* Disk::allocateZone(FileType type) {
     }
     return zone;
 }
-#endif //NONSMR
+
 }  // namespace smr
 //}  // namespace leveldb
 

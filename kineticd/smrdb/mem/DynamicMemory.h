@@ -16,9 +16,7 @@
 using namespace leveldb;
 using namespace leveldb::port;
 using namespace com::seagate::common;
-#define ALIGNED_MEM_SIZE_1M  1*1024*1024
-#define ALIGNED_MEM_SIZE_5M  5*1024*1024
-
+#define ALIGNED_MEM_SIZE  1024*1024
 
 enum class MEMORYType : uint8_t {
   MEM_FOR_CLIENT,         // for clients.

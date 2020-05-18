@@ -29,7 +29,6 @@
 #include "lldp_announcer.h"
 #include "connection_handler.h"
 #include "stack_trace.h"
-#include <sys/un.h>
 
 using com::seagate::kinetic::announcer::AnnouncerController;
 using std:: string;

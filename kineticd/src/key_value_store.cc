@@ -181,12 +181,12 @@ void KeyValueStore::BGSchedule() {
 }
 
 StoreOperationStatus KeyValueStore::Get(const std::string& key, char* value, bool ignore_value,
-    bool using_bloom_filter, char* buff) {
+    bool using_bloom_filter) {
     if (db_corrupt_) {
         return StoreOperationStatus_STORE_CORRUPT;
     }
     return TranslateStatus(db_->Get(leveldb::ReadOptions(), key, value, ignore_value,
-                                     using_bloom_filter, buff));
+                                     using_bloom_filter));
 }
 StoreOperationStatus KeyValueStore::Write(const WriteOptions& options, WriteBatch* updates, KineticMemory* memory) {
     return TranslateStatus(db_->Write(options, updates, memory));

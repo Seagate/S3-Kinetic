@@ -59,7 +59,7 @@ class DBImpl : public DB {
   virtual Status Get(const ReadOptions& options,
                      const Slice& key,
                      char* value, bool ignore_value,
-		             bool using_bloom_filter, char* buff);
+		             bool using_bloom_filter);
   Status PutByInternal(const WriteOptions& option, const Slice& sInternalKey, const Slice& value);
 
   virtual Iterator* NewIterator(const ReadOptions&);

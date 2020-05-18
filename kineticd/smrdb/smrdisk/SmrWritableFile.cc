@@ -159,7 +159,7 @@ Status SmrWritableFile::MapNewRegion() {
 
     uint64_t regionStartAddr = ROUNDUP(segAddr + segSize, 4096);
     uint64_t regionBoundAddr;
-    regionBoundAddr = regionStartAddr + 5*1024*1024;
+    regionBoundAddr = regionStartAddr + 1024*1024;
     uint64_t zoneBoundAddr = TRUNCATE(regionStartAddr + Zone::ZONE_SIZE, Zone::ZONE_SIZE);
     regionBoundAddr = min(regionBoundAddr, zoneBoundAddr);
     available_ = regionBoundAddr - regionStartAddr;

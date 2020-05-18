@@ -30,10 +30,12 @@ using com::seagate::kinetic::PinIndex;
 PinOpHandler::PinOpHandler(SkinnyWaistInterface& skinny_waist,
                            const string mountpoint,
                            const string partition,
+                           STATIC_DRIVE_INFO static_drive_info,
                            bool remount_x86)
                            :skinny_waist_(skinny_waist),
                            mount_point_(mountpoint),
                            partition_(partition),
+                           static_drive_info_(static_drive_info),
                            remount_x86_(remount_x86) {
     server_ = NULL;
     connHandler_ = NULL;
@@ -163,6 +165,26 @@ void PinOpHandler::ProcessRequest(const proto::Command &command,
         if (success) {
             sed_status = PinStatus::PIN_SUCCESS;
             server_->StateChanged(StateEvent::RESTORED, success);
+            //If the drive is non-sed, set the erase pin to "" on erase cmd
+            if (!static_drive_info_.supports_SED) {
+                switch (sed_manager.SetPin(
+                    "",
+                    pin_auth.pin(),
+                    PinIndex::ERASEPIN,
+                    static_drive_info_.drive_sn,
+                    static_drive_info_.supports_SED,
+                    static_drive_info_.sector_size,
+                    static_drive_info_.non_sed_pin_info_sector_num)) {
+                    case PinStatus::PIN_SUCCESS:
+                        break;
+                    case PinStatus::AUTH_FAILURE:
+                        sed_status = PinStatus::AUTH_FAILURE;
+                        break;
+                    default:
+                        sed_status = PinStatus::INTERNAL_ERROR;
+                        break;
+                }
+            }
         } else if (status == StoreOperationStatus_AUTHORIZATION_FAILURE) {
             sed_status = PinStatus::AUTH_FAILURE;
             server_->StateChanged(StateEvent::RESTORED, success);
@@ -247,9 +269,23 @@ bool PinOpHandler::EmptyPin(proto::Command *command_response,
 bool PinOpHandler::ValidPin(SecurityInterface& sed_manager, proto::Command *command_response,
     const proto::Message_PINauth& pin_auth, PinIndex pin_index) {
     #ifdef ISE_AND_LOCK_DISABLED
-    switch (sed_manager.SetPin("", pin_auth.pin(), pin_index)) {
+    switch (sed_manager.SetPin(
+        "",
+        pin_auth.pin(),
+        pin_index,
+        static_drive_info_.drive_sn,
+        static_drive_info_.supports_SED,
+        static_drive_info_.sector_size,
+        static_drive_info_.non_sed_pin_info_sector_num)) {
     #else
-    switch (sed_manager.SetPin(pin_auth.pin(), pin_auth.pin(), pin_index)) {
+    switch (sed_manager.SetPin(
+        pin_auth.pin(),
+        pin_auth.pin(),
+        pin_index,
+        static_drive_info_.drive_sn,
+        static_drive_info_.supports_SED,
+        static_drive_info_.sector_size,
+        static_drive_info_.non_sed_pin_info_sector_num)) {
     #endif
         case PinStatus::PIN_SUCCESS:
             return true;

@@ -28,7 +28,7 @@ Reader::Reader(SequentialFile* file, Reporter* reporter, bool checksum,
       last_record_offset_(0),
       end_of_buffer_offset_(0),
       initial_offset_(initial_offset) {
-      int s = posix_memalign((void**)&backing_store_, 4096, ALIGNED_MEM_SIZE_1M);
+      int s = posix_memalign((void**)&backing_store_, 4096, ALIGNED_MEM_SIZE);
       if (backing_store_ == NULL || s != 0) {
 #ifdef KDEBUG
           cout << " CAN NOT ALLOCATE MEMORY IN LOG READER" << endl;

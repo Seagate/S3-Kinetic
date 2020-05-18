@@ -334,7 +334,7 @@ class SmrdbDbTest : public ::testing::Test {
         options.snapshot = snapshot;
         char* result;
         result = new char[sizeof(result)];
-        Status s = db_->Get(options, k, result, false, true, NULL);
+        Status s = db_->Get(options, k, result, false, true);
         if (s.IsNotFound()) {
             return StoreOperationStatus_NOT_FOUND;
         } else if (!s.ok()) {

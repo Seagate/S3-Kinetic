@@ -102,13 +102,13 @@ void MemTable::Add(SequenceNumber s, ValueType type,
   if (type != kTypeDeletion) {
     myData = (LevelDBData *) value.data();
     // assume page aligned memory buffers for mem size computation
-    memSize_ += sizeof(LevelDBData) + ROUNDUP(myData->headerSize, 4096) + ROUNDUP(myData->dataSize, 4096);
-    //memSize_ += sizeof(LevelDBData) + myData->headerSize + ROUNDUP(myData->dataSize, 4096);
+//    memSize_ += sizeof(LevelDBData) + ROUNDUP(myData->headerSize, 4096) + ROUNDUP(myData->dataSize, 4096);
+    memSize_ += sizeof(LevelDBData) + myData->headerSize + ROUNDUP(myData->dataSize, 4096);
     if(myData->dataSize < 8192) { // TODO(Paul): use configured value_size_threshhold
-      internalValueSSTSize = ROUNDUP(myData->computeSerializedSize(), 4096);
+      internalValueSSTSize = myData->computeSerializedSize();
     }
     else{
-      internalValueSSTSize = ROUNDUP(myData->computeSerializedSize(NULL, true), 4096) + sizeof(ExternalValueInfo);
+      internalValueSSTSize = myData->computeSerializedSize(NULL, true) + sizeof(ExternalValueInfo);
     }
   } else {
     memSize_ += 4096; //myData->headerSize; //4096;

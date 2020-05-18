@@ -54,7 +54,7 @@ BlockBuilder::BlockBuilder(const Options* options)
   assert(options->block_restart_interval >= 1);
   restarts_.push_back(0);       // First restart point is at offset 0
   buffer_ = NULL;
-  int s = posix_memalign((void**)&buffer_, 4096, ALIGNED_MEM_SIZE_5M);
+  int s = posix_memalign((void**)&buffer_, 4096, ALIGNED_MEM_SIZE);
 
   if (buffer_ == NULL || s != 0) {
      Log(options->info_log, 0, "CAN NOT ALLOCATE MEMORY IN BLOCKBUILDER");

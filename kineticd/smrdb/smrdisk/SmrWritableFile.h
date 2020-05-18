@@ -40,7 +40,7 @@ class SmrWritableFile : public WritableFile, public SmrFile, public Listenable {
         }	
         nNewSegmentsAfterLastSync_ = nNewSegments_;
         base_ = NULL;
-        int s = posix_memalign((void**)&base_, 4096, ALIGNED_MEM_SIZE_5M);
+        int s = posix_memalign((void**)&base_, 4096, ALIGNED_MEM_SIZE);
 
         if(base_ == NULL || s !=0) {
             stringstream ss;

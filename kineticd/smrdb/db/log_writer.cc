@@ -35,7 +35,7 @@ Writer::Writer(WritableFile* dest, Env* env, const std::string& dbname)
     type_crc_[i] = crc32c::Value(&t, 1);
   }
   buffer_ = NULL;
-  int s = posix_memalign((void**)&buffer_, 4096, ALIGNED_MEM_SIZE_1M);
+  int s = posix_memalign((void**)&buffer_, 4096, ALIGNED_MEM_SIZE);
   if (buffer_ == NULL || s != 0) {
 #ifdef KDEBUG
      cout << " CAN NOT ALLOCATE MEMORY IN LOG WRITER " << endl;

@@ -92,9 +92,9 @@ class DB : public Listener {
   //
   // May return some other Status on an error.
   virtual Status Get(const ReadOptions& options,
-                     const Slice& key, char* value, 
+                     const Slice& key, char* value,
                      bool ignore_value,
-		     bool using_bloom_filter, char* buff) = 0;
+		     bool using_bloom_filter) = 0;
 
   // Return a heap-allocated iterator over the contents of the database.
   // The result of NewIterator() is initially invalid (caller must

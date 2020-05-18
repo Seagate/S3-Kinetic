@@ -801,12 +801,12 @@ Status DBImpl::CompactMemTable() {
   }
   assert(imm_ != NULL);
 
-#ifdef KDEBUG
-    cout << "****START TO COMPACTMEM " << endl;
+//#ifdef KDEBUG
+//    cout << "****START TO COMPACTMEM " << endl;
     uint64_t start, start1, end;
     start = env_->NowMicros();
     start1 = start;
-#endif
+//#endif
 
   // Save the contents of the memtable as a new Table
   VersionEdit edit;
@@ -838,7 +838,7 @@ Status DBImpl::CompactMemTable() {
 #ifdef KDEBUG
   if(s.ok()) {
     end = env_->NowMicros();
-    Log(options_.info_log, 0, "TIME LOGANDAPPLY & DELETEFILES %ld",(end-start));
+    Log(options_.info_log, 0, "TIME LOGANDAPPLY & DELETEFILES %lld",(end-start));
       if ((end-start) >= (uint64_t)2000000) {
         stringstream ss;
         ss << __FILE__ << ":" << __LINE__ << ":" << __func__
@@ -1621,12 +1621,12 @@ Status DBImpl::DoCompactionWork(CompactionState* compact) {
 #ifdef KDEBUG
   Log(options_.info_log, 0, "   At level %d", compact->compaction->level());
   for (int i = 0 ; i < compact->compaction->num_input_files(0); ++i) {
-      Log(options_.info_log, 0, "     Compacting files %lu ", compact->compaction->input(0,i)->number);
+      Log(options_.info_log, 0, "     Compacting files %llu ", compact->compaction->input(0,i)->number);
   }
   Log(options_.info_log, 0, "   At level %d", compact->compaction->level()+1);
 
   for (int i = 0; i < compact->compaction->num_input_files(1); ++i) {
-      Log(options_.info_log, 0, "     Compacting files %lu ", compact->compaction->input(1,i)->number);
+      Log(options_.info_log, 0, "     Compacting files %llu ", compact->compaction->input(1,i)->number);
   }
 #endif
   assert(versions_->NumLevelFiles(compact->compaction->level()) > 0);
@@ -1857,32 +1857,20 @@ int64_t DBImpl::TEST_MaxNextLevelOverlappingBytes() {
 }
 
 namespace {
-char* allocate_getvalue_buffer(bool byGetInternal) {
+char* allocate_getvalue_buffer() {
   char *buff = NULL;
-  if (!byGetInternal) {
-  	buff = (char*) KernelMemMgr::pInstance_->AllocMem();
-  } else {
-        int s = posix_memalign((void**)&buff, 4096, ROUNDUP((size_t)5*1048576,4096));
-	if (s != 0) {
-	  cout << "FAILED TO ALLOC" << endl;
-	  buff = NULL;
-	}
-  }
+  buff = (char*) KernelMemMgr::pInstance_->AllocMem();
   return buff;
 }
 
-void deallocate_getvalue_buffer(bool byGetInternal, char* buff) {
-  if (!byGetInternal) {
-    KernelMemMgr::pInstance_->FreeMem((void*) buff);
-  } else {
-    free(buff);
-  }
+void deallocate_getvalue_buffer(char* buff) {
+  KernelMemMgr::pInstance_->FreeMem((void*) buff);
 }
 }
 
 Status DBImpl::Get(const ReadOptions& options,
-                   const Slice& key, char* value,
-                   bool ignore_value, bool using_bloom_filter, char* buff) {
+                   const Slice& key,
+                   char* value, bool ignore_value, bool using_bloom_filter) {
   Status s;
   bool fromMem = false;
   MutexLock l(&mutex_);
@@ -1920,16 +1908,14 @@ Status DBImpl::Get(const ReadOptions& options,
     }
 
     if (s.ok() ) {
-     if (buff == NULL) {
-          buff = allocate_getvalue_buffer(false);
-          if (buff == NULL) {
+      char* buff = allocate_getvalue_buffer();
+      if (buff == NULL) {
         //mutex_.Lock(); // prevent double-unlock by MutexLock
-            mem->Unref();
-            if (imm != NULL) imm->Unref();
-            current->Unref();
-            return Status::IOError("CAN NOT ALLOC MEM ", "IN GET FROM MEM");
-          }
-     }
+          mem->Unref();
+          if (imm != NULL) imm->Unref();
+          current->Unref();
+          return Status::IOError("CAN NOT ALLOC MEM ", "IN GET FROM MEM");
+      }
       char* value_pointer = NULL;
       memcpy((char*) &value_pointer, value, sizeof(void*));
       if (fromMem) {
@@ -2063,12 +2049,12 @@ Status DBImpl::GetByInternal(const ReadOptions& options,const Slice& key,
     }
 
     if (s.ok()) {
-        char* buff = allocate_getvalue_buffer(true);
+        char* buff = allocate_getvalue_buffer();
         if (buff == NULL) {
             mem->Unref();
             if (imm != NULL) imm->Unref();
             current->Unref();
-            return Status::IOError("1. CAN NOT ALLOC MEM ", "IN GET FROM MEM");
+            return Status::IOError("CAN NOT ALLOC MEM ", "IN GET FROM MEM");
         }
         char* value_pointer = NULL;
         memcpy((char*) &value_pointer, value, sizeof(void*));
@@ -2109,7 +2095,7 @@ Status DBImpl::PutByInternal(const WriteOptions& option, const Slice& sInternalK
             compare = option.value_comparator->Compare(value, Slice(value_pointer, ptr_size));
 	    //write_mutex_.Lock();
         }
-        deallocate_getvalue_buffer(true, value_pointer);
+        deallocate_getvalue_buffer(value_pointer);
     }
     if (compare != 0) {
         delete[] packed_value;
@@ -2314,7 +2300,6 @@ Status DBImpl::MakeRoomForWrite(bool force) {
   Status s;
 
   while (true) {
-    //cout << "MEM APPROX " << mem_->ApproximateMemoryUsage() << endl;
     if (!bg_error_.ok() && !bg_error_.IsSuperblockIO() && !bg_error_.IsNoSpaceAvailable()) {
       // Yield previous error
       Log(options_.info_log, 0, "BG_ERROR %s", bg_error_.ToString().c_str());
@@ -2349,7 +2334,6 @@ Status DBImpl::MakeRoomForWrite(bool force) {
         if (!this->bg_compaction_scheduled_) {
            MaybeScheduleCompaction();
         }
-	//cout << "WAIT FOR THE PREVIOUS MEM TABLE TO BE DONE" << endl;
         bg_cv_.Wait();
     } else if (versions_->NumLevelFiles(0) >= config::kL0_StopWritesTrigger) {
       // There are too many level-0 files.
@@ -2368,7 +2352,6 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       force = false;   // Do not force another compaction if have room
     }
   }
-  //cout << "EXIT MAKEROOM" << endl;
   return s;
 }
 

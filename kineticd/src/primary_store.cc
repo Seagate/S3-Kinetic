@@ -38,13 +38,11 @@ const uint64_t PrimaryStore::kMinFreeSpace = smr::Disk::NO_SPACE_THRESHOLD;
 namespace {
 char* allocate_getvalue_buffer() {
     char* buff = NULL;
-    //LOG(INFO) << " ALLOC KMEM IN PRIM" << endl;
     buff = (char*) KernelMemMgr::pInstance_->AllocMem();
     return buff;
 }
 
 void deallocate_getvalue_buffer(char* buff) {
-    //LOG(INFO) << " DEALLOC KMEM IN PRIM" << endl;
     KernelMemMgr::pInstance_->FreeMem((void*) buff);
 }
 } // namespace
@@ -266,7 +264,7 @@ bool PrimaryStore::InitUserDataStore(bool create_if_missing) {
 StoreOperationStatus PrimaryStore::Get(
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
-        NullableOutgoingValue *value, char* buff) {
+        NullableOutgoingValue *value) {
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStoreGet, &e);
     char* packed_value;
@@ -280,7 +278,7 @@ StoreOperationStatus PrimaryStore::Get(
     if (value == NULL) {
         ignore_value = true;
     }
-    switch (key_value_store_.Get(key, packed_value, ignore_value, true, buff)) {
+    switch (key_value_store_.Get(key, packed_value, ignore_value, true)) {
         case StoreOperationStatus_SUCCESS:
             break;
         case StoreOperationStatus_NOT_FOUND:

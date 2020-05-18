@@ -37,6 +37,7 @@ MessageProcessor::MessageProcessor(
     PinOpHandler& pinop_handler,
     PowerManager& power_manager,
     Limits& limits,
+    STATIC_DRIVE_INFO static_drive_info,
     UserStoreInterface& user_store)
         : authorizer_(authorizer),
         skinny_waist_(skinny_waist),
@@ -50,6 +51,7 @@ MessageProcessor::MessageProcessor(
         pinop_handler_(pinop_handler),
         power_manager_(power_manager),
         limits_(limits),
+        static_drive_info_(static_drive_info),
         user_store_(user_store) {
             CHECK(!pthread_rwlock_init(&ise_rw_lock_, NULL));
         }
@@ -828,8 +830,18 @@ void MessageProcessor::Security(const Command &command, Command *command_respons
         }
 
         pin_command = "lock";
-        if (!CheckPinStatusSuccess(command_response,
-            sed_manager.SetPin(newpin, oldpin, PinIndex::LOCKPIN), pin_command.c_str(), true)) {
+        if (!CheckPinStatusSuccess(
+                command_response,
+                sed_manager.SetPin(
+                    newpin,
+                    oldpin,
+                    PinIndex::LOCKPIN,
+                    static_drive_info_.drive_sn,
+                    static_drive_info_.supports_SED,
+                    static_drive_info_.sector_size,
+                    static_drive_info_.non_sed_pin_info_sector_num),
+                pin_command.c_str(),
+                true)) {
             return;
         }
         // If the new pin is empty, disable at rest data protection
@@ -859,8 +871,18 @@ void MessageProcessor::Security(const Command &command, Command *command_respons
         }
 
         pin_command = "erase";
-        if (!CheckPinStatusSuccess(command_response,
-            sed_manager.SetPin(newpin, oldpin, PinIndex::ERASEPIN), pin_command.c_str(), true)) {
+        if (!CheckPinStatusSuccess(
+                command_response,
+                sed_manager.SetPin(
+                    newpin,
+                    oldpin,
+                    PinIndex::ERASEPIN,
+                    static_drive_info_.drive_sn,
+                    static_drive_info_.supports_SED,
+                    static_drive_info_.sector_size,
+                    static_drive_info_.non_sed_pin_info_sector_num),
+                pin_command.c_str(),
+                true)) {
             return;
         }
         command_response->mutable_status()->

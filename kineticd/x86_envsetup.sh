@@ -26,6 +26,11 @@ then
 	return 1
 fi
 
+FILE=/usr/include/security/pam_appl.h
+if [ ! -f "$FILE" ]; then
+    echo "$FILE does not exist. Please install using 'sudo apt-get install libpam0g-dev'"
+    return 1
+fi
 
 RESULT=0
 for x in ${lib_loc[0]}

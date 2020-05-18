@@ -31,7 +31,7 @@ include build_config.mk
 #CXX=arm-marvell-linux-gnueabi-g++ -DCRC_ENABLED
 
 CFLAGS += -I. -I./include -Wno-psabi $(PLATFORM_CCFLAGS) $(OPT)
-CXXFLAGS += -I. -I./include -I$(DIR) -I$(KMEM)  -Wno-psabi $(PLATFORM_CXXFLAGS) $(OPT) $(PP_DEFS)
+CXXFLAGS += -I. -I./include -I$(DIR) -I$(KMEM)  -Wno-psabi $(PLATFORM_CXXFLAGS) $(OPT)
 
 LDFLAGS += $(PLATFORM_LDFLAGS)
 LIBS += $(PLATFORM_LIBS)

@@ -64,6 +64,13 @@ int com::seagate::kinetic::populate_identify_info(DEVICE* device, STATIC_DRIVE_I
         } else {
             sdinfo->logical_sectors_per_physical_sector = 1;
         }
+        if (sdinfo->logical_sectors_per_physical_sector != 1) {
+            //Get the next alligned sector
+            sdinfo->non_sed_pin_info_sector_num = sdinfo->logical_sectors_per_physical_sector - \
+            (FIRST_POSSIBLE_NON_SED_PIN_INFO_SECTOR % sdinfo->logical_sectors_per_physical_sector) + FIRST_POSSIBLE_NON_SED_PIN_INFO_SECTOR;
+        } else {
+            sdinfo->non_sed_pin_info_sector_num = FIRST_POSSIBLE_NON_SED_PIN_INFO_SECTOR;
+        }
         // World Wide Name Words 108-111
         sdinfo->drive_wwn = "";
         char wwn[16];
@@ -178,6 +185,7 @@ STATIC_DRIVE_INFO com::seagate::kinetic::PopulateStaticDriveAttributes(string st
     sdinfo.drive_capacity_in_bytes = 0;
     sdinfo.sector_size = 512;
     sdinfo.logical_sectors_per_physical_sector = 0;
+    sdinfo.non_sed_pin_info_sector_num = 0;
     // Read info from SMART Request
     sdinfo.sectors_read_at_poweron = 1000;
     populate_identify_info(&device, &sdinfo);

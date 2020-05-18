@@ -22,7 +22,7 @@ void AtomicCounter::Reset() {
 }
 
 DynamicMemory* DynamicMemory::_instance = NULL;
-const uint32_t D_MEMORY_SIZE = 500*1024*1024;
+const uint32_t D_MEMORY_SIZE = 192*1024*1024;
 
 uint32_t DynamicMemory::GetClientMemUsage() {
         MutexLock l(&mu_);

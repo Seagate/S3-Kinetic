@@ -30,7 +30,7 @@ class SmrSequentialFile: public SequentialFile, public SmrFile {
     : SmrFile(fname, fd, disk, page_size, finfo),
       read_(0), file_offset_(0), base_(NULL), limit_(NULL), dst_(NULL), new_base_(NULL) {
             base_ = NULL;
-            int s = posix_memalign((void**)&base_, 4096, ALIGNED_MEM_SIZE_5M);
+            int s = posix_memalign((void**)&base_, 4096, ALIGNED_MEM_SIZE);
 
             if(base_ == NULL || s !=0) {
                 stringstream ss;

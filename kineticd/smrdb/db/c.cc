@@ -207,7 +207,7 @@ char* leveldb_get(
   char* tmp;
   bool using_bloom_filter = false;
 //  Status s = db->rep->Get(options->rep, Slice(key, keylen), &tmp, using_bloom_filter); //, &fromMem );
-  Status s = db->rep->Get(options->rep, Slice(key, keylen), tmp, false, using_bloom_filter, NULL); //, &fromMem );
+  Status s = db->rep->Get(options->rep, Slice(key, keylen), tmp, false, using_bloom_filter); //, &fromMem );
   if (s.ok()) {
     *vallen = 0; //tmp.size();
     result = tmp; //CopyString(tmp);

@@ -37,7 +37,7 @@ class StdMapKeyValueStore : public KeyValueStoreInterface {
     public:
     StdMapKeyValueStore() = default;
     StoreOperationStatus Get(const std::string& key, char *value, bool ignore_value = false,
-        bool using_bloom_filter = false, char* buff = NULL);
+        bool using_bloom_filter = false);
 
     StoreOperationStatus Put(const std::string& key,
             char *value,

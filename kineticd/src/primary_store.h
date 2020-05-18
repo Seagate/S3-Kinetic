@@ -73,7 +73,7 @@ class PrimaryStore : public PrimaryStoreInterface {
     }
     StoreOperationStatus Get(const std::string& key,
         PrimaryStoreValue* primary_store_value,
-        NullableOutgoingValue *value, char* buff=NULL);
+        NullableOutgoingValue *value);
     StoreOperationStatus Put(
         const std::string& key,
         const PrimaryStoreValue& primary_store_value,
@@ -99,7 +99,7 @@ class PrimaryStore : public PrimaryStoreInterface {
     }
     virtual StoreOperationStatus DoesKeyExist(const string& key) {
         PrimaryStoreValue existing_primary_store_value;
-        return Get(key, &existing_primary_store_value, NULL, NULL);
+        return Get(key, &existing_primary_store_value, NULL);
     }
     void SetCommandValidator(CommandValidator* validator) {
         commandValidator_ = validator;
