@@ -107,6 +107,15 @@ bool NullableOutgoingValue::ToString(std::string *result, int* err) const {
     return value_->ToString(result, err);
 }
 
+char* NullableOutgoingValue::get_value_buff() {
+    return value_->GetBuff();
+}
+
+char* NullableOutgoingValue::get_buff_ptr() {
+    return value_->GetBuffPtr();
+}
+
+
 void NullableOutgoingValue::set_value(OutgoingValueInterface *value) {
     // To simplify things, we require that the wrapped value can only be set
     // once and must not be set to NULL.

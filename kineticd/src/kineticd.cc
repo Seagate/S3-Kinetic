@@ -46,6 +46,7 @@
 #include "popen_wrapper.h"
 #include "drive_info.h"
 #include "getlog_handler.h"
+#include "skinny_waist.h"
 
 using namespace com::seagate::kinetic; //NOLINT
 using ::kinetic::MessageStreamFactory;
@@ -55,6 +56,14 @@ using com::seagate::kinetic::STATIC_DRIVE_INFO;
 using std::unique_ptr;
 using std::move;
 using std::string;
+
+int initDone = 0;
+
+//extern KeyValueStore *kvstore__;
+extern SkinnyWaist *pskinny_waist__;
+
+extern "C" void* InitMain(int argc, char* argv[]); //struct arg *argu);
+
 
 void write_stack_trace(const char* data, int size) {
     // This function gets called once per line of the stack trace, so we need to
@@ -92,9 +101,18 @@ void updateKineticStartCounter() {
     }
     oStream.close();
 }
-int main(int argc, char *argv[]) {
+
+
+void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
+    cout << "1. INIT MAIN" << endl;
+    int i = argc;
+    for (int j=0; j < i; j++) {
+       cout << " J = " << j << " " << argv[j] << endl;
+
+    }
     google::InitGoogleLogging(argv[0]);
     google::InstallFailureSignalHandler();
+    cout << "2. INIT MAIN" << endl;
 
 #ifndef PRODUCT_X86
     google::InstallFailureWriter(&write_stack_trace);
@@ -255,6 +273,8 @@ int main(int argc, char *argv[]) {
             profiler,
             cluster_version_store,
             launch_monitor);
+    ::pskinny_waist__ = &skinny_waist;
+
     com::seagate::kinetic::HmacProvider hmac_provider;
     HmacAuthenticator authenticator(user_store, hmac_provider);
     StatisticsManager statistics_manager;
@@ -409,8 +429,12 @@ int main(int argc, char *argv[]) {
         }
         server.StateChanged(com::seagate::kinetic::StateEvent::STORE_INACCESSIBLE);
     }
+
+    cout << " SERVER STARTED" << endl;
     // Wait until server is stopped
+    initDone = 1;
     pthread_join(serverThread.getThreadId(), NULL);
+    cout << " THREAD JOINED" << endl;
     LOG(INFO) << "Server stopped.  Exiting Kinetic...";
     LOG(INFO) << "===== EXIT STATE:" << endl;
     LOG(INFO) << "#Batch sets = " << ConnectionHandler::_batchSetCollection.numberOfBatchsets()
@@ -431,6 +455,7 @@ int main(int argc, char *argv[]) {
     google::ShutdownGoogleLogging();
     delete LogRingBuffer::Instance();
     google::ShutDownCommandLineFlags();
-
-    return EXIT_SUCCESS;
+    cout << "END OF KINETICD" << endl;
+    return(0);
 }
+

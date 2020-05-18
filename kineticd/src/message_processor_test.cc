@@ -1929,7 +1929,7 @@ TEST_F(MessageProcessorTest, GetReturnsFailureIfUserUnauthorized) {
     message.set_commandbytes(serialized_command);
     SetUserAndHmac(&message);
 
-    EXPECT_CALL(mock_skinny_waist_, Get(42, "key", _, _, _))
+    EXPECT_CALL(mock_skinny_waist_, Get(42, "key", _, _, _, _))
         .WillOnce(Return(StoreOperationStatus_AUTHORIZATION_FAILURE));
     Command command_response;
     NullableOutgoingValue response_value;
@@ -2089,7 +2089,7 @@ TEST_F(MessageProcessorTest, GetReturnsDetailedErrorForCorruption) {
     message.set_commandbytes(serialized_command);
     SetUserAndHmac(&message);
 
-    EXPECT_CALL(mock_skinny_waist_, Get(42, "key", _, _, _))
+    EXPECT_CALL(mock_skinny_waist_, Get(42, "key", _, _, _, _))
                 .WillOnce(Return(StoreOperationStatus_STORE_CORRUPT));
 
     Command command_response;

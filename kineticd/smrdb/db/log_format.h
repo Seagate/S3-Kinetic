@@ -26,7 +26,7 @@ enum RecordType {
 };
 static const int kMaxRecordType = kLastType;
 
-static const int kBlockSize = ALIGNED_MEM_SIZE; //KERNEL_MEM_SIZE //32768*2;
+static const int kBlockSize = ALIGNED_MEM_SIZE_1M;
 
 // Header is checksum (4 bytes), type (1 byte), length (4 bytes).
 static const int kHeaderSize = 4 + 1 + 4;

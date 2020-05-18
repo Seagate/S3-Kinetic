@@ -135,7 +135,7 @@ StoreOperationStatus SkinnyWaist::Get(
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
         RequestContext& request_context,
-        NullableOutgoingValue *value) {
+        NullableOutgoingValue *value, char* buff) {
         PthreadsMutexGuard guard(&mutex_);
 
     if (!authorizer_.AuthorizeKey(user_id, Domain::kRead, key, request_context)) {
@@ -144,7 +144,7 @@ StoreOperationStatus SkinnyWaist::Get(
     if (key == "") {
         return StoreOperationStatus_INVALID_REQUEST;
     }
-    StoreOperationStatus status = primary_store_.Get(key, primary_store_value, value);
+    StoreOperationStatus status = primary_store_.Get(key, primary_store_value, value, buff);
 
     switch (status) {
         case StoreOperationStatus_SUCCESS:
@@ -353,7 +353,6 @@ StoreOperationStatus SkinnyWaist::GetKeyRange(
     CHECK_NOTNULL(results);
 
     PthreadsMutexGuard guard(&mutex_);
-
     PrimaryStoreIteratorInterface* it;
     IteratorStatus it_status;
 

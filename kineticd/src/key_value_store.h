@@ -59,7 +59,7 @@ class KeyValueStore : public KeyValueStoreInterface {
     void BGSchedule();
     void SetLogHandlerInterface(LogHandlerInterface* log_handler);
     StoreOperationStatus Get(const std::string& key, char* value, bool ignore_value = false,
-                             bool using_bloom_filter = false);
+                             bool using_bloom_filter = false, char* buff = NULL);
     StoreOperationStatus Put(
             const std::string& key,
             char* value,

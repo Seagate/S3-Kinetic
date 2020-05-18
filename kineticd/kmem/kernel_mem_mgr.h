@@ -36,6 +36,7 @@ class KernelMemMgr {
 		static const int NUM_BLOCKS = NUM_ALLOCATED_BLOCK;
 		static const size_t BLOCK_SIZE_1 = KERNEL_MEM_SIZE;
 		static pthread_mutex_t memMgrMutex;
+		static pthread_cond_t memAvail;
                 int num_allocated_;
                 int max_num_allocated_;
 		int fd_;

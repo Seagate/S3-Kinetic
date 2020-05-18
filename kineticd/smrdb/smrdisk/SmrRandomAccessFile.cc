@@ -24,7 +24,7 @@ Status SmrRandomAccessFile::Read(uint64_t offset, size_t n, Slice* result, char*
   MutexLock l(mu_);
   // Validate precondition.  The only thing we can't validate
   // is the size of scratch buffer.
-  if (scratch == NULL || offset < 0 || offset > finfo_->getSize() || n < 0 || n > 1024 * 1024 + 264 * 1024 ||
+  if (scratch == NULL || offset < 0 || offset > finfo_->getSize() || n < 0 || n > 5* 1024 * 1024 + 264 * 1024 ||
       n > finfo_->getSize() - offset) {
     stringstream ss;
     ss << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": " << filename_
@@ -53,7 +53,7 @@ Status SmrRandomAccessFile::Read(uint64_t offset, size_t n, Slice* result, char*
     size_t avail = limit_ - dst_;
 
     if (avail == 0) {
-      uint64_t maxMap = min(left, size_t(1024 * 1024 + 264 * 1024));
+      uint64_t maxMap = min(left, size_t(5* 1024 * 1024 + 264 * 1024));
       UnmapCurrentRegion();
       status = MapNewRegion(maxMap);
       if (!status.ok()) {
@@ -120,7 +120,7 @@ Status SmrRandomAccessFile::MapNewRegion(uint64_t maxMap)
   uint64_t regionBoundAddr = regionStartAddr + readSize;
 
   if (base_ == NULL) {
-    base_ = (char*) calloc(1024 * 1024 + 264 * 1024, sizeof(char));
+    base_ = (char*) calloc(5* 1024 * 1024 + 264 * 1024, sizeof(char));
     if (base_ == NULL) {
       stringstream ss;
       ss << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": " << filename_ << ": " << strerror(errno);

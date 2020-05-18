@@ -53,7 +53,7 @@ class SkinnyWaist : public SkinnyWaistInterface {
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
         RequestContext& request_context,
-        NullableOutgoingValue *value = NULL);
+        NullableOutgoingValue *value = NULL, char* buff = NULL);
     StoreOperationStatus GetVersion(int64_t user_id,
             const std::string& key,
             std::string* version,

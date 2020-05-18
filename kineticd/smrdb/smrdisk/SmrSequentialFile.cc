@@ -29,7 +29,7 @@ bool SmrSequentialFile::MapNewRegion() {
     }
     uint64_t regionStartAddr = finfo_->getAddr(file_offset_);
     uint64_t readSize = finfo_->getSizeToSegmentEnd(file_offset_);
-    readSize = min(readSize, uint64_t(1024*1024));
+    readSize = min(readSize, uint64_t(5*1024*1024));
 
     uint64_t regionBoundAddr = regionStartAddr + readSize;
     ssize_t n = ::pread(fd_, base_, readSize, regionStartAddr);

@@ -33,6 +33,8 @@ class OutgoingValueInterface {
     virtual size_t size() const = 0;
     virtual bool TransferToSocket(int fd, int* err) const = 0;
     virtual bool ToString(std::string *result, int* err) const = 0;
+    virtual char* GetBuff() {return NULL;}
+    virtual char* GetBuffPtr() {return NULL;}
 };
 
 class OutgoingStringValue : public OutgoingValueInterface {
@@ -50,15 +52,16 @@ class OutgoingStringValue : public OutgoingValueInterface {
 
 class OutgoingBuffValue : public OutgoingValueInterface {
     public:
-    explicit OutgoingBuffValue(const char* buff, const char* s, uint32_t size); //, bool fromMem);
+    explicit OutgoingBuffValue(char* buff,  char* s, uint32_t size); //, bool fromMem);
     ~OutgoingBuffValue();
     size_t size() const;
     bool TransferToSocket(int fd, int* err) const;
     bool ToString(std::string *result, int* err) const;
-
+    char* GetBuff() {return s_;}
+    char* GetBuffPtr() {return buff_;}
     private:
-    const char* buff_;
-    const char* s_;
+    char* buff_;
+    char* s_;
     uint32_t size_;
     DISALLOW_COPY_AND_ASSIGN(OutgoingBuffValue);
 };

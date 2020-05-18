@@ -9,10 +9,17 @@ ifneq ($(ARM),n)
 	CXX=$(MARV)
 endif
 
-all : zac_kin.a
+all : zac_kin.a zac_local
 .PHONY : all
 
 LIBOBJS = zac_mediator.o ata_cmd_handler.o
+LOCALOBJS = $(LIBOBJS) main.o
+
+zac_local: $(LOCALOBJS)
+	$(CXX) $(LFLAGS) $(LOCALOBJS) -o zac_local
+
+main.o: main.cc includes/zac_mediator.h includes/ata_cmd_handler.h
+	$(CXX) $(CFLAGS) main.cc
 
 ata_cmd_handler.o: includes/ata_cmd_handler.h ata_cmd_handler.cc
 	$(CXX) $(CFLAGS) ata_cmd_handler.cc
@@ -26,3 +33,4 @@ zac_kin.a: $(LIBOBJS)
 
 clean:
 	rm -f *.o *.a
+	rm -f zac_local

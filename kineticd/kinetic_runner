@@ -32,7 +32,7 @@ OLD_VALUE_SIZE_LOG_FILE_PATH=$UTIL_PARTITION/value_size_previousLog
 LATENCY_THRESHOLD=2000
 
 mkdir -p $UPDATE_TMP_DIR
-$KINETIC_HOME/kineticd --certificate=$CERTIFICATE --private_key=$PRIVATE_KEY \
+$KINETIC_HOME/s3kinetic server kinetic:skinny:sda kineticd --certificate=$CERTIFICATE --private_key=$PRIVATE_KEY \
     --firmware_update_tmp_dir=$UPDATE_TMP_DIR \
     --preused_file_path=$PREUSED_FILE_PATH \
     --log_file_path=$LOG_FILE_PATH \

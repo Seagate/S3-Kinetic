@@ -27,10 +27,11 @@ class MockPrimaryStoreIterator : public PrimaryStoreIteratorInterface {
 class MockPrimaryStore : public PrimaryStoreInterface {
     public:
     bool CloseDB() {return true;}
-    MOCK_METHOD3(Get, StoreOperationStatus(
+    MOCK_METHOD4(Get, StoreOperationStatus(
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
-        NullableOutgoingValue* value));
+        NullableOutgoingValue* value,
+	char* buff));
     MOCK_METHOD5(Put, StoreOperationStatus(
         const std::string& key,
         const PrimaryStoreValue& primary_store_value,

@@ -58,6 +58,8 @@ class NullableOutgoingValue : public OutgoingValueInterface {
     bool ToString(std::string *result, int* err) const;
     // set_value should not be called more than once.
     void set_value(OutgoingValueInterface *value);
+    char* get_value_buff();
+    char* get_buff_ptr();
     void clear_value();
     private:
     OutgoingValueInterface *value_;

@@ -56,7 +56,7 @@ IteratorStatus StdMapKeyValueStoreIterator::Prev() {
 
 
 StoreOperationStatus StdMapKeyValueStore::Get(const std::string& key, char *value, bool ignore_value,
-    bool using_bloom_filter) {
+    bool using_bloom_filter, char* buff) {
     if (db_.count(key)) {
         LevelDBData* pData = (LevelDBData*) db_[key].data();
 

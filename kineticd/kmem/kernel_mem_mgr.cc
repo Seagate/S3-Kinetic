@@ -10,6 +10,8 @@ using namespace std;
 
 
 pthread_mutex_t KernelMemMgr::memMgrMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t KernelMemMgr::memAvail = PTHREAD_COND_INITIALIZER;
+
 KernelMemMgr* KernelMemMgr::pInstance_ = NULL;
 
 KernelMemMgr* KernelMemMgr::GetInstance() {
@@ -100,7 +102,6 @@ string KernelMemMgr::ToString() const {
 
 void KernelMemMgr::FreeMem(void *logicalAddr) {
    pthread_mutex_lock(&memMgrMutex);
-
    /* Search for the logicalAddr */
    int i;
    for ( i = 0; i < NUM_BLOCKS; i++) {
@@ -110,30 +111,40 @@ void KernelMemMgr::FreeMem(void *logicalAddr) {
          break;
       }
    }
-//   if( num_allocated_ == 0) {
-//       cout << "KERNEL FREE " << num_allocated_ << endl;
-//   }
+   pthread_cond_signal(&memAvail);
    pthread_mutex_unlock(&memMgrMutex);
 }
 
 void* KernelMemMgr::AllocMem() {   
    pthread_mutex_lock(&memMgrMutex);
    void* logicalAddress = NULL;
-
-   int i;
-   /* Search an unused block */
-   for(i=0; i < NUM_BLOCKS; i++) {
-      if (memBlockInUse_[i] == FALSE) {
-         logicalAddress = virtMemAddresses_[i];
-         memBlockInUse_[i] = TRUE;
-         num_allocated_++;
-	 break;
-      }
+   int retries = 0;
+   while (true) {
+       if (num_allocated_ < NUM_BLOCKS) {
+           int i;
+           //Search an unused block
+           for(i=0; i < NUM_BLOCKS; i++) {
+               if (memBlockInUse_[i] == FALSE) {
+                   logicalAddress = virtMemAddresses_[i];
+                   memBlockInUse_[i] = TRUE;
+                   num_allocated_++;
+	           break;
+               }
+           }
+           if (logicalAddress != NULL) {
+               break;
+           } else {
+                   pthread_cond_wait(&memAvail,&memMgrMutex);
+           }
+       } else {
+           pthread_cond_wait(&memAvail,&memMgrMutex);
+       }
    }
    if(num_allocated_ > max_num_allocated_) {
-       max_num_allocated_ = num_allocated_;
+      max_num_allocated_ = num_allocated_;
       cout << " MAX KERNEL MEM USED " << max_num_allocated_ << endl;
    }
+
    pthread_mutex_unlock(&memMgrMutex);
    return logicalAddress;
 }

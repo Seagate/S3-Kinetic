@@ -119,7 +119,7 @@ TYPED_TEST(PrimaryStoreTest, StoresVersion) {
     NullableOutgoingValue value;
 
     ASSERT_EQ(StoreOperationStatus::StoreOperationStatus_SUCCESS,
-        this->primary_store_->Get("key", &actual_value, &value));
+        this->primary_store_->Get("key", &actual_value, &value, NULL));
     EXPECT_EQ("theversion", actual_value.version);
     this->AssertEqual("thevalue", value);
 }
@@ -139,7 +139,7 @@ TYPED_TEST(PrimaryStoreTest, StoresEmptyStringVersion) {
     NullableOutgoingValue actual_value;
 
     ASSERT_EQ(StoreOperationStatus::StoreOperationStatus_SUCCESS,
-        this->primary_store_->Get("key", &actual_primary_store_value, &actual_value));
+        this->primary_store_->Get("key", &actual_primary_store_value, &actual_value, NULL));
     EXPECT_EQ("", actual_primary_store_value.version);
     this->AssertEqual("thevalue", actual_value);
 }
@@ -163,7 +163,7 @@ TYPED_TEST(PrimaryStoreTest, ToleratesVersionWithEmbeddedNulls) {
     NullableOutgoingValue value;
 
     ASSERT_EQ(StoreOperationStatus::StoreOperationStatus_SUCCESS,
-        this->primary_store_->Get("key", &actual_value, &value));
+        this->primary_store_->Get("key", &actual_value, &value, NULL));
     ASSERT_EQ(version, actual_value.version);
     this->AssertEqual("the value", value);
 }
@@ -186,7 +186,7 @@ TYPED_TEST(PrimaryStoreTest, ToleratesValueWithEmbeddedNulls) {
     PrimaryStoreValue actual_primary_store_value;
     NullableOutgoingValue actual_value;
     ASSERT_EQ(StoreOperationStatus::StoreOperationStatus_SUCCESS,
-        this->primary_store_->Get("key", &actual_primary_store_value, &actual_value));
+        this->primary_store_->Get("key", &actual_primary_store_value, &actual_value, NULL));
     ASSERT_EQ(version, actual_primary_store_value.version);
     this->AssertEqual(value, actual_value);
 }
@@ -209,7 +209,7 @@ TYPED_TEST(PrimaryStoreTest, ToleratesKeyWithEmbeddedNulls) {
     PrimaryStoreValue actual_primary_store_value;
     NullableOutgoingValue actual_value;
     ASSERT_EQ(StoreOperationStatus::StoreOperationStatus_SUCCESS,
-        this->primary_store_->Get(key, &actual_primary_store_value, &actual_value));
+        this->primary_store_->Get(key, &actual_primary_store_value, &actual_value, NULL));
     ASSERT_EQ("version", actual_primary_store_value.version);
     this->AssertEqual("value", actual_value);
 }
@@ -225,7 +225,7 @@ TYPED_TEST(PrimaryStoreTest, StoresTag) {
     PrimaryStoreValue actual_value;
     NullableOutgoingValue value;
     ASSERT_EQ(StoreOperationStatus::StoreOperationStatus_SUCCESS,
-        this->primary_store_->Get("key", &actual_value, &value));
+        this->primary_store_->Get("key", &actual_value, &value, NULL));
     ASSERT_EQ("tag", actual_value.tag);
 }
 
@@ -240,7 +240,7 @@ TYPED_TEST(PrimaryStoreTest, ToleratesEmptyStringTag) {
     PrimaryStoreValue actual_value;
     NullableOutgoingValue value;
     ASSERT_EQ(StoreOperationStatus::StoreOperationStatus_SUCCESS,
-        this->primary_store_->Get("key", &actual_value, &value));
+        this->primary_store_->Get("key", &actual_value, &value, NULL));
     ASSERT_EQ("", actual_value.tag);
 }
 
@@ -259,7 +259,7 @@ TYPED_TEST(PrimaryStoreTest, ToleratesTagWithEmbeddedNulls) {
     PrimaryStoreValue actual_value;
     NullableOutgoingValue value;
     ASSERT_EQ(StoreOperationStatus::StoreOperationStatus_SUCCESS,
-        this->primary_store_->Get("key", &actual_value, &value));
+        this->primary_store_->Get("key", &actual_value, &value, NULL));
     ASSERT_EQ(tag, actual_value.tag);
 }
 
@@ -273,7 +273,7 @@ TYPED_TEST(PrimaryStoreTest, StoresAlgorithm) {
     PrimaryStoreValue actual_value;
     NullableOutgoingValue value;
     ASSERT_EQ(StoreOperationStatus::StoreOperationStatus_SUCCESS,
-    this->primary_store_->Get("key", &actual_value, &value));
+    this->primary_store_->Get("key", &actual_value, &value, NULL));
     ASSERT_EQ(1234, actual_value.algorithm);
 }
 
@@ -438,7 +438,7 @@ class PrimaryStoreUnitTest : public testing::Test {
         std::string packed_value;
         ASSERT_TRUE(internal_value_record.SerializeToString(&packed_value));
         char value;
-        EXPECT_CALL(mock_key_value_store_, Get(key, &value, false, true)).
+        EXPECT_CALL(mock_key_value_store_, Get(key, &value, false, true, NULL)).
             WillOnce(DoAll(SetArrayArgument<1>(&(packed_value[0]),
                            &(packed_value[0])+packed_value.length()),
                            Return(StoreOperationStatus_SUCCESS)));
@@ -454,7 +454,7 @@ class PrimaryStoreUnitTest : public testing::Test {
         ASSERT_TRUE(internal_value_record.SerializeToString(&packed_value));
         char value;
 
-        EXPECT_CALL(mock_key_value_store_, Get(key, &value, false, true)).
+        EXPECT_CALL(mock_key_value_store_, Get(key, &value, false, true, _)).
             WillOnce(DoAll(SetArrayArgument<1>(&(packed_value[0]),
                            &(packed_value[0])+packed_value.length()),
                            Return(StoreOperationStatus_SUCCESS)));
@@ -468,7 +468,7 @@ class PrimaryStoreUnitTest : public testing::Test {
         ASSERT_TRUE(internal_value_record.SerializeToString(&packed_value));
         char value;
 
-        EXPECT_CALL(mock_key_value_store_, Get(key, &value, false, false)).
+        EXPECT_CALL(mock_key_value_store_, Get(key, &value, false, false, _)).
             WillOnce(DoAll(SetArrayArgument<1>(&(packed_value[0]),
                            &(packed_value[0])+packed_value.length()),
                            Return(StoreOperationStatus_SUCCESS)));
@@ -575,7 +575,7 @@ TEST_F(PrimaryStoreUnitTest, GetReturnsInternalErrorIfKeyValueStoreFails) {
     primary_store_value.algorithm = 1;
     NullableOutgoingValue value;
 
-    EXPECT_CALL(mock_key_value_store_, Get(key, _, _, _))
+    EXPECT_CALL(mock_key_value_store_, Get(key, _, _, _, _))
         .WillOnce(Return(StoreOperationStatus_INTERNAL_ERROR));
     ASSERT_EQ(StoreOperationStatus_INTERNAL_ERROR,
         primary_store_.Get(key, &primary_store_value, &value));

@@ -264,7 +264,7 @@ bool PrimaryStore::InitUserDataStore(bool create_if_missing) {
 StoreOperationStatus PrimaryStore::Get(
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
-        NullableOutgoingValue *value) {
+        NullableOutgoingValue *value, char* buff) {
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStoreGet, &e);
     char* packed_value;
@@ -278,7 +278,7 @@ StoreOperationStatus PrimaryStore::Get(
     if (value == NULL) {
         ignore_value = true;
     }
-    switch (key_value_store_.Get(key, packed_value, ignore_value, true)) {
+    switch (key_value_store_.Get(key, packed_value, ignore_value, true, buff)) {
         case StoreOperationStatus_SUCCESS:
             break;
         case StoreOperationStatus_NOT_FOUND:

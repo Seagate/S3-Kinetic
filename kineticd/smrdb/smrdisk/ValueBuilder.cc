@@ -104,7 +104,7 @@ Status ValueBuilder::Finish()
 //      CacheManager::cache(dbname_)->removeWritable(external_.file_number);
 //    }
   }
-  Log(options_.info_log, 6, "Exit Finish");
+  //Log(options_.info_log, 6, "Exit Finish");
   return s;
 }
 
@@ -145,7 +145,8 @@ Status ValueBuilder::Append(const Slice& key, const LevelDBData* value, External
    * a value file will never grow beyond zone size and uint16_t is even sufficient for 4KB values. */
   size_t avail_capacity = fileInfo_->getLastSegment()->getSpaceLeft();
   size_t req_capacity = 0;
-  if(avail_capacity < 3000000) {
+  //TO DO: Need to revisit this constant 15000000
+  if(avail_capacity < 15000000) {
     // Only compute required capacity if availing capacity is getting low
     // Reserve an extra 32 bytes for incoming block builder metadata (keysize, restart, etc.)
     size_t metadata_size = keyinfo_.CurrentSizeEstimate() + key.size() + 32 + sizeof(SectionDescriptor)

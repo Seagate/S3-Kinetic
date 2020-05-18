@@ -832,7 +832,7 @@ TYPED_TEST(SkinnyWaistTest, InstantSecureEraseReportsSuccessButLeavesStoreInUsab
 
     NullableOutgoingValue value;
     EXPECT_EQ(StoreOperationStatus_SUCCESS,
-        this->skinny_waist_.Get(0, "new", &primary_store_value, request_context, &value));
+        this->skinny_waist_.Get(0, "new", &primary_store_value, request_context, &value, NULL));
 }
 
 // Authorization tests
@@ -845,7 +845,7 @@ TYPED_TEST(SkinnyWaistTest, GetAuthorizesUser) {
     NullableOutgoingValue value;
     RequestContext request_context;
     EXPECT_EQ(StoreOperationStatus_AUTHORIZATION_FAILURE,
-        this->skinny_waist_.Get(2, "000", &primary_store_value, request_context, &value));
+        this->skinny_waist_.Get(2, "000", &primary_store_value, request_context, &value, NULL));
 }
 
 TYPED_TEST(SkinnyWaistTest, GetVersionAuthorizesUser) {
@@ -942,7 +942,7 @@ TYPED_TEST(SkinnyWaistTest, PutWithWrongVersionReturnsError) {
 
     NullableOutgoingValue value;
     EXPECT_EQ(StoreOperationStatus_SUCCESS,
-        this->skinny_waist_.Get(0, "old", &primary_store_value, request_context, &value));
+        this->skinny_waist_.Get(0, "old", &primary_store_value, request_context, &value, NULL));
     EXPECT_EQ("oldversion", primary_store_value.version);
     this->AssertEqual("oldvalue", value);
 }
@@ -971,7 +971,7 @@ TYPED_TEST(SkinnyWaistTest, PutForceWithOldVersionSucceeds) {
 
     NullableOutgoingValue value;
     EXPECT_EQ(StoreOperationStatus_SUCCESS,
-        this->skinny_waist_.Get(0, "old", &primary_store_value, request_context, &value));
+        this->skinny_waist_.Get(0, "old", &primary_store_value, request_context, &value, NULL));
     EXPECT_EQ("newversion", primary_store_value.version);
     this->AssertEqual("newvalue", value);
 }
@@ -992,7 +992,7 @@ TYPED_TEST(SkinnyWaistTest, DeleteForceWithOldVersionSucceeds) {
 
     NullableOutgoingValue value;
     EXPECT_EQ(StoreOperationStatus_NOT_FOUND,
-        this->skinny_waist_.Get(0, "old", &primary_store_value, request_context, &value));
+        this->skinny_waist_.Get(0, "old", &primary_store_value, request_context, &value, NULL));
 }
 
 TYPED_TEST(SkinnyWaistTest, DeleteForceForNotFoundSucceeds) {
@@ -1047,18 +1047,18 @@ class SkinnyWaistUnitTest : public testing::Test {
 
 TEST_F(SkinnyWaistUnitTest, GetReturnsInternalErrorWhenAppropriate) {
     PrimaryStoreValue primary_store_value;
-    EXPECT_CALL(this->primary_store_, Get("key", &primary_store_value, _))
+    EXPECT_CALL(this->primary_store_, Get("key", &primary_store_value, _, _))
         .WillOnce(Return(StoreOperationStatus_AUTHORIZATION_FAILURE));
 
     NullableOutgoingValue value;
     RequestContext request_context;
     EXPECT_EQ(StoreOperationStatus_INTERNAL_ERROR,
-        this->skinny_waist_.Get(0, "key", &primary_store_value, request_context, &value));
+        this->skinny_waist_.Get(0, "key", &primary_store_value, request_context, &value, NULL));
 }
 
 TEST_F(SkinnyWaistUnitTest, GetVersionReturnsInternalErrorWhenAppropriate) {
     std::string version;
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
         .WillOnce(Return(StoreOperationStatus_AUTHORIZATION_FAILURE));
     RequestContext request_context;
     EXPECT_EQ(StoreOperationStatus_INTERNAL_ERROR,
@@ -1068,7 +1068,7 @@ TEST_F(SkinnyWaistUnitTest, GetVersionReturnsInternalErrorWhenAppropriate) {
 TEST_F(SkinnyWaistUnitTest, PutReturnsInternalErrorOnFailureToCheckExistenceOfKey) {
     PrimaryStoreValue primary_store_value;
     primary_store_value.algorithm = 1;
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
         .WillOnce(Return(StoreOperationStatus_AUTHORIZATION_FAILURE));
     IncomingStringValue value("");
     RequestContext request_context;
@@ -1079,7 +1079,7 @@ TEST_F(SkinnyWaistUnitTest, PutReturnsInternalErrorOnFailureToCheckExistenceOfKe
 }
 
 TEST_F(SkinnyWaistUnitTest, PutReturnsInternalErrorOnFailureToStoreValue) {
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
         .WillOnce(Return(StoreOperationStatus_SUCCESS));
     EXPECT_CALL(this->primary_store_, Put("key", _, _, _, _))
         .WillOnce(Return(StoreOperationStatus_AUTHORIZATION_FAILURE));
@@ -1094,7 +1094,7 @@ TEST_F(SkinnyWaistUnitTest, PutReturnsInternalErrorOnFailureToStoreValue) {
 }
 
 TEST_F(SkinnyWaistUnitTest, PutReturnsDriveFullWhenAppropriate) {
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
         .WillOnce(Return(StoreOperationStatus_NOT_FOUND));
     EXPECT_CALL(this->primary_store_, Put("key", _, _, _, _))
         .WillOnce(Return(StoreOperationStatus_NO_SPACE));
@@ -1109,7 +1109,7 @@ TEST_F(SkinnyWaistUnitTest, PutReturnsDriveFullWhenAppropriate) {
 }
 
 TEST_F(SkinnyWaistUnitTest, DeleteReturnsInternalErrorOnFailureToCheckExistenceOfKey) {
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
         .WillOnce(Return(StoreOperationStatus_AUTHORIZATION_FAILURE));
     RequestContext request_context;
     std::tuple<int64_t, int64_t> token {0, 0};//NOLINT
@@ -1119,7 +1119,7 @@ TEST_F(SkinnyWaistUnitTest, DeleteReturnsInternalErrorOnFailureToCheckExistenceO
 }
 
 TEST_F(SkinnyWaistUnitTest, DeleteReturnsInternalErrorOnFailureToDeleteValue) {
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
         .WillOnce(Return(StoreOperationStatus_SUCCESS));
     EXPECT_CALL(this->primary_store_, Delete("key", _, _))
         .WillOnce(Return(StoreOperationStatus_AUTHORIZATION_FAILURE));
@@ -1174,7 +1174,7 @@ TEST_F(SkinnyWaistUnitTest, SecurityReturnsInternalErrorWhenAppropriate) {
 }
 
 TEST_F(SkinnyWaistUnitTest, GetReturnsCorruptionIfUnderlyingStoreCorrupt) {
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
     .WillOnce(Return(StoreOperationStatus_STORE_CORRUPT));
     RequestContext request_context;
     EXPECT_EQ(StoreOperationStatus_STORE_CORRUPT,
@@ -1182,7 +1182,7 @@ TEST_F(SkinnyWaistUnitTest, GetReturnsCorruptionIfUnderlyingStoreCorrupt) {
 }
 
 TEST_F(SkinnyWaistUnitTest, GetVersionReturnsCorruptionIfUnderlyingStoreCorrupt) {
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
             .WillOnce(Return(StoreOperationStatus_STORE_CORRUPT));
     RequestContext request_context;
     EXPECT_EQ(StoreOperationStatus_STORE_CORRUPT,
@@ -1248,7 +1248,7 @@ TEST_F(SkinnyWaistUnitTest, GetKeyRangeReturnsCorruptionIfUnderlyingStoreCorrupt
 }
 
 TEST_F(SkinnyWaistUnitTest, DeleteReturnsCorruptionIfUnderlyingStoreCorrupt) {
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
             .WillOnce(Return(StoreOperationStatus_STORE_CORRUPT));
     RequestContext request_context;
     std::tuple<int64_t, int64_t> token {0, 0};//NOLINT
@@ -1258,7 +1258,7 @@ TEST_F(SkinnyWaistUnitTest, DeleteReturnsCorruptionIfUnderlyingStoreCorrupt) {
 }
 
 TEST_F(SkinnyWaistUnitTest, DeleteForceReturnsCorruptionIfUnderlyingStoreCorrupt) {
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
             .WillOnce(Return(StoreOperationStatus_STORE_CORRUPT));
     RequestContext request_context;
     std::tuple<int64_t, int64_t> token {0, 0};//NOLINT
@@ -1268,7 +1268,7 @@ TEST_F(SkinnyWaistUnitTest, DeleteForceReturnsCorruptionIfUnderlyingStoreCorrupt
 }
 
 TEST_F(SkinnyWaistUnitTest, PutReturnsCorruptionIfUnderlyingStoreCorrupt) {
-    EXPECT_CALL(this->primary_store_, Get("key", _, _))
+    EXPECT_CALL(this->primary_store_, Get("key", _, _, _))
             .WillOnce(Return(StoreOperationStatus_STORE_CORRUPT));
     PrimaryStoreValue primary_store_value;
     RequestContext request_context;

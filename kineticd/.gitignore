@@ -62,6 +62,8 @@ src/version_info.h
 /kinetic_cpp_client-prefix
 /ha_cmd-prefix
 /ha_zac_cmds/zac_local
+/qual/qual_local
+/qual-prefix
 /lldp-prefix
 /lldp/lldp_local
 /kmem-prefix

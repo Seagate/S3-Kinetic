@@ -28,7 +28,10 @@
 
 #include "kinetic/reader_writer.h"
 
+bool skinny_IF = false;
+
 namespace kinetic {
+
 
 OutgoingStringValue::OutgoingStringValue(const std::string &s)
     : s_(s) {}
@@ -48,17 +51,13 @@ bool OutgoingStringValue::ToString(std::string *result, int* err) const {
 }
 
 
-OutgoingBuffValue::OutgoingBuffValue(const char* buff, const char* s, uint32_t size)
+OutgoingBuffValue::OutgoingBuffValue(char* buff,  char* s, uint32_t size)
     : buff_(buff), s_(s), size_(size){}
 
 
 OutgoingBuffValue::~OutgoingBuffValue() {
-    if(buff_ != NULL) {
-//#ifdef KMEM_GET
+    if(buff_ != NULL && !skinny_IF) {
         KernelMemMgr::pInstance_->FreeMem((void*)buff_);
-//#else
-//        delete[] buff_;
-//#endif
     }
 }
 

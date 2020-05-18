@@ -52,8 +52,8 @@ class KeyValueStoreInterface {
     virtual bool Init(bool create_if_missing);
     virtual void SetListOwnerReference(SendPendingStatusInterface* send_pending_status_sender);
     virtual void SetLogHandlerInterface(LogHandlerInterface* log_handler);
-    virtual StoreOperationStatus Get(const std::string& key, char *value, bool ignore_value = false,
-                                     bool using_bloom_filter = false) = 0;
+    virtual StoreOperationStatus Get(const std::string& key, char* value, bool ignore_value = false,
+                                     bool using_bloom_filter = false, char* bvalue=NULL) = 0;
     virtual StoreOperationStatus Put(
             const std::string& key,
             char *value,
@@ -89,8 +89,8 @@ class KeyValueStoreInterface {
 class MockKeyValueStore : public KeyValueStoreInterface {
     public:
     MOCK_METHOD1(Init, bool(bool create_if_missing));
-    MOCK_METHOD4(Get, StoreOperationStatus(const std::string& key, char *value, bool ignore_value,
-        bool using_bloom_filter));
+    MOCK_METHOD5(Get, StoreOperationStatus(const std::string& key, char *value, bool ignore_value,
+        bool using_bloom_filter, char* buff));
     MOCK_METHOD4(Put, StoreOperationStatus(
             const std::string& key,
             char* value,
