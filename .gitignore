@@ -121,4 +121,7 @@ libtransports.a
 lldp_kin.a
 qual_kin.a
 zac_kin.a
+s3kinetic.ARM.LAMARRKV
+s3kinetic.X86.NONSMR
+s3kinetic.X86.SMR
 
