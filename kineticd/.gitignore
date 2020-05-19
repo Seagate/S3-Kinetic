@@ -149,3 +149,4 @@ src/version_info.h
 vendor/
 x86_package_install/
 zac_ha_exercise_drive
+kinetic_test
