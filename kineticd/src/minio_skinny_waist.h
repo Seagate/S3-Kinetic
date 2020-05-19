@@ -1,5 +1,5 @@
-#ifndef MINIO_SKINNY_H
-#define MINIO_SKINNY_H
+#ifndef KINETIC_MINIO_SKINNY_WAIST_H_
+#define KINETIC_MINIO_SKINNY_WAIST_H_
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-typedef struct _CPrimaryStoreValue{
+typedef struct _CPrimaryStoreValue {
     char* version;
     char* tag;
     //char* value;
@@ -35,15 +35,17 @@ void CInitMain(char* store_partition);
 
 char* Get(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, char*** buff, uint32_t* size, uint32_t* status);
 
-void Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size, _Bool sync, int64_t sequence, int64_t connID);
+void Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size,
+         _Bool sync, int64_t sequence, int64_t connID);
 
 void Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64_t sequence, int64_t connID);
 
-void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32 maxReturned, bool reverse, char* results, int* size);
+void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32 maxReturned,
+                 bool reverse, char* results, int* size);
 
 
 #ifdef _cplusplus
 }
 #endif
-#endif
+#endif  // KINETIC_MINIO_SKINNY_WAIST_H_
 

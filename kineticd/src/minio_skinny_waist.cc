@@ -11,18 +11,18 @@
 #include "mem/DynamicMemory.h"
 #include "store_operation_status.h"
 
-using namespace std;
-using namespace com::seagate::kinetic;
+using namespace std; // NOLINT
+using namespace com::seagate::kinetic; // NOLINT
 using ::kinetic::IncomingValueInterface;
 using ::kinetic::IncomingBuffValue;
 
 extern "C" {
-   extern bool kineticd_idle;
+    extern bool kineticd_idle;
 }
 
 SkinnyWaist *pskinny_waist__ = NULL;
 
-typedef struct _CPrimaryStoreValue{
+typedef struct _CPrimaryStoreValue {
     char* version;
     char* tag;
     //char* value;
@@ -31,7 +31,6 @@ typedef struct _CPrimaryStoreValue{
 
 char* s;
 extern "C" {
-
 char* allocate_pvalue_buffer(int n) {
     char* buff = NULL;
     buff = smr::DynamicMemory::getInstance()->allocate(n);
@@ -43,9 +42,10 @@ void deallocate_gvalue_buffer(char* buff) {
     KernelMemMgr::pInstance_->FreeMem((void*)buff);
 }
 
-int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size, _Bool sync, uint64_t sequence, int64_t connID) {
+int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value,
+        size_t size, _Bool sync, uint64_t sequence, int64_t connID) {
     kineticd_idle = false;
-    std::tuple<uint64_t, int64_t> token {sequence, connID};
+    std::tuple<uint64_t, int64_t> token {sequence, connID}; // NOLINT
     PrimaryStoreValue primaryStoreValue;
     primaryStoreValue.version = string(psvalue->version);
     primaryStoreValue.tag = string(psvalue->tag);
@@ -54,8 +54,8 @@ int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStore
     IncomingBuffValue ivalue(value, size);
     RequestContext requestContext;
     requestContext.is_ssl = false;
-    
-    StoreOperationStatus status = ::pskinny_waist__->Put(user_id, string(key), string(current_version), primaryStoreValue, &ivalue, true, sync, requestContext, token);
+    StoreOperationStatus status = ::pskinny_waist__->Put(user_id, string(key), string(current_version), primaryStoreValue,
+                                                         &ivalue, true, sync, requestContext, token);
     return status;
 }
 
@@ -76,9 +76,9 @@ char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* 
     switch (status) {
         case StoreOperationStatus::StoreOperationStatus_SUCCESS:
             *size = ovalue->size();
- 	    *st = 0;
+            *st = 0;
             s = ovalue->get_value_buff();
-	    delete ovalue;
+            delete ovalue;
             return s;
         case StoreOperationStatus::StoreOperationStatus_NOT_FOUND:
             delete ovalue;
@@ -99,15 +99,16 @@ char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* 
 
 int Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, uint64_t sequence, int64_t connID) {
     kineticd_idle = false;
-    std::tuple<uint64_t, int64_t> token {sequence, connID};
+    std::tuple<uint64_t, int64_t> token {sequence, connID}; // NOLINT
     RequestContext requestContext;
     requestContext.is_ssl = false;
     StoreOperationStatus status =  ::pskinny_waist__->Delete(user_id, string(key), string(current_version), true, sync, requestContext, token);
     return status;
 }
 
-void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32_t maxReturned, bool reverse, char* results, int* size) {
-    kineticd_idle = false;   
+void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32_t maxReturned,
+                 bool reverse, char* results, int* size) {
+    kineticd_idle = false;
     RequestContext requestContext;
     requestContext.is_ssl = false;
     std::vector<std::string> keys;
@@ -116,16 +117,14 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
     char* temp = results; //(char*)malloc(4096 * sizeof(char));
     //cout << " ADDRESS " << (void*)results << " " << (void*)temp << endl;
     int totalSize = 0;
-    for(it = keys.begin(); it != keys.end(); it++ ) {
-	string key = *it;
-	strcpy(temp, key.c_str());
-	//cout << "TEMP " << key << " " <<  key.size() << " " << string(temp) << " " << (void*)temp <<  endl;
-	temp += key.size();
-	*temp++ = ':';
+    for ( it = keys.begin(); it != keys.end(); it++ ) {
+        string key = *it;
+        strcpy(temp, key.c_str());
+        temp += key.size();
+        *temp++ = ':';
         totalSize += key.size() + 1;
     }
     //cout << " RESULTS " << string(results) << endl;
     *size = totalSize;
 }
-
 }

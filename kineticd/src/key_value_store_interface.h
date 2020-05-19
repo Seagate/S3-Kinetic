@@ -53,7 +53,7 @@ class KeyValueStoreInterface {
     virtual void SetListOwnerReference(SendPendingStatusInterface* send_pending_status_sender);
     virtual void SetLogHandlerInterface(LogHandlerInterface* log_handler);
     virtual StoreOperationStatus Get(const std::string& key, char* value, bool ignore_value = false,
-                                     bool using_bloom_filter = false, char* bvalue=NULL) = 0;
+                                     bool using_bloom_filter = false, char* bvalue = NULL) = 0;
     virtual StoreOperationStatus Put(
             const std::string& key,
             char *value,

@@ -31,7 +31,7 @@ class MockPrimaryStore : public PrimaryStoreInterface {
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
         NullableOutgoingValue* value,
-	char* buff));
+        char* buff));
     MOCK_METHOD5(Put, StoreOperationStatus(
         const std::string& key,
         const PrimaryStoreValue& primary_store_value,

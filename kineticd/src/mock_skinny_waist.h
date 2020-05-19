@@ -20,7 +20,7 @@ class MockSkinnyWaist : public SkinnyWaistInterface {
         PrimaryStoreValue* primary_store_value,
         RequestContext& request_context,
         NullableOutgoingValue *value,
-	char* bvalue));
+        char* bvalue));
     MOCK_METHOD4(GetVersion, StoreOperationStatus(
         int64_t user_id,
         const std::string& key,

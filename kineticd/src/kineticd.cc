@@ -106,9 +106,8 @@ void updateKineticStartCounter() {
 void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
     cout << "1. INIT MAIN" << endl;
     int i = argc;
-    for (int j=0; j < i; j++) {
+    for (int j = 0; j < i; j++) {
        cout << " J = " << j << " " << argv[j] << endl;
-
     }
     google::InitGoogleLogging(argv[0]);
     google::InstallFailureSignalHandler();
