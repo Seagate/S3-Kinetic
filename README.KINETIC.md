@@ -54,8 +54,11 @@ II. COMPILE AND RUN minio or s3kinetic.X.Y:
       To compile, do the followings:
         - Go back to albany-minio directory:
           cd ~/albany-minio
-        - To Compile:
+        - To Compile for ARM, LAMARRKV:
+          source ~/uboot-linux/envsetup.h
           ./s3kinetic.sh ARM LAMARRKV  (for LAMARRKV using ARM processors).
+        - To Compile for X86:
+          source kineticd/x86_envsetup.sh
           ./s3kinetic.sh X86 NONSMR    (for non-smr drive using SATA interface (like standard SATA drive), X86 processor).
           ./s3kinetic.sh X86 SMR       (for smr drive using SATA interface, X86 processor).
 
