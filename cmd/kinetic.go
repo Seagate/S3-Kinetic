@@ -1180,6 +1180,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	} else {
 		return ObjectInfo{}, errInvalidArgument
 	}
+        kineticMutex.Lock()
 	goBuf := allocateValBuf(int(bufSize))
 	//Read data to buf
 	_, err = readToBuffer(r, goBuf)
@@ -1196,7 +1197,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         bytes, _ := json.Marshal(&fsMeta)
         buf := allocateValBuf(len(bytes))
         copy(buf, bytes)
-        kineticMutex.Lock()
+        //kineticMutex.Lock()
         kc = GetKineticConnection()
 	_, err = kc.CPut(key, goBuf, int(bufSize), kopts)
 	if err != nil {
