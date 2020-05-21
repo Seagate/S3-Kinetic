@@ -169,9 +169,18 @@ func Main(args []string) {
 	fmt.Println(" APP NAME ", appName)
 	// Run the app - exit on error.
 	fmt.Println(" Args ", args)
-
-        minioargs := []string{args[0], args[1], args[2]}
-        kineticargs := args[3:]
+	var minioargs []string
+	j := 0
+        for _, arg := range args {
+		if arg == "kineticd" {
+			break;
+		} else {
+			minioargs = append(minioargs, arg)
+		        j++
+		}
+	}
+        //minioargs := []string{args[0], args[1], args[2]}
+        kineticargs := args[j:]
         fmt.Println(" Minio Arga ", minioargs)
         fmt.Println(" Kinetic Args ", kineticargs)
         InitKineticd(kineticargs)

@@ -33,7 +33,7 @@ II. COMPILE AND RUN minio or s3kinetic.X.Y:
         s3kinetic.X86.SMR
     
     The above examples are the combinations that were tested.
-    The other combinations like s3kinetic.ARM.NONSMR, s3kinetic.ARM.SMR are not in the CMakeList.txt configuration, therefore they may not compiled.  These combinations may be used by INTERPOSER.
+    The other combinations like s3kinetic.ARM.NONSMR, s3kinetic.ARM.SMR are not in the CMakeList.txt configuration, therefore they may not be compiled.  These combinations may be used by INTERPOSER.
            
     A. COMPILE:
       Under "albany-minio" directory, there is "kineticd" directory.
@@ -43,6 +43,7 @@ II. COMPILE AND RUN minio or s3kinetic.X.Y:
       To compile minio (s3kinetic.x.y), assume that the following directories are under user's home directory:
         - albany-minio
         - uboot-linux (this is uboot for ARM)
+        - make sure the branch for kineticd is "features/kinetic-minio-skinny-5MBvalue"
 
       If this is the 1st time, do the followings (assume the current directory is ~/albany-minio):
         - go to "uboot-linux" directory,  do:
@@ -63,8 +64,14 @@ II. COMPILE AND RUN minio or s3kinetic.X.Y:
           ./s3kinetic.sh X86 SMR       (for smr drive using SATA interface, X86 processor).
 
       An exectuable 'minio' and s3kinetic.x.y  will be created and are ready to run.
+
+    ****Notes:  If there is no change in kineticd, another way to compile is to do make as following:
+    - for ARM:
+        make -f Makefile.arm
+    - for X86
+        make -f Makefile.x86
       
-    B. RUN minio ors3kinetic.X.Y:
+    B. RUN minio or s3kinetic.X.Y:
        1. UNDER LAMARRKV or INTERPOSER ARM:
           - Copy minio or s3kinetic.X.Y (ARM version) to the Lamarrkv drive under directory /mnt/util:
             scp minio (or s3kinetic.X.Y) root@ip_address:/mnt/util/
@@ -83,6 +90,11 @@ II. COMPILE AND RUN minio or s3kinetic.X.Y:
 
           - start minio by typing:
              ./minio server kinetic:skinny:sda kineticd --store_partition=/dev/sda --store_device=sda --metadata_db_path=./metatdata.db
+
+             to turn on  'TRACE":
+
+             ./minio --trace  server kinetic:skinny:sda kineticd --store_partition=/dev/sda --store_device=sda --metadata_db_path=./metatdata.db
+ 
           - Wait till these messages appear:
 
           ********3. OBJECT LAYER
