@@ -19,7 +19,7 @@ case "$1" in
        ;;
      esac
      make
-     ./cplibx86.sh ../libx86
+     ./cplibx86.sh ../lib
      cd ../
      make -f Makefile.x86
      ;;
@@ -29,7 +29,7 @@ case "$1" in
     source ~/uboot-linux/envsetup.sh
     cmake -DPRODUCT="$2"
     make
-    ./cplib.sh ../libarm
+    ./cplib.sh ../lib
     cd ../
     make -f Makefile.arm
     ;;

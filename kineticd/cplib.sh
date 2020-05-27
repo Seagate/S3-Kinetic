@@ -1,3 +1,4 @@
+[ ! -d "$1" ] && mkdir -p "$1"
 cp *.a $1
 cp kmem/*.a  $1
 cp ./K_api/Kinetic_Security/api/libksapi.a $1
