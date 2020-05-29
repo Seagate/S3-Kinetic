@@ -10,6 +10,17 @@ VERSION ?= $(shell git describe --tags)
 TAG ?= "minio/minio:$(VERSION)"
 BUILD_LDFLAGS := '$(LDFLAGS)'
 all: build
+	if [ ! -f "minio" ]; \
+	then \
+	    echo === New executable minio was not created ===; \
+	fi
+	if [ -f "minio" ]; \
+	then \
+		[ ! -d "./bin" ] && mkdir ./bin; \
+		cp minio ./bin/s3kinetic.X86; \
+		mv minio ./bin/; \
+    	echo === New executable minio was not created ===; \
+	fi
 
 checks:
 	@echo "Checking dependencies"
