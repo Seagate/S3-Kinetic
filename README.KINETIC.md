@@ -172,6 +172,14 @@ II. COMPILE AND RUN minio or s3kinetic.X.Y:
       4. Performance Test
          There is s3-benchmark test.
 
+    D. Running minio (or s4kinetic.x.y) with file system (ext4 or xfs):
+       This command will allow users to run minio on a storage file system such as ext4 or xfs or other file systems:
+
+       ./minio (or s3kinetic.x.y) server ./datadir
+
+       where "datadir" is a data directory. This directory can be a regular directory or a directory that is mounted to a storage partition.
+
+
 (to be continued)
 
 

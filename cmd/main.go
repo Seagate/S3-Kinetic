@@ -171,7 +171,9 @@ func Main(args []string) {
 	fmt.Println(" Args ", args)
 	var minioargs []string
 	j := 0
+	var newarg string
         for _, arg := range args {
+		newarg = arg
 		if arg == "kineticd" {
 			break;
 		} else {
@@ -181,9 +183,12 @@ func Main(args []string) {
 	}
         //minioargs := []string{args[0], args[1], args[2]}
         kineticargs := args[j:]
-        fmt.Println(" Minio Arga ", minioargs)
-        fmt.Println(" Kinetic Args ", kineticargs)
-        InitKineticd(kineticargs)
+        fmt.Println(" Minio Arg ", minioargs)
+        fmt.Println(" 1. Kinetic Args ", j, newarg)
+        if  newarg == "kineticd" {
+        	fmt.Println(" Kinetic Args ", kineticargs)
+        	InitKineticd(kineticargs)
+	}
 
         if err := newApp(appName).Run(minioargs); err != nil {
                 os.Exit(1)
