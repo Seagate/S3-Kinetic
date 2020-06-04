@@ -31,6 +31,7 @@ import (
 
 	"C"
 	"os"
+    "log"
 	minio "github.com/minio/minio/cmd"
 
 	// Import gateway
@@ -39,6 +40,7 @@ import (
 )
 
 func main() {
+    log.Println("Test Logger")
     common.EnableTrace()
     defer common.KUntrace(common.KTrace("Enter"))
     minio.Main(os.Args)

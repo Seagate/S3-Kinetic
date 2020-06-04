@@ -47,6 +47,7 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 	"github.com/minio/minio/pkg/mimedb"
 	"github.com/minio/minio/pkg/mountinfo"
+    "github.com/minio/minio/common"
 )
 
 // Default etag is used for pre-existing objects.
@@ -97,6 +98,7 @@ type fsAppendFile struct {
 
 // Initializes meta volume on all the fs path.
 func initMetaVolumeFS(fsPath, fsUUID string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// This happens for the first time, but keep this here since this
 	// is the only place where it can be made less expensive
 	// optimizing all other calls. Create minio meta volume,
@@ -123,6 +125,7 @@ func initMetaVolumeFS(fsPath, fsUUID string) error {
 
 // NewFSObjectLayer - initialize new fs object layer.
 func NewFSObjectLayer(fsPath string) (ObjectLayer, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	ctx := context.Background()
 	if fsPath == "" {
 		return nil, errInvalidArgument
@@ -189,12 +192,14 @@ func NewFSObjectLayer(fsPath string) (ObjectLayer, error) {
 
 // NewNSLock - initialize a new namespace RWLocker instance.
 func (fs *FSObjects) NewNSLock(ctx context.Context, bucket string, objects ...string) RWLocker {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// lockers are explicitly 'nil' for FS mode since there are only local lockers
 	return fs.nsMutex.NewNSLock(ctx, nil, bucket, objects...)
 }
 
 // Shutdown - should be called when process shuts down.
 func (fs *FSObjects) Shutdown(ctx context.Context) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	fs.fsFormatRlk.Close()
 
 	// Cleanup and delete tmp uuid.
@@ -203,6 +208,7 @@ func (fs *FSObjects) Shutdown(ctx context.Context) error {
 
 // StorageInfo - returns underlying storage statistics.
 func (fs *FSObjects) StorageInfo(ctx context.Context, _ bool) StorageInfo {
+    defer common.KUntrace(common.KTrace("Enter"))
 
 	atomic.AddInt64(&fs.activeIOCount, 1)
 	defer func() {
@@ -229,6 +235,7 @@ func (fs *FSObjects) StorageInfo(ctx context.Context, _ bool) StorageInfo {
 }
 
 func (fs *FSObjects) waitForLowActiveIO() {
+    defer common.KUntrace(common.KTrace("Enter"))
 	for atomic.LoadInt64(&fs.activeIOCount) >= fs.maxActiveIOCount {
 		time.Sleep(lowActiveIOWaitTick)
 	}
@@ -236,6 +243,7 @@ func (fs *FSObjects) waitForLowActiveIO() {
 
 // CrawlAndGetDataUsage returns data usage stats of the current FS deployment
 func (fs *FSObjects) CrawlAndGetDataUsage(ctx context.Context, endCh <-chan struct{}) DataUsageInfo {
+    defer common.KUntrace(common.KTrace("Enter"))
 	dataUsageInfo := updateUsage(fs.fsPath, endCh, fs.waitForLowActiveIO, func(item Item) (int64, error) {
 		// Get file size, symlinks which cannot bex
 		// followed are automatically filtered by fastwalk.
@@ -258,6 +266,7 @@ func (fs *FSObjects) CrawlAndGetDataUsage(ctx context.Context, endCh <-chan stru
 // corresponding valid bucket names on the backend in a platform
 // compatible way for all operating systems.
 func (fs *FSObjects) getBucketDir(ctx context.Context, bucket string) (string, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if bucket == "" || bucket == "." || bucket == ".." {
 		return "", errVolumeNotFound
 	}
@@ -266,6 +275,7 @@ func (fs *FSObjects) getBucketDir(ctx context.Context, bucket string) (string, e
 }
 
 func (fs *FSObjects) statBucketDir(ctx context.Context, bucket string) (os.FileInfo, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	bucketDir, err := fs.getBucketDir(ctx, bucket)
 	if err != nil {
 		return nil, err
@@ -280,6 +290,7 @@ func (fs *FSObjects) statBucketDir(ctx context.Context, bucket string) (os.FileI
 // MakeBucketWithLocation - create a new bucket, returns if it
 // already exists.
 func (fs *FSObjects) MakeBucketWithLocation(ctx context.Context, bucket, location string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	bucketLock := fs.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
 		return err
@@ -309,6 +320,7 @@ func (fs *FSObjects) MakeBucketWithLocation(ctx context.Context, bucket, locatio
 
 // GetBucketInfo - fetch bucket metadata info.
 func (fs *FSObjects) GetBucketInfo(ctx context.Context, bucket string) (bi BucketInfo, e error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	bucketLock := fs.NewNSLock(ctx, bucket, "")
 	if e := bucketLock.GetRLock(globalObjectTimeout); e != nil {
 		return bi, e
@@ -335,6 +347,7 @@ func (fs *FSObjects) GetBucketInfo(ctx context.Context, bucket string) (bi Bucke
 
 // ListBuckets - list all s3 compatible buckets (directories) at fsPath.
 func (fs *FSObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if err := checkPathLength(fs.fsPath); err != nil {
 		logger.LogIf(ctx, err)
 		return nil, err
@@ -384,6 +397,7 @@ func (fs *FSObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
 // DeleteBucket - delete a bucket and all the metadata associated
 // with the bucket including pending multipart, object metadata.
 func (fs *FSObjects) DeleteBucket(ctx context.Context, bucket string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	bucketLock := fs.NewNSLock(ctx, bucket, "")
 	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
 		logger.LogIf(ctx, err)
@@ -424,6 +438,7 @@ func (fs *FSObjects) DeleteBucket(ctx context.Context, bucket string) error {
 // if source object and destination object are same we only
 // update metadata.
 func (fs *FSObjects) CopyObject(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (oi ObjectInfo, e error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	cpSrcDstSame := isStringEqual(pathJoin(srcBucket, srcObject), pathJoin(dstBucket, dstObject))
 	if !cpSrcDstSame {
 		objectDWLock := fs.NewNSLock(ctx, dstBucket, dstObject)
@@ -490,6 +505,7 @@ func (fs *FSObjects) CopyObject(ctx context.Context, srcBucket, srcObject, dstBu
 // GetObjectNInfo - returns object info and a reader for object
 // content.
 func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
 	}
@@ -589,6 +605,7 @@ func (fs *FSObjects) GetObjectNInfo(ctx context.Context, bucket, object string, 
 // startOffset indicates the starting read location of the object.
 // length indicates the total length of the object.
 func (fs *FSObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}
@@ -611,6 +628,7 @@ func (fs *FSObjects) GetObject(ctx context.Context, bucket, object string, offse
 
 // getObject - wrapper for GetObject
 func (fs *FSObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if _, err = fs.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
 	}
@@ -695,6 +713,7 @@ func (fs *FSObjects) getObject(ctx context.Context, bucket, object string, offse
 
 // Create a new fs.json file, if the existing one is corrupt. Should happen very rarely.
 func (fs *FSObjects) createFsJSON(object, fsMetaPath string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	fsMeta := newFSMetaV1()
 	fsMeta.Meta = make(map[string]string)
 	fsMeta.Meta["etag"] = GenETag()
@@ -711,6 +730,7 @@ func (fs *FSObjects) createFsJSON(object, fsMetaPath string) error {
 
 // Used to return default etag values when a pre-existing object's meta data is queried.
 func (fs *FSObjects) defaultFsJSON(object string) fsMetaV1 {
+    defer common.KUntrace(common.KTrace("Enter"))
 	fsMeta := newFSMetaV1()
 	fsMeta.Meta = make(map[string]string)
 	fsMeta.Meta["etag"] = defaultEtag
@@ -721,6 +741,7 @@ func (fs *FSObjects) defaultFsJSON(object string) fsMetaV1 {
 
 // getObjectInfo - wrapper for reading object metadata and constructs ObjectInfo.
 func (fs *FSObjects) getObjectInfo(ctx context.Context, bucket, object string) (oi ObjectInfo, e error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	fsMeta := fsMetaV1{}
 	if HasSuffix(object, SlashSeparator) {
 		fi, err := fsStatDir(ctx, pathJoin(fs.fsPath, bucket, object))
@@ -767,6 +788,7 @@ func (fs *FSObjects) getObjectInfo(ctx context.Context, bucket, object string) (
 
 // getObjectInfoWithLock - reads object metadata and replies back ObjectInfo.
 func (fs *FSObjects) getObjectInfoWithLock(ctx context.Context, bucket, object string) (oi ObjectInfo, e error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Lock the object before reading.
 	objectLock := fs.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetRLock(globalObjectTimeout); err != nil {
@@ -791,6 +813,7 @@ func (fs *FSObjects) getObjectInfoWithLock(ctx context.Context, bucket, object s
 
 // GetObjectInfo - reads object metadata and replies back ObjectInfo.
 func (fs *FSObjects) GetObjectInfo(ctx context.Context, bucket, object string, opts ObjectOptions) (oi ObjectInfo, e error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 
 	atomic.AddInt64(&fs.activeIOCount, 1)
 	defer func() {
@@ -820,6 +843,7 @@ func (fs *FSObjects) GetObjectInfo(ctx context.Context, bucket, object string, o
 // object is "a/b/c/d", stat makes sure that objects ""a/b/c""
 // "a/b" and "a" do not exist.
 func (fs *FSObjects) parentDirIsObject(ctx context.Context, bucket, parent string) bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	var isParentDirObject func(string) bool
 	isParentDirObject = func(p string) bool {
 		if p == "." || p == SlashSeparator {
@@ -841,6 +865,7 @@ func (fs *FSObjects) parentDirIsObject(ctx context.Context, bucket, parent strin
 // Additionally writes `fs.json` which carries the necessary metadata
 // for future object operations.
 func (fs *FSObjects) PutObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if err := checkPutObjectArgs(ctx, bucket, object, fs, r.Size()); err != nil {
 		return ObjectInfo{}, err
 	}
@@ -862,6 +887,7 @@ func (fs *FSObjects) PutObject(ctx context.Context, bucket string, object string
 
 // putObject - wrapper for PutObject
 func (fs *FSObjects) putObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	data := r.Reader
 
 	// No metadata is set, allocate a new one.
@@ -994,6 +1020,7 @@ func (fs *FSObjects) putObject(ctx context.Context, bucket string, object string
 // DeleteObjects - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (fs *FSObjects) DeleteObjects(ctx context.Context, bucket string, objects []string) ([]error, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	//fmt.Println(" *** DELETE OBJS *****", bucket, " ", objects)
 	errs := make([]error, len(objects))
 	for idx, object := range objects {
@@ -1005,6 +1032,7 @@ func (fs *FSObjects) DeleteObjects(ctx context.Context, bucket string, objects [
 // DeleteObject - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (fs *FSObjects) DeleteObject(ctx context.Context, bucket, object string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Acquire a write lock before deleting the object.
 	objectLock := fs.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetLock(globalOperationTimeout); err != nil {
@@ -1058,6 +1086,7 @@ func (fs *FSObjects) DeleteObject(ctx context.Context, bucket, object string) er
 // isLeaf - is used by listDir function to check if an entry
 // is a leaf or non-leaf entry.
 func (fs *FSObjects) listDirFactory() ListDirFunc {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// listDir - lists all the entries at a given prefix and given entry in the prefix.
 	listDir := func(bucket, prefixDir, prefixEntry string) (emptyDir bool, entries []string) {
 		var err error
@@ -1081,6 +1110,7 @@ func (fs *FSObjects) listDirFactory() ListDirFunc {
 // and the prefix represents an empty directory. An S3 empty directory
 // is also an empty directory in the FS backend.
 func (fs *FSObjects) isObjectDir(bucket, prefix string) bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	entries, err := readDirN(pathJoin(fs.fsPath, bucket, prefix), 1)
 	if err != nil {
 		return false
@@ -1091,6 +1121,7 @@ func (fs *FSObjects) isObjectDir(bucket, prefix string) bool {
 // getObjectETag is a helper function, which returns only the md5sum
 // of the file on the disk.
 func (fs *FSObjects) getObjectETag(ctx context.Context, bucket, entry string, lock bool) (string, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	fsMetaPath := pathJoin(fs.fsPath, minioMetaBucket, bucketMetaPrefix, bucket, entry, fs.metaJSONFile)
 
 	var reader io.Reader
@@ -1188,6 +1219,7 @@ func (fs *FSObjects) GetObjectTag(ctx context.Context, bucket, object string) (t
 
 // PutObjectTag - replace or add tags to an existing object
 func (fs *FSObjects) PutObjectTag(ctx context.Context, bucket, object string, tags string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	fsMetaPath := pathJoin(fs.fsPath, minioMetaBucket, bucketMetaPrefix, bucket, object, fs.metaJSONFile)
 	fsMeta := fsMetaV1{}
 	wlk, err := fs.rwPool.Write(fsMetaPath)
@@ -1220,17 +1252,20 @@ func (fs *FSObjects) PutObjectTag(ctx context.Context, bucket, object string, ta
 
 // DeleteObjectTag - delete object tags from an existing object
 func (fs *FSObjects) DeleteObjectTag(ctx context.Context, bucket, object string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return fs.PutObjectTag(ctx, bucket, object, "")
 }
 
 // ReloadFormat - no-op for fs, Valid only for XL.
 func (fs *FSObjects) ReloadFormat(ctx context.Context, dryRun bool) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return NotImplemented{}
 }
 
 // HealFormat - no-op for fs, Valid only for XL.
 func (fs *FSObjects) HealFormat(ctx context.Context, dryRun bool) (madmin.HealResultItem, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return madmin.HealResultItem{}, NotImplemented{}
 }
@@ -1238,6 +1273,7 @@ func (fs *FSObjects) HealFormat(ctx context.Context, dryRun bool) (madmin.HealRe
 // HealObject - no-op for fs. Valid only for XL.
 func (fs *FSObjects) HealObject(ctx context.Context, bucket, object string, dryRun, remove bool, scanMode madmin.HealScanMode) (
 	res madmin.HealResultItem, err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return res, NotImplemented{}
 }
@@ -1245,6 +1281,7 @@ func (fs *FSObjects) HealObject(ctx context.Context, bucket, object string, dryR
 // HealBucket - no-op for fs, Valid only for XL.
 func (fs *FSObjects) HealBucket(ctx context.Context, bucket string, dryRun, remove bool) (madmin.HealResultItem,
 	error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return madmin.HealResultItem{}, NotImplemented{}
 }
@@ -1255,54 +1292,64 @@ func (fs *FSObjects) HealBucket(ctx context.Context, bucket string, dryRun, remo
 // error walker returns error. Optionally if context.Done() is received
 // then Walk() stops the walker.
 func (fs *FSObjects) Walk(ctx context.Context, bucket, prefix string, results chan<- ObjectInfo) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return fsWalk(ctx, fs, bucket, prefix, fs.listDirFactory(), results, fs.getObjectInfo, fs.getObjectInfo)
 }
 
 // HealObjects - no-op for fs. Valid only for XL.
 func (fs *FSObjects) HealObjects(ctx context.Context, bucket, prefix string, fn healObjectFn) (e error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return NotImplemented{}
 }
 
 // ListBucketsHeal - list all buckets to be healed. Valid only for XL
 func (fs *FSObjects) ListBucketsHeal(ctx context.Context) ([]BucketInfo, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return []BucketInfo{}, NotImplemented{}
 }
 
 // GetMetrics - no op
 func (fs *FSObjects) GetMetrics(ctx context.Context) (*Metrics, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	logger.LogIf(ctx, NotImplemented{})
 	return &Metrics{}, NotImplemented{}
 }
 
 // SetBucketPolicy sets policy on bucket
 func (fs *FSObjects) SetBucketPolicy(ctx context.Context, bucket string, policy *policy.Policy) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return savePolicyConfig(ctx, fs, bucket, policy)
 }
 
 // GetBucketPolicy will get policy on bucket
 func (fs *FSObjects) GetBucketPolicy(ctx context.Context, bucket string) (*policy.Policy, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return getPolicyConfig(fs, bucket)
 }
 
 // DeleteBucketPolicy deletes all policies on bucket
 func (fs *FSObjects) DeleteBucketPolicy(ctx context.Context, bucket string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return removePolicyConfig(ctx, fs, bucket)
 }
 
 // SetBucketLifecycle sets lifecycle on bucket
 func (fs *FSObjects) SetBucketLifecycle(ctx context.Context, bucket string, lifecycle *lifecycle.Lifecycle) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return saveLifecycleConfig(ctx, fs, bucket, lifecycle)
 }
 
 // GetBucketLifecycle will get lifecycle on bucket
 func (fs *FSObjects) GetBucketLifecycle(ctx context.Context, bucket string) (*lifecycle.Lifecycle, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return getLifecycleConfig(fs, bucket)
 }
 
 // DeleteBucketLifecycle deletes all lifecycle on bucket
 func (fs *FSObjects) DeleteBucketLifecycle(ctx context.Context, bucket string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return removeLifecycleConfig(ctx, fs, bucket)
 }
 
@@ -1313,16 +1360,19 @@ func (fs *FSObjects) GetBucketSSEConfig(ctx context.Context, bucket string) (*bu
 
 // SetBucketSSEConfig sets bucket encryption config on given bucket
 func (fs *FSObjects) SetBucketSSEConfig(ctx context.Context, bucket string, config *bucketsse.BucketSSEConfig) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return saveBucketSSEConfig(ctx, fs, bucket, config)
 }
 
 // DeleteBucketSSEConfig deletes bucket encryption config on given bucket
 func (fs *FSObjects) DeleteBucketSSEConfig(ctx context.Context, bucket string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return removeBucketSSEConfig(ctx, fs, bucket)
 }
 
 // ListObjectsV2 lists all blobs in bucket filtered by prefix
 func (fs *FSObjects) ListObjectsV2(ctx context.Context, bucket, prefix, continuationToken, delimiter string, maxKeys int, fetchOwner bool, startAfter string) (result ListObjectsV2Info, err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	//fmt.Println("*** LIST OBJECTS V2 ***")
 	marker := continuationToken
 	if marker == "" {
@@ -1346,26 +1396,31 @@ func (fs *FSObjects) ListObjectsV2(ctx context.Context, bucket, prefix, continua
 
 // IsNotificationSupported returns whether bucket notification is applicable for this layer.
 func (fs *FSObjects) IsNotificationSupported() bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return true
 }
 
 // IsListenBucketSupported returns whether listen bucket notification is applicable for this layer.
 func (fs *FSObjects) IsListenBucketSupported() bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return true
 }
 
 // IsEncryptionSupported returns whether server side encryption is implemented for this layer.
 func (fs *FSObjects) IsEncryptionSupported() bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return true
 }
 
 // IsCompressionSupported returns whether compression is applicable for this layer.
 func (fs *FSObjects) IsCompressionSupported() bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return true
 }
 
 // IsReady - Check if the backend disk is ready to accept traffic.
 func (fs *FSObjects) IsReady(_ context.Context) bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	_, err := os.Stat(fs.fsPath)
 	return err == nil
 }

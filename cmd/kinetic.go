@@ -82,7 +82,7 @@ func bToMb(b uint64) uint64 {
 }
 
 func PrintMemUsage() {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	log.Println("Alloc: ", bToMb(m.Alloc))
@@ -94,7 +94,7 @@ func PrintMemUsage() {
 }
 
 func InitKineticd(argv []string) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 
 	log.Println("LEN OF ARGS ", len(argv))
         argc := C.int(len(argv))
@@ -1425,15 +1425,22 @@ func (ko *KineticObjects) listDirFactory() ListDirFunc {
         defer common.KUntrace(common.KTrace("Enter"))
         // listDir - lists all the entries at a given prefix and given entry in the prefix.
         listDir := func(bucket, prefixDir, prefixEntry string) (emptyDir bool, entries []string) {
+                defer common.KUntrace(common.KTrace(":listDirectoryFactory:func: Enter"))
+                common.KTrace("listDirFactory:func: bucket:" + bucket +
+                    ", prefixDir:" + prefixDir + ", prefixEntry:" + prefixEntry)
+                common.KTrace("listDirFactory:func: path:" + pathJoin(ko.fsPath, bucket, prefixEntry))
                 var err error
+                common.KTrace("*** CALLING READ DIR ***")
                 entries, err = readDir(pathJoin(ko.fsPath, bucket, prefixDir))
                 if err != nil && err != errFileNotFound {
                         logger.LogIf(context.Background(), err)
                         return false, nil
                 }
                 if len(entries) == 0 {
+                        common.KTrace("*** NO ENTRY ***")
                         return true, nil
                 }
+                common.KTrace("*** HAS ENTRY ***")
                 sort.Strings(entries)
                 return false, filterMatchingPrefix(entries, prefixEntry)
         }
@@ -1576,14 +1583,35 @@ func (ko *KineticObjects) DeleteBucketPolicy(ctx context.Context, bucket string)
 
 // SetBucketLifecycle sets lifecycle on bucket
 func (ko *KineticObjects) SetBucketLifecycle(ctx context.Context, bucket string, lifecycle *lifecycle.Lifecycle) error {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
+    out, merr := json.MarshalIndent(lifecycle, "", "\t")
+    if merr == nil {
+        common.KTrace(string(out))
+    } else {
+        common.KTrace("Failed to marshall LifeCycle object")
+    }
+	t := time.Now()
+    y,m,d := t.Date()
+    str := fmt.Sprintf("Time now: %d:%d:%d", y, m, d)
+    common.KTrace(str)
 	return saveLifecycleConfig(ctx, ko, bucket, lifecycle)
 }
 
 // GetBucketLifecycle will get lifecycle on bucket
 func (ko *KineticObjects) GetBucketLifecycle(ctx context.Context, bucket string) (*lifecycle.Lifecycle, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-	return getLifecycleConfig(ko, bucket)
+    lc, err := getLifecycleConfig(ko, bucket)
+/*
+    if err == nil {
+        out, merr := json.MarshalIndent(lc, "", "\t")
+        if merr == nil {
+            common.KTrace(string(out))
+        } else {
+            common.KTrace("Failed to marshall LifeCycle object")
+        }
+    }
+*/
+	return lc, err //getLifecycleConfig(ko, bucket)
 }
 
 // DeleteBucketLifecycle deletes all lifecycle on bucket

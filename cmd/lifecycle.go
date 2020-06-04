@@ -25,6 +25,7 @@ import (
 	"sync"
 
 	"github.com/minio/minio/pkg/bucket/lifecycle"
+	"github.com/minio/minio/common"
 )
 
 const (
@@ -41,6 +42,7 @@ type LifecycleSys struct {
 
 // Set - sets lifecycle config to given bucket name.
 func (sys *LifecycleSys) Set(bucketName string, lifecycle lifecycle.Lifecycle) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if globalIsGateway {
 		// no-op
 		return
@@ -54,6 +56,7 @@ func (sys *LifecycleSys) Set(bucketName string, lifecycle lifecycle.Lifecycle) {
 
 // Get - gets lifecycle config associated to a given bucket name.
 func (sys *LifecycleSys) Get(bucketName string) (lc lifecycle.Lifecycle, ok bool) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("LIFECYCLE: GET", bucketName)
 	if globalIsGateway {
 	        //log.Println("1. LIFECYCLE: GET", bucketName)
@@ -83,6 +86,7 @@ func (sys *LifecycleSys) Get(bucketName string) (lc lifecycle.Lifecycle, ok bool
 }
 
 func saveLifecycleConfig(ctx context.Context, objAPI ObjectLayer, bucketName string, bucketLifecycle *lifecycle.Lifecycle) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	data, err := xml.Marshal(bucketLifecycle)
 	if err != nil {
 		return err
@@ -95,6 +99,8 @@ func saveLifecycleConfig(ctx context.Context, objAPI ObjectLayer, bucketName str
 
 // getLifecycleConfig - get lifecycle config for given bucket name.
 func getLifecycleConfig(objAPI ObjectLayer, bucketName string) (*lifecycle.Lifecycle, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace("Bucket name: " + bucketName)
 	// Construct path to lifecycle.xml for the given bucket.
 	configFile := path.Join(bucketConfigPrefix, bucketName, bucketLifecycleConfig)
 	configData, err := readConfig(context.Background(), objAPI, configFile)
@@ -109,6 +115,7 @@ func getLifecycleConfig(objAPI ObjectLayer, bucketName string) (*lifecycle.Lifec
 }
 
 func removeLifecycleConfig(ctx context.Context, objAPI ObjectLayer, bucketName string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Construct path to lifecycle.xml for the given bucket.
 	configFile := path.Join(bucketConfigPrefix, bucketName, bucketLifecycleConfig)
 
@@ -123,6 +130,7 @@ func removeLifecycleConfig(ctx context.Context, objAPI ObjectLayer, bucketName s
 
 // NewLifecycleSys - creates new lifecycle system.
 func NewLifecycleSys() *LifecycleSys {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return &LifecycleSys{
 		bucketLifecycleMap: make(map[string]lifecycle.Lifecycle),
 	}
@@ -130,6 +138,7 @@ func NewLifecycleSys() *LifecycleSys {
 
 // Init - initializes lifecycle system from lifecycle.xml of all buckets.
 func (sys *LifecycleSys) Init(buckets []BucketInfo, objAPI ObjectLayer) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if objAPI == nil {
 		return errServerNotInitialized
 	}
@@ -146,6 +155,7 @@ func (sys *LifecycleSys) Init(buckets []BucketInfo, objAPI ObjectLayer) error {
 
 // Loads lifecycle policies for all buckets into LifecycleSys.
 func (sys *LifecycleSys) load(buckets []BucketInfo, objAPI ObjectLayer) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	for _, bucket := range buckets {
 		config, err := objAPI.GetBucketLifecycle(context.Background(), bucket.Name)
 		if err != nil {
@@ -163,6 +173,7 @@ func (sys *LifecycleSys) load(buckets []BucketInfo, objAPI ObjectLayer) error {
 
 // Remove - removes lifecycle config for given bucket name.
 func (sys *LifecycleSys) Remove(bucketName string) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	sys.Lock()
 	defer sys.Unlock()
 

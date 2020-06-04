@@ -32,6 +32,7 @@ import (
 	"github.com/minio/minio/pkg/env"
 	iampolicy "github.com/minio/minio/pkg/iam/policy"
 	xnet "github.com/minio/minio/pkg/net"
+	"github.com/minio/minio/common"
 )
 
 // Config - OpenID Config
@@ -88,6 +89,7 @@ func (r *Config) PopulatePublicKey() error {
 
 // UnmarshalJSON - decodes JSON data.
 func (r *Config) UnmarshalJSON(data []byte) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// subtype to avoid recursive call to UnmarshalJSON()
 	type subConfig Config
 	var sr subConfig
@@ -113,6 +115,7 @@ type JWT struct {
 
 // GetDefaultExpiration - returns the expiration seconds expected.
 func GetDefaultExpiration(dsecs string) (time.Duration, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	defaultExpiryDuration := time.Duration(60) * time.Minute // Defaults to 1hr.
 	if dsecs != "" {
 		expirySecs, err := strconv.ParseInt(dsecs, 10, 64)
@@ -133,6 +136,7 @@ func GetDefaultExpiration(dsecs string) (time.Duration, error) {
 }
 
 func updateClaimsExpiry(dsecs string, claims map[string]interface{}) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	expStr := claims["exp"]
 	if expStr == "" {
 		return ErrTokenExpired
@@ -298,6 +302,7 @@ func Enabled(kvs config.KVS) bool {
 
 // LookupConfig lookup jwks from config, override with any ENVs.
 func LookupConfig(kvs config.KVS, transport *http.Transport, closeRespFn func(io.ReadCloser)) (c Config, err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if err = config.CheckValidKeys(config.IdentityOpenIDSubSys, kvs, DefaultKVS); err != nil {
 		return c, err
 	}

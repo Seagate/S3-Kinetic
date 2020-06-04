@@ -42,6 +42,7 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 	xnet "github.com/minio/minio/pkg/net"
 	"github.com/minio/minio/pkg/sync/errgroup"
+    "github.com/minio/minio/common"
 )
 
 // NotificationSys - notification system.
@@ -547,6 +548,7 @@ func (sys *NotificationSys) RemoveBucketObjectLockConfig(ctx context.Context, bu
 // SetBucketLifecycle - calls SetBucketLifecycle on all peers.
 func (sys *NotificationSys) SetBucketLifecycle(ctx context.Context, bucketName string,
 	bucketLifecycle *lifecycle.Lifecycle) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	go func() {
 		ng := WithNPeers(len(sys.peerClients))
 		for idx, client := range sys.peerClients {

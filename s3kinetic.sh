@@ -35,11 +35,3 @@ case "$1" in
     ;;
 esac
 
-if [ -f "minio" ]; then
-    [ ! -d "./bin" ] && mkdir ./bin
-    cp minio ./bin/s3kinetic.$1.$2
-    mv minio ./bin/
-    echo "=== New executable minio was created in ./bin directory ===" 
-else
-    echo "=== New executable minio was not created ==="
-fi

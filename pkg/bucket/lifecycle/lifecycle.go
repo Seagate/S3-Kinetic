@@ -22,6 +22,8 @@ import (
 	"io"
 	"strings"
 	"time"
+    "fmt"
+	"github.com/minio/minio/common"
 )
 
 var (
@@ -54,14 +56,21 @@ func (lc Lifecycle) IsEmpty() bool {
 
 // ParseLifecycleConfig - parses data in given reader to Lifecycle.
 func ParseLifecycleConfig(reader io.Reader) (*Lifecycle, error) {
-        log.Println(" PARSE LIFE CYCLE CONFIG")
-
+    defer common.KUntrace(common.KTrace("Enter"))
 	var lc Lifecycle
 	if err := xml.NewDecoder(reader).Decode(&lc); err != nil {
                 log.Println(" 0. ERROR: PARSE", err)
 
 		return nil, err
 	}
+/*
+    out, merr := json.MarshalIndent(lc, "", "\t")
+    if merr == nil {
+        fmt.Println("pkg.lifecycle.ParseLifecycleConfig(): ", string(out))
+    } else {
+        fmt.Println("pkg.lifecycle.ParseLifecycleConfig(): Failed to marshall lifecycle object")
+    }
+*/
 	if err := lc.Validate(); err != nil {
 		log.Println(" 1. ERROR: PARSE", err)
 		return nil, err
@@ -129,20 +138,28 @@ func (lc Lifecycle) FilterRuleActions(objName, objTags string) (Expiration, Tran
 // ComputeAction returns the action to perform by evaluating all lifecycle rules
 // against the object name and its modification time.
 func (lc Lifecycle) ComputeAction(objName, objTags string, modTime time.Time) Action {
+    defer common.KUntrace(common.KTrace("Enter"))
 	var action = NoneAction
 	if modTime.IsZero() {
 		return action
 	}
 	exp, _ := lc.FilterRuleActions(objName, objTags)
+    str := fmt.Sprintf("Expiration Info: %+v\n", exp)
+    common.KTrace(str)
 	if !exp.IsDateNull() {
+        common.KTrace("Time is not NULL")
 		if time.Now().After(exp.Date.Time) {
+            common.KTrace("Del Action")
 			action = DeleteAction
 		}
 	}
 	if !exp.IsDaysNull() {
+        common.KTrace("Day is not NULL")
 		if time.Now().After(modTime.Add(time.Duration(exp.Days) * 24 * time.Hour)) {
+            common.KTrace("Del Action")
 			action = DeleteAction
 		}
+		action = DeleteAction
 	}
 	return action
 }

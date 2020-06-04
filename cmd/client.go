@@ -603,13 +603,14 @@ func (c *Client) CDelete(key string, cmd Opts)  error {
         defer common.KUntrace(common.KTrace("Enter"))
         currentVersion := "1"
         cKey := C.CString(key)
-	var status C.int 
+	var status C.int
         status = C.Delete(1, cKey, C.CString(currentVersion), false, 1, 1)
 	//log.Println(" STATUS DEL ", int(status))
         return  toKineticError(KineticError(int(status)))
 }
 
 func (c *Client) Delete(key string, cmd Opts) error {
+        defer common.KUntrace(common.KTrace("Enter"))
         if SkinnyWaistIF {
                 return c.CDelete(key, cmd)
         }

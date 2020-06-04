@@ -20,10 +20,12 @@ import (
 	"context"
 	//"log"
 	"time"
+    "fmt"
 
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/bucket/lifecycle"
 	"github.com/minio/minio/pkg/event"
+	"github.com/minio/minio/common"
 )
 
 const (
@@ -39,6 +41,7 @@ type lifecycleOps struct {
 var globalLifecycleOps = &lifecycleOps{}
 
 func getLocalBgLifecycleOpsStatus() BgLifecycleOpsStatus {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return BgLifecycleOpsStatus{
 		LastActivity: globalLifecycleOps.LastActivity,
 	}
@@ -48,10 +51,12 @@ func getLocalBgLifecycleOpsStatus() BgLifecycleOpsStatus {
 // listing of all objects and applies any matching bucket lifecycle
 // rules.
 func initDailyLifecycle() {
+    defer common.KUntrace(common.KTrace("Enter"))
 	go startDailyLifecycle()
 }
 
 func startDailyLifecycle() {
+    defer common.KUntrace(common.KTrace("Enter"))
 	var objAPI ObjectLayer
 	var ctx = context.Background()
 	//log.Println("START DAILY LIFECYCLE")
@@ -59,6 +64,7 @@ func startDailyLifecycle() {
 	for {
 		objAPI = newObjectLayerWithoutSafeModeFn()
 		if objAPI == nil {
+            common.KTrace("****** Object API is not ready.  Sleeping...")
 			time.Sleep(time.Second)
 			continue
 		}
@@ -67,6 +73,7 @@ func startDailyLifecycle() {
 
 	// Calculate the time of the last lifecycle operation in all peers node of the cluster
 	computeLastLifecycleActivity := func(status []BgOpsStatus) time.Time {
+        defer common.KUntrace(common.KTrace("Enter"))
 		//log.Println(" CALCULATE TIME OF LAST LIFECYCLE")
 		var lastAct time.Time
 		for _, st := range status {
@@ -76,8 +83,9 @@ func startDailyLifecycle() {
 		}
 		return lastAct
 	}
-	
+
 	for {
+        common.KTrace("****** Wake up")
 		// Check if we should perform lifecycle ops based on the last lifecycle activity, sleep one hour otherwise
 
 		allLifecycleStatus := []BgOpsStatus{
@@ -88,6 +96,7 @@ func startDailyLifecycle() {
 		}
 		lastAct := computeLastLifecycleActivity(allLifecycleStatus)
 		if !lastAct.IsZero() && time.Since(lastAct) < bgLifecycleInterval {
+            common.KTrace("****** There was action.  Sleeping...")
 			time.Sleep(bgLifecycleTick)
 		}
 		//log.Println("PERFORM LIFECYCLE OP")
@@ -100,10 +109,12 @@ func startDailyLifecycle() {
 		// instance doing the lifecycle round round
 		case OperationTimedOut:
                         //log.Println("2.1 PERFORM LIFECYCLE OP")
+            common.KTrace("****** OperationTimedOut: Sleeping...")
 			time.Sleep(bgLifecycleTick)
 		default:
 			logger.LogIf(ctx, err)
                         //log.Println("2.2 PERFORM LIFECYCLE OP")
+            common.KTrace("****** OperationTimedOut: Default Sleeping...")
 			time.Sleep(time.Minute)
 			continue
 		}
@@ -116,6 +127,7 @@ func startDailyLifecycle() {
 var lifecycleLockTimeout = newDynamicTimeout(60*time.Second, time.Second)
 
 func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Lock to avoid concurrent lifecycle ops from other nodes
         //log.Println("LIFECYCLE ROUND")
 
@@ -131,12 +143,22 @@ func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
 	}
 
 	for _, bucket := range buckets {
+        str := fmt.Sprintf("Bucket Info: %+v\n", bucket)
+        common.KTrace(str)
 		//log.Println("CHECK BUCKET: ", bucket.Name)
 		// Check if the current bucket has a configured lifecycle policy, skip otherwise
 		l, ok := globalLifecycleSys.Get(bucket.Name)
 		if !ok {
 			continue
 		}
+        /*
+        out, merr := json.MarshalIndent(l, "", "\t")
+        if merr == nil {
+            common.KTrace(string(out))
+        } else {
+            common.KTrace("Failed to marshall LifeCycle object")
+        }
+        */
 
 		// Calculate the common prefix of all lifecycle rules
 		//log.Println("1. CHECK BUCKET: ", bucket.Name, l)
@@ -151,16 +173,20 @@ func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
 
 		// Allocate new results channel to receive ObjectInfo.
 		objInfoCh := make(chan ObjectInfo)
-
+        /*
+        str = fmt.Sprintf("ObjInfoCh Info: %+v\n", objInfoCh)
+        common.KTrace(str)
+        fmt.Println(len(objInfoCh))
+        */
 		// Walk through all objects
 		if err := objAPI.Walk(ctx, bucket.Name, commonPrefix, objInfoCh); err != nil {
 			return err
 		}
-                //log.Println("3. CHECK BUCKET: ", bucket.Name, objInfoCh)
-
 		for {
+            common.KTrace("FOR")
 			var objects []string
 			for obj := range objInfoCh {
+                common.KTrace("FOR obj loop: obj is delivered from objInfoCh")
                 	//log.Println("3.0 CHECK BUCKET: ", bucket.Name, obj)
 
 				if len(objects) == maxObjectList {
@@ -170,6 +196,7 @@ func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
 
 				// Find the action that need to be executed
 				if l.ComputeAction(obj.Name, obj.UserTags, obj.ModTime) == lifecycle.DeleteAction {
+                    common.KTrace("+++ Delete Action")
 					objects = append(objects, obj.Name)
 				}
 			}
