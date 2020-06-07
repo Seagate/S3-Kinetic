@@ -101,6 +101,7 @@ func doTreeWalk(ctx context.Context, bucket, prefixDir, entryPrefixMatch, marker
 	}
 
 	for i, entry := range entries {
+        common.KTrace("entry: " + entry)
 		pentry := pathJoin(prefixDir, entry)
 		isDir := HasSuffix(pentry, SlashSeparator)
 
@@ -148,8 +149,10 @@ func doTreeWalk(ctx context.Context, bucket, prefixDir, entryPrefixMatch, marker
 		isEOF := ((i == len(entries)-1) && isEnd)
 		select {
 		case <-endWalkCh:
+            common.KTrace("End walk channel")
 			return false, errWalkAbort
 		case resultCh <- TreeWalkResult{entry: pentry, end: isEOF}:
+            common.KTrace("Send the entry to result channel: " + entry)
 		}
 	}
 

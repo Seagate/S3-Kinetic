@@ -21,6 +21,7 @@ import (
 	//"log"
 	"path"
 	"sync"
+    "fmt"
 
 	"strings"
 
@@ -268,10 +269,14 @@ func fsWalk(ctx context.Context, obj ObjectLayer, bucket, prefix string, listDir
 				break
 			}
 
+            common.KTrace(":fsWalk: receive from walkResultCh: walkResult.entry: " + fmt.Sprintf("%+v", walkResult))
+
 			var objInfo ObjectInfo
 			var err error
 			if HasSuffix(walkResult.entry, SlashSeparator) {
+                common.KTrace(":fsWalk: IF HasSuffix")
 				for _, getObjectInfoDir := range getObjectInfoDirs {
+                    common.KTrace(":fsWalk: FOR loop")
 					objInfo, err = getObjectInfoDir(ctx, bucket, walkResult.entry)
 					if err == nil {
 						break
@@ -286,11 +291,14 @@ func fsWalk(ctx context.Context, obj ObjectLayer, bucket, prefix string, listDir
 					}
 				}
 			} else {
+                common.KTrace(":fsWalk: ELSE HasSuffix")
 				objInfo, err = getObjInfo(ctx, bucket, walkResult.entry)
 			}
 			if err != nil {
+                common.KTrace(":fsWalk: IF err != nill")
 				continue
 			}
+            common.KTrace(fmt.Sprintf(":fsWalk: sending objInfo to results channel: objInfo: %+v", objInfo))
 			results <- objInfo
 			if walkResult.end {
 				break

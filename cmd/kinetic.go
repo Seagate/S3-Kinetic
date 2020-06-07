@@ -477,6 +477,8 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 
 func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi BucketInfo, err error) {
         defer common.KUntrace(common.KTrace("Enter"))
+        defer common.KTrace(fmt.Sprintf("BucketInfo: %+v", bi))
+
 	//log.Println(" GET BUCKET INFO ", bucket)
         bucketLock := ko.NewNSLock(ctx, bucket, "")
         if e := bucketLock.GetRLock(globalObjectTimeout); e != nil {
@@ -884,6 +886,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 	} else {
 		key = bucket + "/" + object
 	}
+    common.KTrace("object = " + object + ", bucket = " + bucket + ", key = " + key)
 	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
@@ -893,20 +896,23 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
-        kineticMutex.Lock()
+    kineticMutex.Lock()
 	kc := GetKineticConnection()
-        cvalue, size, err := kc.CGetMeta(key, kopts)
-        ReleaseConnection(kc.Idx)
-        if err != nil {
-                err = errFileNotFound
-		kineticMutex.Unlock()
-	        return oi, err
+    cvalue, size, err := kc.CGetMeta(key, kopts)
+    ReleaseConnection(kc.Idx)
+    if err != nil {
+        common.KTrace("1. IF err != nil")
+        err = errFileNotFound
+	    kineticMutex.Unlock()
+	    return oi, err
 	}
-        if (cvalue != nil) {
+    if (cvalue != nil) {
+        common.KTrace("IF cvalue != nil")
 		value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		fsMeta.Meta = make(map[string]string)
 		err = json.Unmarshal(value[:size], &fsMeta)
 		if err != nil {
+            common.KTrace("2. IF err != nil")
 			kineticMutex.Unlock()
 			return oi, err
 		}
@@ -917,7 +923,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
                 modTime: fsMeta.KoInfo.CreatedTime,
 
 	}
-        kineticMutex.Unlock()
+    kineticMutex.Unlock()
 	return fsMeta.ToKVObjectInfo(bucket, object, fi), err
 }
 
@@ -1322,7 +1328,8 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 }
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("prefix:%s, marker:%s, delimiter:%s, maxKeys:%d", prefix, marker, delimiter, maxKeys))
 	//log.Println("LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
 	var objInfos []ObjectInfo
 	//var eof bool
@@ -1414,7 +1421,7 @@ for true {
 		}
 		result.Objects = append(result.Objects, objInfo)
 	}
-        //log.Println("END: LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
+    common.KTrace(fmt.Sprintf("Result: %+v", result))
 	return result, nil
 }
 
