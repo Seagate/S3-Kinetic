@@ -1360,7 +1360,6 @@ for true {
 		return loi, err
 	}
 	for _, key := range keys {
-        common.KTrace(fmt.Sprintf("Key = %s", key))
 		lastKey = key
 		var objInfo ObjectInfo
                 //log.Println("KEY ", string(key), string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]))
@@ -1420,10 +1419,8 @@ for true {
 			result.Prefixes = append(result.Prefixes, objInfo.Name)
 			continue
 		}
-        common.KTrace(fmt.Sprintf("objInf = %s", objInfo.Name))
 		result.Objects = append(result.Objects, objInfo)
 	}
-    common.KTrace(fmt.Sprintf("Result: %+v", result))
 	return result, nil
 }
 
@@ -1435,21 +1432,15 @@ func (ko *KineticObjects) listDirFactory() ListDirFunc {
         // listDir - lists all the entries at a given prefix and given entry in the prefix.
         listDir := func(bucket, prefixDir, prefixEntry string) (emptyDir bool, entries []string) {
                 defer common.KUntrace(common.KTrace(":listDirectoryFactory:func: Enter"))
-                common.KTrace("listDirFactory:func: bucket:" + bucket +
-                    ", prefixDir:" + prefixDir + ", prefixEntry:" + prefixEntry)
-                common.KTrace("listDirFactory:func: path:" + pathJoin(ko.fsPath, bucket, prefixEntry))
                 var err error
-                common.KTrace("*** CALLING READ DIR ***")
                 entries, err = readDir(pathJoin(ko.fsPath, bucket, prefixDir))
                 if err != nil && err != errFileNotFound {
                         logger.LogIf(context.Background(), err)
                         return false, nil
                 }
                 if len(entries) == 0 {
-                        common.KTrace("*** NO ENTRY ***")
                         return true, nil
                 }
-                common.KTrace("*** HAS ENTRY ***")
                 sort.Strings(entries)
                 return false, filterMatchingPrefix(entries, prefixEntry)
         }
@@ -1588,7 +1579,6 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 	    }
 
 	    for _, key := range keys {
-            common.KTrace(fmt.Sprintf("=== Key = %s", key))
 		    lastKey = key
 		    var objInfo ObjectInfo
 		    if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
@@ -1637,12 +1627,10 @@ func (ko *KineticObjects) Walk(ctx context.Context, bucket, prefix string, resul
     defer common.KUntrace(common.KTrace("Enter"))
     go func() {
         defer common.KUntrace(common.KTrace("Enter"))
-        //defer close(results)
-        //ko.listObjects(ctx, bucket, prefix, "", "", -1, results)
-        ko.listObjects(ctx, bucket, prefix, "", results) // "", "", -1, results)
+        delimiter := ""
+        ko.listObjects(ctx, bucket, prefix, delimiter, results)
     } ()
     return nil
-    //return fsWalk(ctx, ko, bucket, prefix, ko.listDirFactory(), results, ko.getObjectInfo, ko.getObjectInfo)
 }
 
 
@@ -1673,16 +1661,6 @@ func (ko *KineticObjects) DeleteBucketPolicy(ctx context.Context, bucket string)
 // SetBucketLifecycle sets lifecycle on bucket
 func (ko *KineticObjects) SetBucketLifecycle(ctx context.Context, bucket string, lifecycle *lifecycle.Lifecycle) error {
     defer common.KUntrace(common.KTrace("Enter"))
-    out, merr := json.MarshalIndent(lifecycle, "", "\t")
-    if merr == nil {
-        common.KTrace(string(out))
-    } else {
-        common.KTrace("Failed to marshall LifeCycle object")
-    }
-	t := time.Now()
-    y,m,d := t.Date()
-    str := fmt.Sprintf("Time now: %d:%d:%d", y, m, d)
-    common.KTrace(str)
 	return saveLifecycleConfig(ctx, ko, bucket, lifecycle)
 }
 
@@ -1690,17 +1668,7 @@ func (ko *KineticObjects) SetBucketLifecycle(ctx context.Context, bucket string,
 func (ko *KineticObjects) GetBucketLifecycle(ctx context.Context, bucket string) (*lifecycle.Lifecycle, error) {
         defer common.KUntrace(common.KTrace("Enter"))
     lc, err := getLifecycleConfig(ko, bucket)
-/*
-    if err == nil {
-        out, merr := json.MarshalIndent(lc, "", "\t")
-        if merr == nil {
-            common.KTrace(string(out))
-        } else {
-            common.KTrace("Failed to marshall LifeCycle object")
-        }
-    }
-*/
-	return lc, err //getLifecycleConfig(ko, bucket)
+	return lc, err
 }
 
 // DeleteBucketLifecycle deletes all lifecycle on bucket

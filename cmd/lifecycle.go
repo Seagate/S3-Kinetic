@@ -100,7 +100,6 @@ func saveLifecycleConfig(ctx context.Context, objAPI ObjectLayer, bucketName str
 // getLifecycleConfig - get lifecycle config for given bucket name.
 func getLifecycleConfig(objAPI ObjectLayer, bucketName string) (*lifecycle.Lifecycle, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace("Bucket name: " + bucketName)
 	// Construct path to lifecycle.xml for the given bucket.
 	configFile := path.Join(bucketConfigPrefix, bucketName, bucketLifecycleConfig)
 	configData, err := readConfig(context.Background(), objAPI, configFile)

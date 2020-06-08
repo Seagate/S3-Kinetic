@@ -108,6 +108,5 @@ func readDirN(dirPath string, count int) (entries []string, err error) {
 			}
 		}
 	}
-    common.KTrace("# entries: "  + fmt.Sprintf("%d", len(entries)))
 	return entries, nil
 }

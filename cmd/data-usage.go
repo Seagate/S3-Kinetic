@@ -23,7 +23,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-    "fmt"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/minio/cmd/config"
@@ -194,9 +193,6 @@ func updateUsage(basePath string, doneCh <-chan struct{}, waitForLowActiveIO fun
 		}
 
 		t := time.Now()
-        y,m,d := t.Date()
-        str := fmt.Sprintf("Time now: %d:%d:%d", y, m, d)
-        common.KTrace(str)
 		size, err := getSize(Item{path, typ})
 		// Use the response time of the getSize call to guess system load.
 		// Sleep equivalent time.

@@ -26,7 +26,6 @@ import (
 	"github.com/minio/minio/pkg/bucket/lifecycle"
 	"github.com/minio/minio/pkg/bucket/policy"
     "github.com/minio/minio/common"
-    "encoding/json"
 )
 
 const (
@@ -38,12 +37,6 @@ const (
 // https://docs.aws.amazon.com/AmazonS3/latest/dev/object-lifecycle-mgmt.html
 func (api objectAPIHandlers) PutBucketLifecycleHandler(w http.ResponseWriter, r *http.Request) {
     defer common.KUntrace(common.KTrace("Enter"))
-    out, merr := json.MarshalIndent(r, "", "\t")
-    if merr == nil {
-        common.KTrace(string(out))
-    } else {
-        common.KTrace("Failed to marshall http.Request object")
-    }
 	ctx := newContext(r, w, "PutBucketLifecycle")
 
 	defer logger.AuditLog(w, r, "PutBucketLifecycle", mustGetClaimsFromToken(r))

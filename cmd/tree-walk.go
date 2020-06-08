@@ -20,7 +20,6 @@ import (
 	"context"
 	"sort"
 	"strings"
-    "fmt"
     "github.com/minio/minio/common"
 )
 
@@ -79,12 +78,8 @@ func doTreeWalk(ctx context.Context, bucket, prefixDir, entryPrefixMatch, marker
 	}
 
 	emptyDir, entries := listDir(bucket, prefixDir, entryPrefixMatch)
-    str := fmt.Sprintf("Bucket Info: %+v\n", bucket)
-    common.KTrace(str)
-
 	// For an empty list return right here.
 	if emptyDir {
-        common.KTrace("Empty directory")
 		return true, nil
 	}
 
@@ -101,7 +96,6 @@ func doTreeWalk(ctx context.Context, bucket, prefixDir, entryPrefixMatch, marker
 	}
 
 	for i, entry := range entries {
-        common.KTrace("entry: " + entry)
 		pentry := pathJoin(prefixDir, entry)
 		isDir := HasSuffix(pentry, SlashSeparator)
 
@@ -149,10 +143,8 @@ func doTreeWalk(ctx context.Context, bucket, prefixDir, entryPrefixMatch, marker
 		isEOF := ((i == len(entries)-1) && isEnd)
 		select {
 		case <-endWalkCh:
-            common.KTrace("End walk channel")
 			return false, errWalkAbort
 		case resultCh <- TreeWalkResult{entry: pentry, end: isEOF}:
-            common.KTrace("Send the entry to result channel: " + entry)
 		}
 	}
 
@@ -173,7 +165,6 @@ func startTreeWalk(ctx context.Context, bucket, prefix, marker string, recursive
 	// treeWalk is called with prefixDir="one/two/" and marker="three/four/five.txt"
 	// and entryPrefixMatch="th"
 
-    common.KTrace("Creating result channel resultCh")
 	resultCh := make(chan TreeWalkResult, maxObjectList)
 	entryPrefixMatch := prefix
 	prefixDir := ""
@@ -187,9 +178,7 @@ func startTreeWalk(ctx context.Context, bucket, prefix, marker string, recursive
         defer common.KUntrace(common.KTrace("Enter"))
 		isEnd := true // Indication to start walking the tree with end as true.
 		doTreeWalk(ctx, bucket, prefixDir, entryPrefixMatch, marker, recursive, listDir, resultCh, endWalkCh, isEnd)
-        common.KTrace("Closing result channel resultCh")
 		close(resultCh)
 	}()
-    common.KTrace("Returning result channel resultCh")
 	return resultCh
 }
