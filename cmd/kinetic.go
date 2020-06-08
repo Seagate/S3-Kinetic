@@ -1360,6 +1360,7 @@ for true {
 		return loi, err
 	}
 	for _, key := range keys {
+        common.KTrace(fmt.Sprintf("Key = %s", key))
 		lastKey = key
 		var objInfo ObjectInfo
                 //log.Println("KEY ", string(key), string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]))
@@ -1419,6 +1420,7 @@ for true {
 			result.Prefixes = append(result.Prefixes, objInfo.Name)
 			continue
 		}
+        common.KTrace(fmt.Sprintf("objInf = %s", objInfo.Name))
 		result.Objects = append(result.Objects, objInfo)
 	}
     common.KTrace(fmt.Sprintf("Result: %+v", result))
@@ -1552,6 +1554,79 @@ func (ko *KineticObjects) HealBucket(ctx context.Context, bucket string, dryRun,
 	logger.LogIf(ctx, NotImplemented{})
 	return madmin.HealResultItem{}, NotImplemented{}
 }
+/*
+* This private listObjects() is called by KineticObject.Walk().  It will retrieves
+* all objects with the spcecified prefix and in specified bucket.
+*/
+func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delimiter string, resChannel chan<- ObjectInfo) (e error) {
+    defer common.KUntrace(common.KTrace("Enter"))
+    defer close(resChannel)
+	kopts := Opts{
+		ClusterVersion:  0,
+		Force:           true,
+		Tag:             []byte{},
+		Algorithm:       kinetic_proto.Command_SHA1,
+		Synchronization: kinetic_proto.Command_WRITEBACK,
+		Timeout:         60000, //60 sec
+		Priority:        kinetic_proto.Command_NORMAL,
+	}
+
+	startKey := "meta." + bucket + "/" + prefix
+	endKey := "meta." + bucket + "0"
+	var lastKey []byte
+	var kc *Client
+    var maxKeyRange uint32
+    maxKeyRange = 800
+    for true {
+        kineticMutex.Lock()
+        kc = GetKineticConnection()
+        keys, err := kc.CGetKeyRange(startKey, endKey, false, true, maxKeyRange, false, kopts)
+        ReleaseConnection(kc.Idx)
+        kineticMutex.Unlock()
+	    if err != nil {
+		    return err
+	    }
+
+	    for _, key := range keys {
+            common.KTrace(fmt.Sprintf("=== Key = %s", key))
+		    lastKey = key
+		    var objInfo ObjectInfo
+		    if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
+			    objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
+			    if err != nil {
+				    return err
+			    }
+	            if delimiter == SlashSeparator && prefix != "" {
+                    if  !HasSuffix(string(prefix), SlashSeparator) {
+					    objInfo.IsDir = true
+					    objInfo.Name = prefix + SlashSeparator
+				    } else {
+	                    result := strings.Split(string(key[len("meta.") + len(bucket) +1 + len(prefix):]), SlashSeparator)
+					    if len(result) == 1 {
+					    } else if len(result) > 1 {
+                            objInfo.IsDir = true
+                            objInfo.Name = prefix + result[0] + SlashSeparator
+                        }
+				    }
+			    } else if delimiter == SlashSeparator && prefix == "" {
+				    result := strings.Split(string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
+				    if len(result) > 1 {
+		                objInfo.IsDir = true
+                        objInfo.Name = result[0] + SlashSeparator
+				    }
+			    }
+                resChannel <- objInfo
+		    }
+	    }
+        if len(keys) < int(maxKeyRange) {
+            break
+        } else {
+		    startKey = string(lastKey)
+		    endKey = ""
+	    }
+    }
+	return nil
+}
 
 // Walk a bucket, optionally prefix recursively, until we have returned
 // all the content to objectInfo channel, it is callers responsibility
@@ -1559,8 +1634,15 @@ func (ko *KineticObjects) HealBucket(ctx context.Context, bucket string, dryRun,
 // error walker returns error. Optionally if context.Done() is received
 // then Walk() stops the walker.
 func (ko *KineticObjects) Walk(ctx context.Context, bucket, prefix string, results chan<- ObjectInfo) error {
+    defer common.KUntrace(common.KTrace("Enter"))
+    go func() {
         defer common.KUntrace(common.KTrace("Enter"))
-        return fsWalk(ctx, ko, bucket, prefix, ko.listDirFactory(), results, ko.getObjectInfo, ko.getObjectInfo)
+        //defer close(results)
+        //ko.listObjects(ctx, bucket, prefix, "", "", -1, results)
+        ko.listObjects(ctx, bucket, prefix, "", results) // "", "", -1, results)
+    } ()
+    return nil
+    //return fsWalk(ctx, ko, bucket, prefix, ko.listDirFactory(), results, ko.getObjectInfo, ko.getObjectInfo)
 }
 
 
