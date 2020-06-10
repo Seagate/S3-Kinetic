@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/common"
 )
 
 // Return all the entries at the directory dirPath.
@@ -35,6 +36,7 @@ func readDir(dirPath string) (entries []string, err error) {
 
 // Return N entries at the directory dirPath. If count is -1, return all entries
 func readDirN(dirPath string, count int) (entries []string, err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	d, err := os.Open(dirPath)
 	if err != nil {
 		// File is really not found.

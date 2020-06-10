@@ -43,6 +43,7 @@ import (
 	"github.com/minio/minio/pkg/auth"
 	"github.com/minio/minio/pkg/env"
 	xnet "github.com/minio/minio/pkg/net"
+    "github.com/minio/minio/common"
 )
 
 const (
@@ -325,6 +326,7 @@ func (n *hdfsObjects) ListBuckets(ctx context.Context) (buckets []minio.BucketIn
 }
 
 func (n *hdfsObjects) listDirFactory() minio.ListDirFunc {
+    common.KUntrace(common.KTrace("Enter"))
 	// listDir - lists all the entries at a given prefix and given entry in the prefix.
 	listDir := func(bucket, prefixDir, prefixEntry string) (emptyDir bool, entries []string) {
 		f, err := n.clnt.Open(minio.PathJoin(hdfsSeparator, bucket, prefixDir))

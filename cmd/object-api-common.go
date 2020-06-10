@@ -21,11 +21,11 @@ import (
 	//"log"
 	"path"
 	"sync"
-
 	"strings"
 
 	humanize "github.com/dustin/go-humanize"
 	"github.com/minio/minio/cmd/logger"
+	"github.com/minio/minio/common"
 )
 
 const (
@@ -248,15 +248,16 @@ func listObjectsNonSlash(ctx context.Context, bucket, prefix, marker, delimiter 
 // error walker returns error. Optionally if context.Done() is received
 // then Walk() stops the walker.
 func fsWalk(ctx context.Context, obj ObjectLayer, bucket, prefix string, listDir ListDirFunc, results chan<- ObjectInfo, getObjInfo func(context.Context, string, string) (ObjectInfo, error), getObjectInfoDirs ...func(context.Context, string, string) (ObjectInfo, error)) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if err := checkListObjsArgs(ctx, bucket, prefix, "", obj); err != nil {
 		// Upon error close the channel.
 		close(results)
 		return err
 	}
-	//log.Println(" FSWALK")
 	walkResultCh := startTreeWalk(ctx, bucket, prefix, "", true, listDir, ctx.Done())
 
 	go func() {
+        defer common.KUntrace(common.KTrace("Enter"))
 		defer close(results)
 
 		for {

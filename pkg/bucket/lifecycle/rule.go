@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"log"
+	"github.com/minio/minio/common"
 )
 
 // Status represents lifecycle configuration status
@@ -75,6 +76,7 @@ func (r Rule) validateStatus() error {
 }
 
 func (r Rule) validateAction() error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if r.Expiration == (Expiration{}) {
 		return errMissingExpirationAction
 	}

@@ -22,6 +22,7 @@ import (
 	"io"
 	"strings"
 	"time"
+	"github.com/minio/minio/common"
 )
 
 var (
@@ -54,8 +55,7 @@ func (lc Lifecycle) IsEmpty() bool {
 
 // ParseLifecycleConfig - parses data in given reader to Lifecycle.
 func ParseLifecycleConfig(reader io.Reader) (*Lifecycle, error) {
-        log.Println(" PARSE LIFE CYCLE CONFIG")
-
+    defer common.KUntrace(common.KTrace("Enter"))
 	var lc Lifecycle
 	if err := xml.NewDecoder(reader).Decode(&lc); err != nil {
                 log.Println(" 0. ERROR: PARSE", err)
@@ -129,6 +129,7 @@ func (lc Lifecycle) FilterRuleActions(objName, objTags string) (Expiration, Tran
 // ComputeAction returns the action to perform by evaluating all lifecycle rules
 // against the object name and its modification time.
 func (lc Lifecycle) ComputeAction(objName, objTags string, modTime time.Time) Action {
+    defer common.KUntrace(common.KTrace("Enter"))
 	var action = NoneAction
 	if modTime.IsZero() {
 		return action
@@ -143,6 +144,8 @@ func (lc Lifecycle) ComputeAction(objName, objTags string, modTime time.Time) Ac
 		if time.Now().After(modTime.Add(time.Duration(exp.Days) * 24 * time.Hour)) {
 			action = DeleteAction
 		}
+        // Tri:  Add this line to test lifecycle. Delete immediately
+		//action = DeleteAction
 	}
 	return action
 }

@@ -23,6 +23,7 @@ import (
 	"os"
 	"syscall"
 	"unsafe"
+	"github.com/minio/minio/common"
 )
 
 // The buffer must be at least a block long.
@@ -78,6 +79,7 @@ func readDir(dirPath string) (entries []string, err error) {
 // Return count entries at the directory dirPath and all entries
 // if count is set to -1
 func readDirN(dirPath string, count int) (entries []string, err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	fd, err := syscall.Open(dirPath, 0, 0)
 	if err != nil {
 		if os.IsNotExist(err) || isSysErrNotDir(err) {

@@ -82,7 +82,7 @@ func bToMb(b uint64) uint64 {
 }
 
 func PrintMemUsage() {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	log.Println("Alloc: ", bToMb(m.Alloc))
@@ -94,7 +94,7 @@ func PrintMemUsage() {
 }
 
 func InitKineticd(argv []string) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 
 	log.Println("LEN OF ARGS ", len(argv))
         argc := C.int(len(argv))
@@ -477,6 +477,7 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 
 func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi BucketInfo, err error) {
         defer common.KUntrace(common.KTrace("Enter"))
+
 	//log.Println(" GET BUCKET INFO ", bucket)
         bucketLock := ko.NewNSLock(ctx, bucket, "")
         if e := bucketLock.GetRLock(globalObjectTimeout); e != nil {
@@ -893,16 +894,16 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
-        kineticMutex.Lock()
+    kineticMutex.Lock()
 	kc := GetKineticConnection()
-        cvalue, size, err := kc.CGetMeta(key, kopts)
-        ReleaseConnection(kc.Idx)
-        if err != nil {
-                err = errFileNotFound
-		kineticMutex.Unlock()
-	        return oi, err
+    cvalue, size, err := kc.CGetMeta(key, kopts)
+    ReleaseConnection(kc.Idx)
+    if err != nil {
+        err = errFileNotFound
+	    kineticMutex.Unlock()
+	    return oi, err
 	}
-        if (cvalue != nil) {
+    if (cvalue != nil) {
 		value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		fsMeta.Meta = make(map[string]string)
 		err = json.Unmarshal(value[:size], &fsMeta)
@@ -917,7 +918,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
                 modTime: fsMeta.KoInfo.CreatedTime,
 
 	}
-        kineticMutex.Unlock()
+    kineticMutex.Unlock()
 	return fsMeta.ToKVObjectInfo(bucket, object, fi), err
 }
 
@@ -1322,7 +1323,8 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 }
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("prefix:%s, marker:%s, delimiter:%s, maxKeys:%d", prefix, marker, delimiter, maxKeys))
 	//log.Println("LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
 	var objInfos []ObjectInfo
 	//var eof bool
@@ -1341,7 +1343,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	endKey := "meta." + bucket + "0"
 	//kineticMutex.Lock() 
 	//kc := GetKineticConnection()
-	var lastKey []byte 
+	var lastKey []byte
 	var kc *Client
 for true {
         kineticMutex.Lock() 
@@ -1414,7 +1416,6 @@ for true {
 		}
 		result.Objects = append(result.Objects, objInfo)
 	}
-        //log.Println("END: LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
 	return result, nil
 }
 
@@ -1425,6 +1426,7 @@ func (ko *KineticObjects) listDirFactory() ListDirFunc {
         defer common.KUntrace(common.KTrace("Enter"))
         // listDir - lists all the entries at a given prefix and given entry in the prefix.
         listDir := func(bucket, prefixDir, prefixEntry string) (emptyDir bool, entries []string) {
+                defer common.KUntrace(common.KTrace(":listDirectoryFactory:func: Enter"))
                 var err error
                 entries, err = readDir(pathJoin(ko.fsPath, bucket, prefixDir))
                 if err != nil && err != errFileNotFound {
@@ -1538,6 +1540,78 @@ func (ko *KineticObjects) HealBucket(ctx context.Context, bucket string, dryRun,
 	logger.LogIf(ctx, NotImplemented{})
 	return madmin.HealResultItem{}, NotImplemented{}
 }
+/*
+* This private listObjects() is called by KineticObject.Walk().  It will retrieves
+* all objects with the spcecified prefix and in specified bucket.
+*/
+func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delimiter string, resChannel chan<- ObjectInfo) (e error) {
+    defer common.KUntrace(common.KTrace("Enter"))
+    defer close(resChannel)
+	kopts := Opts{
+		ClusterVersion:  0,
+		Force:           true,
+		Tag:             []byte{},
+		Algorithm:       kinetic_proto.Command_SHA1,
+		Synchronization: kinetic_proto.Command_WRITEBACK,
+		Timeout:         60000, //60 sec
+		Priority:        kinetic_proto.Command_NORMAL,
+	}
+
+	startKey := "meta." + bucket + "/" + prefix
+	endKey := "meta." + bucket + "0"
+	var lastKey []byte
+	var kc *Client
+    var maxKeyRange uint32
+    maxKeyRange = 800
+    for true {
+        kineticMutex.Lock()
+        kc = GetKineticConnection()
+        keys, err := kc.CGetKeyRange(startKey, endKey, false, true, maxKeyRange, false, kopts)
+        ReleaseConnection(kc.Idx)
+        kineticMutex.Unlock()
+	    if err != nil {
+		    return err
+	    }
+
+	    for _, key := range keys {
+		    lastKey = key
+		    var objInfo ObjectInfo
+		    if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
+			    objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
+			    if err != nil {
+				    return err
+			    }
+	            if delimiter == SlashSeparator && prefix != "" {
+                    if  !HasSuffix(string(prefix), SlashSeparator) {
+					    objInfo.IsDir = true
+					    objInfo.Name = prefix + SlashSeparator
+				    } else {
+	                    result := strings.Split(string(key[len("meta.") + len(bucket) +1 + len(prefix):]), SlashSeparator)
+					    if len(result) == 1 {
+					    } else if len(result) > 1 {
+                            objInfo.IsDir = true
+                            objInfo.Name = prefix + result[0] + SlashSeparator
+                        }
+				    }
+			    } else if delimiter == SlashSeparator && prefix == "" {
+				    result := strings.Split(string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
+				    if len(result) > 1 {
+		                objInfo.IsDir = true
+                        objInfo.Name = result[0] + SlashSeparator
+				    }
+			    }
+                resChannel <- objInfo
+		    }
+	    }
+        if len(keys) < int(maxKeyRange) {
+            break
+        } else {
+		    startKey = string(lastKey)
+		    endKey = ""
+	    }
+    }
+	return nil
+}
 
 // Walk a bucket, optionally prefix recursively, until we have returned
 // all the content to objectInfo channel, it is callers responsibility
@@ -1545,8 +1619,13 @@ func (ko *KineticObjects) HealBucket(ctx context.Context, bucket string, dryRun,
 // error walker returns error. Optionally if context.Done() is received
 // then Walk() stops the walker.
 func (ko *KineticObjects) Walk(ctx context.Context, bucket, prefix string, results chan<- ObjectInfo) error {
+    defer common.KUntrace(common.KTrace("Enter"))
+    go func() {
         defer common.KUntrace(common.KTrace("Enter"))
-        return fsWalk(ctx, ko, bucket, prefix, ko.listDirFactory(), results, ko.getObjectInfo, ko.getObjectInfo)
+        delimiter := ""
+        ko.listObjects(ctx, bucket, prefix, delimiter, results)
+    } ()
+    return nil
 }
 
 
@@ -1576,14 +1655,15 @@ func (ko *KineticObjects) DeleteBucketPolicy(ctx context.Context, bucket string)
 
 // SetBucketLifecycle sets lifecycle on bucket
 func (ko *KineticObjects) SetBucketLifecycle(ctx context.Context, bucket string, lifecycle *lifecycle.Lifecycle) error {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 	return saveLifecycleConfig(ctx, ko, bucket, lifecycle)
 }
 
 // GetBucketLifecycle will get lifecycle on bucket
 func (ko *KineticObjects) GetBucketLifecycle(ctx context.Context, bucket string) (*lifecycle.Lifecycle, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-	return getLifecycleConfig(ko, bucket)
+    lc, err := getLifecycleConfig(ko, bucket)
+	return lc, err
 }
 
 // DeleteBucketLifecycle deletes all lifecycle on bucket

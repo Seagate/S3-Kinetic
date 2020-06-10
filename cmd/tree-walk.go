@@ -20,6 +20,7 @@ import (
 	"context"
 	"sort"
 	"strings"
+    "github.com/minio/minio/common"
 )
 
 // TreeWalkResult - Tree walk result carries results of tree walking.
@@ -60,6 +61,7 @@ type ListDirFunc func(bucket, prefixDir, prefixEntry string) (emptyDir bool, ent
 
 // treeWalk walks directory tree recursively pushing TreeWalkResult into the channel as and when it encounters files.
 func doTreeWalk(ctx context.Context, bucket, prefixDir, entryPrefixMatch, marker string, recursive bool, listDir ListDirFunc, resultCh chan TreeWalkResult, endWalkCh <-chan struct{}, isEnd bool) (emptyDir bool, treeErr error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Example:
 	// if prefixDir="one/two/three/" and marker="four/five.txt" treeWalk is recursively
 	// called with prefixDir="one/two/three/four/" and marker="five.txt"
@@ -152,6 +154,7 @@ func doTreeWalk(ctx context.Context, bucket, prefixDir, entryPrefixMatch, marker
 
 // Initiate a new treeWalk in a goroutine.
 func startTreeWalk(ctx context.Context, bucket, prefix, marker string, recursive bool, listDir ListDirFunc, endWalkCh <-chan struct{}) chan TreeWalkResult {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Example 1
 	// If prefix is "one/two/three/" and marker is "one/two/three/four/five.txt"
 	// treeWalk is called with prefixDir="one/two/three/" and marker="four/five.txt"
@@ -172,6 +175,7 @@ func startTreeWalk(ctx context.Context, bucket, prefix, marker string, recursive
 	}
 	marker = strings.TrimPrefix(marker, prefixDir)
 	go func() {
+        defer common.KUntrace(common.KTrace("Enter"))
 		isEnd := true // Indication to start walking the tree with end as true.
 		doTreeWalk(ctx, bucket, prefixDir, entryPrefixMatch, marker, recursive, listDir, resultCh, endWalkCh, isEnd)
 		close(resultCh)

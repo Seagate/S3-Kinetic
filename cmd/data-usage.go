@@ -29,6 +29,7 @@ import (
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/env"
 	"github.com/minio/minio/pkg/hash"
+	"github.com/minio/minio/common"
 )
 
 const (
@@ -161,12 +162,14 @@ type Item struct {
 type getSizeFn func(item Item) (int64, error)
 
 func updateUsage(basePath string, doneCh <-chan struct{}, waitForLowActiveIO func(), getSize getSizeFn) DataUsageInfo {
+    defer common.KUntrace(common.KTrace("Enter"))
 	var dataUsageInfo = DataUsageInfo{
 		BucketsSizes:          make(map[string]uint64),
 		ObjectsSizesHistogram: make(map[string]uint64),
 	}
 
 	fastWalk(basePath, 1, doneCh, func(path string, typ os.FileMode) error {
+        defer common.KUntrace(common.KTrace("Enter"))
 		// Wait for I/O to go down.
 		waitForLowActiveIO()
 
