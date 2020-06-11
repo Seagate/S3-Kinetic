@@ -26,6 +26,7 @@ import (
 	xhttp "github.com/minio/minio/cmd/http"
 	"github.com/minio/minio/pkg/event"
 	"github.com/minio/minio/pkg/handlers"
+	"github.com/minio/minio/common"
 )
 
 var (
@@ -49,6 +50,7 @@ func checkCopyObjectPartPreconditions(ctx context.Context, w http.ResponseWriter
 //  x-amz-copy-source-if-match
 //  x-amz-copy-source-if-none-match
 func checkCopyObjectPreconditions(ctx context.Context, w http.ResponseWriter, r *http.Request, objInfo ObjectInfo, encETag string) bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Return false for methods other than GET and HEAD.
 	if r.Method != http.MethodPut {
 		return false
@@ -147,6 +149,7 @@ func checkCopyObjectPreconditions(ctx context.Context, w http.ResponseWriter, r 
 //  If-Match
 //  If-None-Match
 func checkPreconditions(ctx context.Context, w http.ResponseWriter, r *http.Request, objInfo ObjectInfo) bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Return false for methods other than GET and HEAD.
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		return false
@@ -248,6 +251,7 @@ func isETagEqual(left, right string) bool {
 // is a common function to be called from object handlers and
 // web handlers.
 func deleteObject(ctx context.Context, obj ObjectLayer, cache CacheObjectLayer, bucket, object string, r *http.Request) (err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	deleteObject := obj.DeleteObject
 	if cache != nil {
 		deleteObject = cache.DeleteObject

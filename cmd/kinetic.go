@@ -1233,7 +1233,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 // DeleteObjects - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (ko *KineticObjects) DeleteObjects(ctx context.Context, bucket string, objects []string) ([]error, error) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 	errs := make([]error, len(objects))
 	for idx, object := range objects {
 		errs[idx] = ko.DeleteObject(ctx, bucket, object)
@@ -1244,7 +1244,7 @@ func (ko *KineticObjects) DeleteObjects(ctx context.Context, bucket string, obje
 // DeleteObject - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object string) error {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Acquire a write lock before deleting the object.
 	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetLock(globalOperationTimeout); err != nil {
@@ -1270,8 +1270,8 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         fsMeta := fsMetaV1{}
         cvalue, size, err := kc.CGetMeta(key, kopts)
         if err != nil {
-                err = errFileNotFound
-                ReleaseConnection(kc.Idx)
+            err = errFileNotFound
+            ReleaseConnection(kc.Idx)
 	        kineticMutex.Unlock()
                 return  err
         }
