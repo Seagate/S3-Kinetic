@@ -1582,7 +1582,7 @@ var errorCodes = errorCodeMap{
 	ErrFileNotFound: {
 		Code:           "FileNotFound",
 		Description:    "File not found",
-		HTTPStatusCode: http.StatusBadRequest,
+		HTTPStatusCode: http.StatusNotFound,
 	},
 	// Add your error structure here.
 }
