@@ -25,6 +25,7 @@ import (
 	"github.com/minio/minio/cmd/logger"
 
 	"github.com/minio/minio/pkg/bucket/policy"
+	"github.com/minio/minio/common"
 )
 
 // Validate all the ListObjects query arguments, returns an APIErrorCode
@@ -53,6 +54,7 @@ func validateListObjectsArgs(marker, delimiter, encodingType string, maxKeys int
 // You can use the versions subresource to list metadata about all
 // of the versions of objects in a bucket.
 func (api objectAPIHandlers) ListBucketObjectVersionsHandler(w http.ResponseWriter, r *http.Request) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	ctx := newContext(r, w, "ListBucketObjectVersions")
 
 	defer logger.AuditLog(w, r, "ListBucketObjectVersions", mustGetClaimsFromToken(r))
@@ -135,6 +137,7 @@ func (api objectAPIHandlers) ListBucketObjectVersionsHandler(w http.ResponseWrit
 // NOTE: It is recommended that this API to be used for application development.
 // MinIO continues to support ListObjectsV1 and V2 for supporting legacy tools.
 func (api objectAPIHandlers) ListObjectsV2MHandler(w http.ResponseWriter, r *http.Request) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	ctx := newContext(r, w, "ListObjectsV2M")
 
 	defer logger.AuditLog(w, r, "ListObjectsV2M", mustGetClaimsFromToken(r))
@@ -219,6 +222,7 @@ func (api objectAPIHandlers) ListObjectsV2MHandler(w http.ResponseWriter, r *htt
 // NOTE: It is recommended that this API to be used for application development.
 // MinIO continues to support ListObjectsV1 for supporting legacy tools.
 func (api objectAPIHandlers) ListObjectsV2Handler(w http.ResponseWriter, r *http.Request) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	ctx := newContext(r, w, "ListObjectsV2")
 
 	defer logger.AuditLog(w, r, "ListObjectsV2", mustGetClaimsFromToken(r))
@@ -301,6 +305,7 @@ func (api objectAPIHandlers) ListObjectsV2Handler(w http.ResponseWriter, r *http
 // criteria to return a subset of the objects in a bucket.
 //
 func (api objectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http.Request) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	ctx := newContext(r, w, "ListObjectsV1")
 
 	defer logger.AuditLog(w, r, "ListObjectsV1", mustGetClaimsFromToken(r))
