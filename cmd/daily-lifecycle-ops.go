@@ -150,14 +150,13 @@ func lifecycleRound(ctx context.Context, objAPI ObjectLayer) error {
 		for {
 			var objects []string
 			for obj := range objInfoCh {
-				if len(objects) == maxObjectList {
-					// Reached maximum delete requests, attempt a delete for now.
-					break
-				}
-
 				// Find the action that need to be executed
 				if l.ComputeAction(obj.Name, obj.UserTags, obj.ModTime) == lifecycle.DeleteAction {
 					objects = append(objects, obj.Name)
+				}
+				if len(objects) == maxObjectList {
+					// Reached maximum delete requests, attempt a delete for now.
+					break
 				}
 			}
 

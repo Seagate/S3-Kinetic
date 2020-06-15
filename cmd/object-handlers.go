@@ -29,7 +29,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
 	"time"
 
 	"github.com/gorilla/mux"
@@ -2585,11 +2584,10 @@ func (api objectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.
 
 	// http://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectDELETE.html
 	if err := deleteObject(ctx, objectAPI, api.CacheAPI(), bucket, object, r); err != nil {
-		switch err.(type) {
-		case BucketNotFound:
-			// When bucket doesn't exist specially handle it.
+		switch err {
+        case errFileNotFound:
 			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
-			return
+            return
 		}
 		// Ignore delete object errors while replying to client, since we are suppposed to reply only 204.
 	}

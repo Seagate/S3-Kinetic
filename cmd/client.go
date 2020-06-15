@@ -599,7 +599,7 @@ func (c *Client) Get(key string, value []byte, cmd Opts) (uint32, error) {
 }
 
 //CDelete: 
-func (c *Client) CDelete(key string, cmd Opts)  error {
+func (c *Client) cDelete(key string, cmd Opts)  error {
         defer common.KUntrace(common.KTrace("Enter"))
         currentVersion := "1"
         cKey := C.CString(key)
@@ -611,8 +611,9 @@ func (c *Client) CDelete(key string, cmd Opts)  error {
 
 func (c *Client) Delete(key string, cmd Opts) error {
         defer common.KUntrace(common.KTrace("Enter"))
+        common.KTrace(fmt.Sprint("key: %s", key))
         if SkinnyWaistIF {
-                return c.CDelete(key, cmd)
+                return c.cDelete(key, cmd)
         }
 	//log.Println("CMD DELETE: ", key)
 	authType := kinetic_proto.Message_HMACAUTH

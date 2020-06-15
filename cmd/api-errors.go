@@ -333,6 +333,7 @@ const (
 	ErrInvalidDecompressedSize
 	ErrAddUserInvalidArgument
 	ErrPostPolicyConditionInvalidFormat
+    ErrFileNotFound
 )
 
 type errorCodeMap map[APIErrorCode]APIError
@@ -1578,6 +1579,11 @@ var errorCodes = errorCodeMap{
 		Description:    "Invalid according to Policy: Policy Condition failed",
 		HTTPStatusCode: http.StatusForbidden,
 	},
+	ErrFileNotFound: {
+		Code:           "FileNotFound",
+		Description:    "File not found",
+		HTTPStatusCode: http.StatusNotFound,
+	},
 	// Add your error structure here.
 }
 
@@ -1590,6 +1596,8 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 	}
 	// Verify if the underlying error is signature mismatch.
 	switch err {
+    case errFileNotFound:
+        apiErr = ErrFileNotFound
 	case errInvalidArgument:
 		apiErr = ErrAdminInvalidArgument
 	case errNoSuchUser:

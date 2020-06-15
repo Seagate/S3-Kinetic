@@ -55,6 +55,7 @@ import (
 	"github.com/minio/minio/pkg/bucket/policy"
 	"strconv"
 	"github.com/minio/minio/common"
+    "github.com/minio/minio/pkg/event"
 )
 
 var numberOfKinConns int = 2 
@@ -575,41 +576,92 @@ for true {
 // DeleteBucket - delete a bucket and all the metadata associated
 // with the bucket including pending multipart, object metadata.
 func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error {
-        defer common.KUntrace(common.KTrace("Enter"))
-	//log.Println("*** DELETE BUCKET *** ", bucket)
+    defer common.KUntrace(common.KTrace("Enter"))
 	bucketLock := ko.NewNSLock(ctx, bucket, "")
-	if err := bucketLock.GetLock(globalObjectTimeout); err != nil {
+    var err error
+	if err = bucketLock.GetLock(globalObjectTimeout); err != nil {
 		logger.LogIf(ctx, err)
 		return err
 	}
 	defer bucketLock.Unlock()
-	bucketKey := string(make([]byte, 1024))
-	bucketKey = "bucket." + bucket
-	kopts := Opts{
-		ClusterVersion:  0,
-		Force:           false,
-		Tag:             []byte{}, //(fsMeta.Meta),
-		Algorithm:       kinetic_proto.Command_SHA1,
-		Synchronization: kinetic_proto.Command_WRITEBACK,
-		Timeout:         60000, //60 sec
-		Priority:        kinetic_proto.Command_NORMAL,
-	}
-	kineticMutex.Lock()
-	kc := GetKineticConnection()
-	err := kc.Delete(bucketKey, kopts)
-	if err != nil {
-	        kineticMutex.Unlock()
-		return err
-	}
-	metaKey := "meta." + bucketKey
-	err = kc.Delete(metaKey, kopts)
-	if err != nil {
-	        kineticMutex.Unlock()
-		return err
-	}
-	ReleaseConnection(kc.Idx)
-	kineticMutex.Unlock()
-	return nil
+    commonPrefix := ""
+
+    // Allocate new results channel to receive ObjectInfo.
+    objInfoCh := make(chan ObjectInfo)
+    // Walk through all objects
+    if err = ko.Walk(ctx, bucket, commonPrefix, objInfoCh); err != nil {
+        return err
+    }
+    var lastErr error
+    lastErr = nil
+
+    for {
+        var objects []string
+        for obj := range objInfoCh {
+            objects = append(objects, obj.Name)
+            if len(objects) == maxObjectList {
+                // Reached maximum delete requests, attempt a delete for now.
+                break
+            }
+        }
+
+        // All objects in the bucket have been deleted.  Nothing to do.
+        if len(objects) == 0 {
+            break
+        }
+
+        // Deletes a list of objects.
+        deleteErrs, err := ko.DeleteObjects(ctx, bucket, objects)
+
+        if err != nil {
+            lastErr = err
+            logger.LogIf(ctx, err)
+        } else {
+            for i := range deleteErrs {
+                if deleteErrs[i] != nil {
+                    lastErr = deleteErrs[i]
+                    common.KTrace(fmt.Sprintf("---- error: %s", deleteErrs[i]))
+                    logger.LogIf(ctx, deleteErrs[i])
+                    continue
+                }
+                // Notify object deleted event.
+                sendEvent(eventArgs{
+                    EventName:  event.ObjectRemovedDelete,
+                    BucketName: bucket, //bucket.Name,
+                    Object: ObjectInfo{
+                        Name: objects[i],
+                    },
+                    Host: "Internal: [ILM-EXPIRY]",
+               })
+
+            }
+        }
+    }
+
+    if lastErr == nil {
+	    bucketKey := string(make([]byte, 1024))
+	    bucketKey = "bucket." + bucket
+	    kopts := Opts{
+		    ClusterVersion:  0,
+		    Force:           false,
+		    Tag:             []byte{}, //(fsMeta.Meta),
+		    Algorithm:       kinetic_proto.Command_SHA1,
+		    Synchronization: kinetic_proto.Command_WRITEBACK,
+		    Timeout:         60000, //60 sec
+		    Priority:        kinetic_proto.Command_NORMAL,
+	    }
+	    kineticMutex.Lock()
+	    kc := GetKineticConnection()
+        err = kc.Delete(bucketKey, kopts)
+        if err == nil {
+            metaKey := "meta." + bucketKey
+            err = kc.Delete(metaKey, kopts)
+        }
+        lastErr = err
+        ReleaseConnection(kc.Idx)
+        kineticMutex.Unlock()
+    } // End of if !hasError
+    return lastErr
 }
 
 /// Object Operations
@@ -1233,7 +1285,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 // DeleteObjects - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (ko *KineticObjects) DeleteObjects(ctx context.Context, bucket string, objects []string) ([]error, error) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 	errs := make([]error, len(objects))
 	for idx, object := range objects {
 		errs[idx] = ko.DeleteObject(ctx, bucket, object)
@@ -1244,7 +1296,7 @@ func (ko *KineticObjects) DeleteObjects(ctx context.Context, bucket string, obje
 // DeleteObject - deletes an object from a bucket, this operation is destructive
 // and there are no rollbacks supported.
 func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object string) error {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Acquire a write lock before deleting the object.
 	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetLock(globalOperationTimeout); err != nil {
@@ -1270,8 +1322,8 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         fsMeta := fsMetaV1{}
         cvalue, size, err := kc.CGetMeta(key, kopts)
         if err != nil {
-                err = errFileNotFound
-                ReleaseConnection(kc.Idx)
+            err = errFileNotFound
+            ReleaseConnection(kc.Idx)
 	        kineticMutex.Unlock()
                 return  err
         }
