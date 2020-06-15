@@ -592,7 +592,8 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
     if err = ko.Walk(ctx, bucket, commonPrefix, objInfoCh); err != nil {
         return err
     }
-    hasError := false
+    var lastErr error
+    lastErr = nil
 
     for {
         var objects []string
@@ -613,11 +614,12 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
         deleteErrs, err := ko.DeleteObjects(ctx, bucket, objects)
 
         if err != nil {
-            hasError = true
+            lastErr = err
             logger.LogIf(ctx, err)
         } else {
             for i := range deleteErrs {
                 if deleteErrs[i] != nil {
+                    lastErr = deleteErrs[i]
                     common.KTrace(fmt.Sprintf("---- error: %s", deleteErrs[i]))
                     logger.LogIf(ctx, deleteErrs[i])
                     continue
@@ -636,7 +638,7 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
         }
     }
 
-    if !hasError {
+    if lastErr == nil {
 	    bucketKey := string(make([]byte, 1024))
 	    bucketKey = "bucket." + bucket
 	    kopts := Opts{
@@ -655,10 +657,11 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
             metaKey := "meta." + bucketKey
             err = kc.Delete(metaKey, kopts)
         }
+        lastErr = err
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
     } // End of if !hasError
-    return err
+    return lastErr
 }
 
 /// Object Operations
