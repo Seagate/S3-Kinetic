@@ -69,6 +69,7 @@ class MockSkinnyWaist : public SkinnyWaistInterface {
         RequestContext& request_context,
         const std::tuple<int64_t, int64_t> token));
     MOCK_METHOD1(InstantSecureErase, StoreOperationStatus(std::string pin));
+    MOCK_METHOD1(Erase, StoreOperationStatus(std::string pin));
     MOCK_METHOD3(Security, StoreOperationStatus(int64_t user_id, const std::list<User> &users,
             RequestContext& request_context));
     MOCK_METHOD2(SetRecordStatus, bool(const std::string& key, bool bad));
@@ -87,7 +88,7 @@ class MockSkinnyWaist : public SkinnyWaistInterface {
             ConnectionTimeHandler* timer));
     MOCK_METHOD5(Write, bool(BatchSet* batchSet, Command& command_response, const std::tuple<int64_t, int64_t> token,
         int64_t user_id, RequestContext& request_context));
-    MOCK_METHOD1(Flush, Status(bool toSST));
+    MOCK_METHOD1(Flush, leveldb::Status(bool toSST));
 };
 
 } // namespace kinetic

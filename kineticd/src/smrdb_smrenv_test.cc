@@ -30,12 +30,12 @@ class SmrdbSmrEnvTest : public ::testing::Test {
         db_path_ = FLAGS_store_test_partition;
         smr::Disk::initializeSuperBlockAddr(db_path_);
         DestroyDB(db_path_, Options());
-        InstantSecureEraserX86::ClearSuperblocks(db_path_);
+        InstantSecureEraser::ClearSuperblocks(db_path_);
     }
 
     ~SmrdbSmrEnvTest() {
         env_->clearDisk();
-        InstantSecureEraserX86::ClearSuperblocks(db_path_);
+        InstantSecureEraser::ClearSuperblocks(db_path_);
     }
 };
 

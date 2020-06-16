@@ -22,8 +22,7 @@ class MockDeviceInformation : public DeviceInformationInterface {
     MOCK_METHOD2(GetCapacity, bool(uint64_t* total, uint64_t* remaining));
 
     MOCK_METHOD1(GetHdaUtilization, bool(float* hda_utilization));
-    MOCK_METHOD1(GetEn0Utilization, bool(float* en0_utilization));
-    MOCK_METHOD1(GetEn1Utilization, bool(float* en1_utilization));
+    MOCK_METHOD2(GetEnUtilization, bool(const std::string& ethernet_device, float* en_utilization));
     MOCK_METHOD1(GetCpuUtilization, bool(float* cpu_idle_percent));
 
     MOCK_METHOD4(GetHdaTemp, bool(float* current, float* min, float* max, float* target));

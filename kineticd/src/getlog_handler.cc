@@ -77,24 +77,21 @@ bool GetLogHandler::SetUtilizations(Command *command_response) {
         success = false;
     }
 
-    float en0_utilization;
-    if (device_information_.GetEn0Utilization(&en0_utilization)) {
-        utilization = command_response->mutable_body()->mutable_getlog()->
-                add_utilizations();
-        utilization->set_name("EN0");
-        utilization->set_value(en0_utilization);
-    } else {
-        success = false;
+    std::vector<DeviceNetworkInterface> interfaces;
+    if (!network_interfaces_.GetExternallyVisibleNetworkInterfaces(&interfaces)) {
+        return false;
     }
-
-    float en1_utilization;
-    if (device_information_.GetEn1Utilization(&en1_utilization)) {
+    for (auto it = interfaces.begin(); it != interfaces.end(); ++it) {
+        float en_utilization;
         utilization = command_response->mutable_body()->mutable_getlog()->
                 add_utilizations();
-        utilization->set_name("EN1");
-        utilization->set_value(en1_utilization);
-    } else {
-        success = false;
+        utilization->set_name(it->name);
+        if (device_information_.GetEnUtilization(it->name, &en_utilization)) {
+            utilization->set_value(en_utilization);
+        } else {
+            success = false;
+            utilization->set_value(-1);
+        }
     }
 
     float cpu_idle_percent;
@@ -150,9 +147,15 @@ bool GetLogHandler::SetTemperatures(Command *command_response) {
          temperature = command_response->mutable_body()->mutable_getlog()->
                  add_temperatures();
          temperature->set_name("CPU");
-         temperature->set_current(current);
-         temperature->set_minimum(minimum);
-         temperature->set_maximum(maximum);
+         if (minimum != -1) {
+            temperature->set_current(current);
+         }
+         if (minimum != -1) {
+            temperature->set_minimum(minimum);
+         }
+         if (maximum != -1) {
+            temperature->set_maximum(maximum);
+         }
          temperature->set_target(0);
      } else {
          success = false;

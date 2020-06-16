@@ -92,10 +92,20 @@ TEST_F(GetLogHandlerTest, GetLogReturnsUtilizationIfRequested) {
         .WillOnce(Return(true));
     EXPECT_CALL(device_information_, GetHdaUtilization(_))
         .WillOnce(DoAll(SetArgPointee<0>(0.10), Return(true)));
-    EXPECT_CALL(device_information_, GetEn0Utilization(_))
-        .WillOnce(DoAll(SetArgPointee<0>(0.20), Return(true)));
-    EXPECT_CALL(device_information_, GetEn1Utilization(_))
-        .WillOnce(DoAll(SetArgPointee<0>(0.25), Return(true)));
+    DeviceNetworkInterface eth1;
+    eth1.name = "eth1";
+    eth1.mac_address = "00:00:00:00:00";
+    eth1.ipv4 = "127.0.0.1";
+    eth1.ipv6 = "::1";
+
+    std::vector<DeviceNetworkInterface> interfaces;
+    interfaces.push_back(eth1);
+    EXPECT_CALL(network_interfaces_, GetExternallyVisibleNetworkInterfaces(_))
+        .WillOnce(DoAll(
+            SetArgPointee<0>(interfaces),
+            Return(true)));
+    EXPECT_CALL(device_information_, GetEnUtilization(_, _))
+        .WillOnce(DoAll(SetArgPointee<1>(0.20), Return(true)));
     EXPECT_CALL(device_information_, GetCpuUtilization(_))
         .WillOnce(DoAll(SetArgPointee<0>(0.30), Return(true)));
 
@@ -110,22 +120,19 @@ TEST_F(GetLogHandlerTest, GetLogReturnsUtilizationIfRequested) {
     get_log_handler_.ProcessRequest(command, &command_response, &response_value, request_context,
             message.hmacauth().identity());
 
-    ASSERT_EQ(5, command_response.body().getlog().utilizations_size());
+    ASSERT_EQ(4, command_response.body().getlog().utilizations_size());
 
     EXPECT_EQ("HDA", command_response.body().getlog().utilizations(0).name());
     EXPECT_EQ(0.10f, command_response.body().getlog().utilizations(0).value());
 
-    EXPECT_EQ("EN0", command_response.body().getlog().utilizations(1).name());
+    EXPECT_EQ("eth1", command_response.body().getlog().utilizations(1).name());
     EXPECT_EQ(0.20f, command_response.body().getlog().utilizations(1).value());
 
-    EXPECT_EQ("EN1", command_response.body().getlog().utilizations(2).name());
-    EXPECT_EQ(0.25f, command_response.body().getlog().utilizations(2).value());
+    EXPECT_EQ("CPU", command_response.body().getlog().utilizations(2).name());
+    EXPECT_EQ(0.70f, command_response.body().getlog().utilizations(2).value());
 
-    EXPECT_EQ("CPU", command_response.body().getlog().utilizations(3).name());
-    EXPECT_EQ(0.70f, command_response.body().getlog().utilizations(3).value());
-
-    EXPECT_EQ("Connections", command_response.body().getlog().utilizations(4).name());
-    EXPECT_EQ(0.30f, command_response.body().getlog().utilizations(4).value());
+    EXPECT_EQ("Connections", command_response.body().getlog().utilizations(3).name());
+    EXPECT_EQ(0.30f, command_response.body().getlog().utilizations(3).value());
 }
 
 TEST_F(GetLogHandlerTest, GetLogReturnsCapacityIfRequested) {

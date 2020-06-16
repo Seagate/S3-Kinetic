@@ -468,7 +468,14 @@ PinStatus SecurityManager::SetPinNonSED(
         VLOG(1) << "Failed to write the non-sed pin info packet to the drive";
         return PinStatus::INTERNAL_ERROR;
     }
-    return PinStatus::PIN_SUCCESS;
+    /*Failure of fdatasync doesn't necessarily imply that the drive failed to get the erase pin changes.
+    It is still possible for the write to have succeeded anyway*/
+    if (fdatasync(fd) != 0) {
+        VLOG(1) << "Failed to flush cache to the drive to complete erase pin update.";
+        return PinStatus::INTERNAL_ERROR;
+    } else {
+        return PinStatus::PIN_SUCCESS;
+    }
 }
 
 PinStatus SecurityManager::SetPinTCG(std::string new_pin, std::string old_pin, PinIndex pin_index) {

@@ -196,7 +196,7 @@ TEST_F(SmrdbMemEnvTest, LargeWrite) {
 //     options.value_size_threshold = FLAGS_file_store_minimum_size;
 //     cmd_list_proxy.SetListOwnerReference(&send_pending_status_sender);
 
-//     InstantSecureEraserX86::ClearSuperblocks(FLAGS_store_test_partition);
+//     InstantSecureEraser::ClearSuperblocks(FLAGS_store_test_partition);
 
 //     const Slice keys[] = {Slice("aaa"), Slice("bbb"), Slice("ccc")};
 //     const std::string vals[] = {"foo", "bar", "baz"};

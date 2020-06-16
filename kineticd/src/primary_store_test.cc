@@ -62,7 +62,7 @@ class PrimaryStoreTest : public testing::Test {
 
     virtual void SetUp() {
         smr::Disk::initializeSuperBlockAddr(FLAGS_store_test_partition);
-        InstantSecureEraserX86::ClearSuperblocks(FLAGS_store_test_partition);
+        InstantSecureEraser::ClearSuperblocks(FLAGS_store_test_partition);
         ASSERT_TRUE(key_value_store_->Init(true));
         key_value_store_->SetListOwnerReference(&send_pending_status_sender_);
 
@@ -541,7 +541,7 @@ TEST_F(PrimaryStoreUnitTest, ClearEmptiesKeyValueAndFileSystemStore) {
         .WillOnce(Return(true));
     EXPECT_CALL(mock_cluster_version_store_, Erase())
         .WillOnce(Return(true));
-    ASSERT_EQ(StoreOperationStatus_SUCCESS, primary_store_.Clear(pin));
+    ASSERT_EQ(StoreOperationStatus_SUCCESS, primary_store_.Clear(pin, false));
 }
 
 TEST_F(PrimaryStoreUnitTest, WriteCorrectNumberOfPreusedBytes) {
@@ -623,7 +623,7 @@ TEST_F(PrimaryStoreUnitTest, ClearReturnsInternalErrorIfKeyValueStoreFails) {
     std::string pin("");
     EXPECT_CALL(instant_secure_eraser_, Erase(pin))
         .WillOnce(Return(PinStatus::INTERNAL_ERROR));
-    ASSERT_EQ(StoreOperationStatus_INTERNAL_ERROR, primary_store_.Clear(pin));
+    ASSERT_EQ(StoreOperationStatus_INTERNAL_ERROR, primary_store_.Clear(pin, false));
 }
 
 TEST_F(PrimaryStoreUnitTest, PutReturnsNoSpaceWhenAppropriate) {

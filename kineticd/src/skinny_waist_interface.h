@@ -82,6 +82,7 @@ class SkinnyWaistInterface {
         RequestContext& request_context,
         const std::tuple<int64_t, int64_t> token) = 0;
     virtual StoreOperationStatus InstantSecureErase(std::string pin) = 0;
+    virtual StoreOperationStatus Erase(std::string pin) = 0;
     virtual StoreOperationStatus Security(int64_t user_id,
             const std::list<User> &users,
             RequestContext& request_context) = 0;

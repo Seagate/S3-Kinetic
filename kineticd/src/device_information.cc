@@ -128,7 +128,7 @@ bool DeviceInformation::GetHdaUtilization(float* hda_utilization) {
     return true;
 }
 
-bool GetEnUtilization(const std::string& ethernet_device,
+bool DeviceInformation::GetEnUtilization(const std::string& ethernet_device,
         float* en_utilization) {
     VLOG(2) << "Reading << " << ethernet_device << " utilization";
 
@@ -186,14 +186,6 @@ bool GetEnUtilization(const std::string& ethernet_device,
 
     *en_utilization = utilization;
     return true;
-}
-
-bool DeviceInformation::GetEn0Utilization(float* en0_utilization) {
-    return GetEnUtilization("eth0", en0_utilization);
-}
-
-bool DeviceInformation::GetEn1Utilization(float* en1_utilization) {
-    return GetEnUtilization("eth1", en1_utilization);
 }
 
 bool ReadProcStatPath(const string& proc_stat_path, uint64_t* total_time, uint64_t* idle_time) {
@@ -284,25 +276,27 @@ bool DeviceInformation::GetCpuTemp(
 
     std::ifstream current_value((sysfs_temperature_dir_ + "temp1_input").c_str());
     if (!current_value.is_open()) {
-        return false;
+        *current = -1;
+    } else {
+        current_value >> *current;
+        *current = *current / NORMALIZE_TEMP_CONSTANT;
     }
-
-    current_value >> *current;
-    *current = *current / NORMALIZE_TEMP_CONSTANT;
 
     std::ifstream min_value((sysfs_temperature_dir_ + "temp1_min").c_str());
-    if (!current_value.is_open()) {
-        return false;
+    if (!min_value.is_open()) {
+        *min = -1;
+    } else {
+        min_value >> *min;
+        *min = *min / NORMALIZE_TEMP_CONSTANT;
     }
-    min_value >> *min;
-    *min = *min / NORMALIZE_TEMP_CONSTANT;
 
     std::ifstream max_value((sysfs_temperature_dir_ + "temp1_max").c_str());
     if (!max_value.is_open()) {
-        return false;
+        *max = -1;
+    } else {
+        max_value >> *max;
+        *max = *max / NORMALIZE_TEMP_CONSTANT;
     }
-    max_value >> *max;
-    *max = *max / NORMALIZE_TEMP_CONSTANT;
 
     return true;
 }

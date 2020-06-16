@@ -42,7 +42,7 @@ class MockPrimaryStore : public PrimaryStoreInterface {
         const std::string& key,
         bool guarantee_durable,
         const std::tuple<int64_t, int64_t> token));
-    MOCK_METHOD1(Clear, StoreOperationStatus(std::string pin));
+    MOCK_METHOD2(Clear, StoreOperationStatus(std::string pin, bool SecureRequested));
     MOCK_METHOD1(Find, PrimaryStoreIteratorInterface*(const std::string& key));
     MOCK_METHOD2(SetRecordStatus, bool(const std::string& key, bool bad));
     MOCK_METHOD0(SetPreUsedBytes, void());

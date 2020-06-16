@@ -498,14 +498,19 @@ bool PrimaryStore::Close() {
     return true;
 }
 
-StoreOperationStatus PrimaryStore::Clear(std::string pin) {
+StoreOperationStatus PrimaryStore::Clear(std::string pin, bool SecureRequested) {
     StoreOperationStatus store_operation_status = StoreOperationStatus_SUCCESS;
     // Close the underlying KV store so that there isn't any activity on the partition.
     // We don't have to do anything to the file store because it has no background tasks
     // and the MessageProcessor guarantees no operations happen in parallel with ISE
     key_value_store_.Close();
+    PinStatus status;
+    if (SecureRequested) {
+        status = instant_secure_eraser_.SecureErase(pin);
+    } else {
+        status = instant_secure_eraser_.Erase(pin);
+    }
 
-    PinStatus status = instant_secure_eraser_.Erase(pin);
     switch (status) {
         case PinStatus::PIN_SUCCESS:
             break;

@@ -31,10 +31,10 @@ class MockMountManager : public MountManagerInterface {
         string dev_path_store_partion));
 };
 
-class MountManagerARM : public MountManagerInterface {
+class MountManager : public MountManagerInterface {
     public:
     static const int MAX_ALLOWED_ERRORS;
-    MountManagerARM();
+    MountManager();
     bool MountExt4(string part_path, string mountpoint);
     bool IsMounted(string dev_path_store_partion, string dev_path_mountpoint);
     bool Unmount(const string mountpoint);
@@ -42,15 +42,6 @@ class MountManagerARM : public MountManagerInterface {
         string dev_path_store_partion);
 };
 
-class MountManagerX86 : public MountManagerInterface {
-    public:
-    MountManagerX86();
-    bool MountExt4(string part_path, string mountpoint);
-    bool IsMounted(string dev_path_mountpoint, string dev_path_store_partion);
-    bool Unmount(const string mountpoint);
-    bool CheckFileSystemReadonly(int put_errors, string dev_path_mountpoint,
-        string dev_path_store_partion);
-};
 } // namespace kinetic
 } // namespace seagate
 } // namespace com

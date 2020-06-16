@@ -138,6 +138,10 @@ void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
 
     string dev = FLAGS_store_partition;
     DriveEnv::getInstance()->storePartition(FLAGS_store_partition);
+    FLAGS_store_device = "";
+    for (char c : FLAGS_store_partition) {
+        if (!std::isdigit(c)) FLAGS_store_device += c;
+    }
     int dev_pos = dev.find("sd");
     dev = dev.substr(dev_pos);
     string system_command = "echo 1024 > /sys/block/" + dev + "/queue/max_sectors_kb";
@@ -227,27 +231,18 @@ void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
         static_drive_info.drive_capacity_in_bytes);
     NetworkInterfaces network_interfaces;
 
-#if BUILD_FOR_ARM == 1
-    InstantSecureEraserARM instant_secure_eraser(FLAGS_store_mountpoint,
+    InstantSecureEraser instant_secure_eraser(FLAGS_store_mountpoint,
                                                  FLAGS_store_partition,
                                                  FLAGS_store_device,
                                                  FLAGS_metadata_mountpoint,
-                                                 FLAGS_metadata_partition);
-
+                                                 FLAGS_metadata_partition,
+                                                 FLAGS_store_partition,
+                                                 FLAGS_file_store_path);
     device_information.LoadDriveIdentification();
     // Following 3 Vars: for pinop handler to unmount/mount metadata
     // during lock, unlock
-    bool pinop_remount_x86_ = false;
     const string pinop_lock_umount_point = FLAGS_metadata_mountpoint;
     const string pinop_lock_umount_part = FLAGS_metadata_partition;
-#else
-    InstantSecureEraserX86 instant_secure_eraser(FLAGS_store_partition, FLAGS_file_store_path);
-    // Following 3 Vars: For consistency, X86 pinop handler store mountpoint and partition,
-    // though x86 mount manager does attempt to actually mount/unmount anything
-    bool pinop_remount_x86_ = true;
-    const string pinop_lock_umount_point = FLAGS_store_mountpoint;
-    const string pinop_lock_umount_part = FLAGS_store_partition;
-#endif
 
     unique_ptr<CautiousFileHandlerInterface> version_file_handler(
             new CautiousFileHandler(FLAGS_cluster_version_path, "version"));
@@ -317,8 +312,7 @@ void* InitMain(int argc, char* argv[]) { //struct arg *arg) {
     PinOpHandler pinop_handler(skinny_waist,
                                pinop_lock_umount_point,
                                pinop_lock_umount_part,
-                               static_drive_info,
-                               pinop_remount_x86_);
+                               static_drive_info);
 
     PowerManager power_manager(skinny_waist, FLAGS_store_partition);
 

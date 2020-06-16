@@ -292,7 +292,7 @@ add_library(kinetic
     src/connection_map.cc
     src/connection_queue.cc
     src/connection.cc
-    src/device_information_${FILE_SUFFIX}.cc
+    src/device_information.cc
     src/drive_info.cc
     src/domain.cc
     src/file_system_store.cc
@@ -333,7 +333,7 @@ add_library(kinetic
     src/db_logger.cc
     src/smartlog_processors.cc
     src/popen_wrapper.cc
-    src/instant_secure_eraser_${FILE_SUFFIX}.cc
+    src/instant_secure_eraser.cc
     src/network_interfaces.cc
     src/announcer_controller.cc
     src/multicast_announcer.cc

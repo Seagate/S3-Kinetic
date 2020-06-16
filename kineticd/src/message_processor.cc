@@ -34,7 +34,7 @@ MessageProcessor::MessageProcessor(
     P2PRequestManagerInterface& p2p_request_manager,
     GetLogHandler& get_log_handler,
     SetupHandler& setup_handler,
-    PinOpHandler& pinop_handler,
+    PinOpHandlerInterface& pinop_handler,
     PowerManager& power_manager,
     Limits& limits,
     STATIC_DRIVE_INFO static_drive_info,
@@ -1301,11 +1301,18 @@ void MessageProcessor::ProcessPinMessage(const proto::Command &command,
         // Allowing an ISE to run in parallel with any other operation is very bad since ISE
         // closes the underlying store, unmounts the FS, etc. To prevent this we have a RW lock.
         // ISE acquires the lock for writing and everything else acquires it for reading
-        pinop_handler_.ProcessRequest(command,
-                request_value,
-                command_response,
-                request_context,
-                pin_auth, connection);
+        if (static_drive_info_.supports_SED == false && command.body().pinop().pinoptype() == Command_PinOperation_PinOpType_SECURE_ERASE_PINOP) {
+        command_response->mutable_status()->
+            set_code(Command_Status_StatusCode_INVALID_REQUEST);
+        command_response->mutable_status()->
+            set_statusmessage("ISE not supported for non-SED devices");
+        } else {
+            pinop_handler_.ProcessRequest(command,
+                    request_value,
+                    command_response,
+                    request_context,
+                    pin_auth, connection);
+        }
     }
 }
 

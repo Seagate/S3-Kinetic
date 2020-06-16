@@ -83,7 +83,7 @@ class PrimaryStore : public PrimaryStoreInterface {
     StoreOperationStatus Delete(const std::string& key,
                                 bool guarantee_durable,
                                 const std::tuple<int64_t, int64_t> token);
-    StoreOperationStatus Clear(std::string pin);
+    StoreOperationStatus Clear(std::string pin, bool SecureRequested);
     PrimaryStoreIterator* Find(const std::string& key);
     bool SetRecordStatus(const std::string& key, bool bad = true);
     static const uint64_t kMinFreeSpace; // = smr::Disk::NO_SPACE_THRESHOLD;

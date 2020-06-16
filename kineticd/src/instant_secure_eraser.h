@@ -19,26 +19,32 @@ class Server;
 
 class InstantSecureEraserInterface {
     public:
+    virtual PinStatus SecureErase(std::string pin) = 0;
     virtual PinStatus Erase(std::string pin) = 0;
     virtual bool MountCreateFileSystem(bool create_if_missing) = 0;
 };
 
 class MockInstantSecureEraser : public InstantSecureEraserInterface {
     public:
+    MOCK_METHOD1(SecureErase, PinStatus(std::string));
     MOCK_METHOD1(Erase, PinStatus(std::string));
     MOCK_METHOD1(MountCreateFileSystem, bool(bool create_if_missing));
 };
 
-class InstantSecureEraserARM : public InstantSecureEraserInterface {
+class InstantSecureEraser : public InstantSecureEraserInterface {
     public:
-    InstantSecureEraserARM(const string store_mountpoint,
+    InstantSecureEraser(const string store_mountpoint,
                            const string store_partition,
                            const string store_device,
                            const string metadata_mountpoint,
-                           const string metadata_partition);
+                           const string metadata_partition,
+                           const string primary_db_path,
+                           const string file_store_path);
 
-    virtual PinStatus Erase(std::string pin);
+    virtual PinStatus SecureErase(std::string pin);
     virtual bool MountCreateFileSystem(bool create_if_missing);
+    virtual PinStatus Erase(std::string pin);
+    static bool ClearSuperblocks(std::string device_path);
 
     private:
     const string store_mountpoint_;
@@ -46,19 +52,10 @@ class InstantSecureEraserARM : public InstantSecureEraserInterface {
     const string store_device_;
     const string metadata_mountpoint_;
     const string metadata_partition_;
-};
-
-class InstantSecureEraserX86 : public InstantSecureEraserInterface {
-    public:
-    InstantSecureEraserX86(const string primary_db_path, const string file_store_path);
-    virtual PinStatus Erase(std::string pin);
-    static bool ClearSuperblocks(std::string device_path);
-    virtual bool MountCreateFileSystem(bool create_if_missing);
-
-    private:
     const string primary_db_path_;
     const string file_store_path_;
 };
+
 
 } // namespace kinetic
 } // namespace seagate
