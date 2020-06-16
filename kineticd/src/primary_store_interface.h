@@ -75,7 +75,7 @@ class PrimaryStoreInterface {
     virtual StoreOperationStatus Delete(const std::string& key,
                                         bool guarantee_durable,
                                         const std::tuple<int64_t, int64_t> token) = 0;
-    virtual StoreOperationStatus Clear(std::string pin) = 0;
+    virtual StoreOperationStatus Clear(std::string pin, bool SecureRequested) = 0;
     virtual PrimaryStoreIteratorInterface* Find(const std::string& key) = 0;
     virtual bool SetRecordStatus(const std::string& key, bool bad = true) = 0;
     virtual leveldb::Status Flush(bool toSST = false, bool clearMems = false, bool toClose = false) = 0;

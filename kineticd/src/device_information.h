@@ -35,8 +35,7 @@ class DeviceInformation : public DeviceInformationInterface {
     virtual bool GetPortionFull(float* portionFull);
 
     virtual bool GetHdaUtilization(float* hda_utilization);
-    virtual bool GetEn0Utilization(float* en0_utilization);
-    virtual bool GetEn1Utilization(float* en1_utilization);
+    virtual bool GetEnUtilization(const std::string& ethernet_device, float* en_utilization);
     virtual bool GetCpuUtilization(float* cpu_idle_percent);
 
     virtual bool GetCpuTemp(float* current, float* min, float* max, float* target);

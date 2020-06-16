@@ -6,6 +6,7 @@
 #include "kinetic.pb.h"
 #include "security_manager.h"
 #include "drive_info.h"
+#include "pinop_handler_interface.h"
 
 namespace com {
 namespace seagate {
@@ -17,13 +18,12 @@ class Server;
 class ConnectionHandler;
 class Connection;
 
-class PinOpHandler {
+class PinOpHandler : public PinOpHandlerInterface {
     public:
     explicit PinOpHandler(SkinnyWaistInterface& skinny_waist,
                           const string mountpoint,
                           const string partition,
-                          STATIC_DRIVE_INFO static_drive_info,
-                          bool remount_x86 = false);
+                          STATIC_DRIVE_INFO static_drive_info);
 
     void ProcessRequest(const proto::Command &command,
                                       IncomingValueInterface* request_value,
@@ -47,7 +47,6 @@ class PinOpHandler {
     const string mount_point_;
     const string partition_;
     STATIC_DRIVE_INFO static_drive_info_;
-    bool remount_x86_;
     ConnectionHandler* connHandler_;
 
 

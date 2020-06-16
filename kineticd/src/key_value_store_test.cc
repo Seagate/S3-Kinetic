@@ -18,7 +18,7 @@ class KeyValueStoreTest : public testing::Test {
     protected:
     KeyValueStoreTest() {
         smr::Disk::initializeSuperBlockAddr(FLAGS_store_test_partition);
-        InstantSecureEraserX86::ClearSuperblocks(FLAGS_store_test_partition);
+        InstantSecureEraser::ClearSuperblocks(FLAGS_store_test_partition);
         key_value_store_ = new KeyValueStore(FLAGS_store_test_partition,
                                              FLAGS_table_cache_size,
                                              FLAGS_block_size,

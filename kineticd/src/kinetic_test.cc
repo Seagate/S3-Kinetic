@@ -4,6 +4,7 @@
 #include "kinetic.pb.h"
 #include "key_value_store_interface.h"
 #include "key_value_store.h"
+#include "command_line_flags.h"
 
 using com::seagate::kinetic::proto::Message;
 using com::seagate::kinetic::KeyValueStore;
@@ -28,6 +29,10 @@ int main(int argc, char *argv[]) {
     google::InstallFailureSignalHandler();
     testing::InitGoogleTest(&argc, argv);
     google::ParseCommandLineFlags(&argc, &argv, true);
+    FLAGS_store_test_device = "";
+    for (char c : FLAGS_store_test_partition) {
+        if (!std::isdigit(c)) FLAGS_store_test_device += c;
+    }
     int status = RUN_ALL_TESTS();
     google::ShutdownGoogleLogging();
     google::ShutDownCommandLineFlags();

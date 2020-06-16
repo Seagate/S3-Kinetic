@@ -6,6 +6,7 @@
 #include "mock_authorizer.h"
 #include "authorizer_interface.h"
 #include "domain.h"
+#include "drive_info.h"
 #include "file_system_store.h"
 #include "hmac_authenticator.h"
 #include "primary_store.h"
@@ -22,9 +23,10 @@
 #include "command_line_flags.h"
 #include "instant_secure_eraser.h"
 #include "smrdisk/Disk.h"
-#include "drive_info.h"
+#include "mock_pinop_handler.h"
 
 using namespace com::seagate::kinetic::proto; //NOLINT
+using com::seagate::kinetic::proto::Command_PinOperation_PinOpType_SECURE_ERASE_PINOP;
 using com::seagate::kinetic::STATIC_DRIVE_INFO;
 
 namespace com {
@@ -37,7 +39,7 @@ using ::testing::_;
 using ::testing::Return;
 using ::testing::SetArgPointee;
 using ::testing::NiceMock;
-STATIC_DRIVE_INFO static_drive_info_;
+STATIC_DRIVE_INFO static_drive_info_ = {"", "", "", "", "", "", false, false, false, false, 0, 0, 0, 0, 0};
 
 class MessageProcessorTest : public ::testing::Test {
     protected:
@@ -108,7 +110,7 @@ class MessageProcessorTest : public ::testing::Test {
                 mock_p2p_request_manager_,
                 get_log_handler_,
                 setup_handler_,
-                pinop_handler_,
+                mock_pinop_handler_,
                 power_manager_,
                 limits_,
                 static_drive_info_,
@@ -117,7 +119,7 @@ class MessageProcessorTest : public ::testing::Test {
 
     virtual void SetUp() {
         smr::Disk::initializeSuperBlockAddr(FLAGS_store_test_partition);
-        InstantSecureEraserX86::ClearSuperblocks(FLAGS_store_test_partition);
+        InstantSecureEraser::ClearSuperblocks(FLAGS_store_test_partition);
         ASSERT_TRUE(file_system_store_.Init(true));
         ASSERT_TRUE(db_.Init(true));
         db_.SetListOwnerReference(&send_pending_status_sender_);
@@ -261,6 +263,7 @@ class MessageProcessorTest : public ::testing::Test {
     PowerManager power_manager_;
     MessageProcessor message_processor_;
     MockSkinnyWaist mock_skinny_waist_;
+    MockPinOpHandler mock_pinop_handler_;
     MessageProcessor message_processor_with_mocks_;
     IncomingStringValue empty_value_;
     StatisticsManager statistics_manager_;
@@ -2392,6 +2395,37 @@ TEST_F(MessageProcessorTest, MediaScanRejectsReverse) {
                                       message.hmacauth().identity(), connection_id);
 
     EXPECT_EQ(Command_Status_StatusCode_INVALID_REQUEST, command_response.status().code());
+}
+
+TEST_F(MessageProcessorTest, ISEGetsRejectedForNonSED) {
+    Message message;
+    Command command;
+    std::string pin("");
+    std::string serialized_command;
+    Connection *connection = new Connection(0);
+    Command_PinOperation_PinOpType pinoptype(Command_PinOperation_PinOpType_SECURE_ERASE_PINOP);
+
+    command.mutable_body()->mutable_pinop()->set_pinoptype(pinoptype);
+    command.mutable_header()->set_messagetype(Command_MessageType_PINOP);
+    command.SerializeToString(&serialized_command);
+    message.set_commandbytes(serialized_command);
+    message.mutable_pinauth()->set_pin(pin);
+
+    Command command_response;
+    NullableOutgoingValue response_value;
+    RequestContext request_context;
+
+    EXPECT_CALL(mock_pinop_handler_, ProcessRequest(_, _, _, _, _, _))
+                .Times(0);
+
+    message_processor_with_mocks_.ProcessPinMessage(command, &empty_value_, &command_response, &response_value,
+                                                    request_context, message.pinauth(), connection);
+
+
+    EXPECT_EQ(Command_Status_StatusCode_INVALID_REQUEST, command_response.status().code());
+    EXPECT_EQ("ISE not supported for non-SED devices", command_response.status().statusmessage());
+
+    delete connection;
 }
 
 } // namespace kinetic

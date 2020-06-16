@@ -233,7 +233,7 @@ class SmrdbDbTest : public ::testing::Test {
         dbname_ = FLAGS_store_test_partition;
         cmd_list_proxy_.SetListOwnerReference(&send_pending_status_sender_);
         logger_.SetLogHandlerInterface(&log_handler_);
-        InstantSecureEraserX86::ClearSuperblocks(dbname_);
+        InstantSecureEraser::ClearSuperblocks(dbname_);
         DestroyDB(dbname_, Options());
         db_ = NULL;
         Reopen();
@@ -297,7 +297,7 @@ class SmrdbDbTest : public ::testing::Test {
     void DestroyAndReopen(Options* options = NULL) {
         delete db_;
         db_ = NULL;
-        InstantSecureEraserX86::ClearSuperblocks(dbname_);
+        InstantSecureEraser::ClearSuperblocks(dbname_);
         DestroyDB(dbname_, Options());
         ASSERT_OK(TryReopen(options));
     }
@@ -2209,7 +2209,7 @@ std::string MakeKey(unsigned int num) {
 
 void BM_LogAndApply(int iters, int num_base_files) {
     std::string dbname = FLAGS_store_test_partition;
-    InstantSecureEraserX86::ClearSuperblocks(dbname);
+    InstantSecureEraser::ClearSuperblocks(dbname);
     DestroyDB(dbname, Options());
 
     DB* db = NULL;

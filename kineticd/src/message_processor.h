@@ -4,6 +4,7 @@
 #include "kinetic/common.h"
 
 #include "domain.h"
+#include "drive_info.h"
 #include "kinetic.pb.h"
 #include "message_processor_interface.h"
 #include "profiler.h"
@@ -43,7 +44,7 @@ class MessageProcessor : public MessageProcessorInterface {
         P2PRequestManagerInterface& p2p_request_manager,
         GetLogHandler& get_log_handler,
         SetupHandler& setup_handler,
-        PinOpHandler& pinop_handler,
+        PinOpHandlerInterface& pinop_handler,
         PowerManager& power_manager,
         Limits& limits,
         STATIC_DRIVE_INFO static_drive_info,
@@ -100,11 +101,12 @@ class MessageProcessor : public MessageProcessorInterface {
 
     SetupHandler& setup_handler_;
 
-    PinOpHandler& pinop_handler_;
+    PinOpHandlerInterface& pinop_handler_;
 
     PowerManager& power_manager_;
 
     Limits& limits_;
+
     STATIC_DRIVE_INFO static_drive_info_;
 
     UserStoreInterface& user_store_;

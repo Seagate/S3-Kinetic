@@ -23,20 +23,17 @@ using proto::Command_PinOperation_PinOpType_LOCK_PINOP;
 using proto::Command_PinOperation_PinOpType_ERASE_PINOP;
 using proto::Command_PinOperation_PinOpType_SECURE_ERASE_PINOP;
 using com::seagate::kinetic::SecurityManager;
-using com::seagate::kinetic::MountManagerARM;
-using com::seagate::kinetic::MountManagerX86;
+using com::seagate::kinetic::MountManager;
 using com::seagate::kinetic::PinIndex;
 
 PinOpHandler::PinOpHandler(SkinnyWaistInterface& skinny_waist,
                            const string mountpoint,
                            const string partition,
-                           STATIC_DRIVE_INFO static_drive_info,
-                           bool remount_x86)
+                           STATIC_DRIVE_INFO static_drive_info)
                            :skinny_waist_(skinny_waist),
                            mount_point_(mountpoint),
                            partition_(partition),
-                           static_drive_info_(static_drive_info),
-                           remount_x86_(remount_x86) {
+                           static_drive_info_(static_drive_info) {
     server_ = NULL;
     connHandler_ = NULL;
 }
@@ -55,11 +52,7 @@ void PinOpHandler::ProcessRequest(const proto::Command &command,
     int state_result;
 #endif
 
-#if BUILD_FOR_ARM == 1
-    MountManagerARM mount_manager;
-#else
-    MountManagerX86 mount_manager;
-#endif
+    MountManager mount_manager;
 
     switch (command.body().pinop().pinoptype()) {
     #ifndef ISE_AND_LOCK_DISABLED
@@ -124,9 +117,6 @@ void PinOpHandler::ProcessRequest(const proto::Command &command,
             if (mount_manager.Unmount(mount_point_)) {
                 sed_status = sed_manager.Lock(pin_auth.pin());
                 if (sed_status != PinStatus::PIN_SUCCESS) {
-                    if (remount_x86_) {
-                        is_mounted = mount_manager.MountExt4(FLAGS_store_partition.data(), mount_point_);
-                    }
                     if (is_mounted && dbOpened) { skinny_waist_.InitUserDataStore();}
                     success = false;
                 }
@@ -140,9 +130,57 @@ void PinOpHandler::ProcessRequest(const proto::Command &command,
         break;
         #endif //close ifndef ISE_AND_LOCK_DISABLED for LOCK & UNLOCK cases
     case Command_PinOperation_PinOpType_ERASE_PINOP:
+        if (!ValidPin(sed_manager, command_response, pin_auth, PinIndex::ERASEPIN)) {
+            //TODO(Gonzalo): Do not think we need to log anything
+            LOG(ERROR) << "InvalidPin";
+            return;
+        }
+        state_result = server_->SupportableStateChanged(com::seagate::kinetic::StateEvent::ISE,
+                                                        proto::Message_AuthType_PINAUTH,
+                                                        command.header().messagetype(),
+                                                        command_response);
+        if (state_result < 0) {
+            return;
+        }
+        status = skinny_waist_.Erase(pin_auth.pin());
+        success = (status == StoreOperationStatus_SUCCESS);
+        server_->StateChanged(StateEvent::ISED, success);
+        server_->StateChanged(StateEvent::RESTORE);
+        // Set sed_status appropriately
+        if (success) {
+            sed_status = PinStatus::PIN_SUCCESS;
+            server_->StateChanged(StateEvent::RESTORED, success);
+            //Reset Erase pin to empty string
+            switch (sed_manager.SetPin(
+                "",
+                pin_auth.pin(),
+                PinIndex::ERASEPIN,
+                static_drive_info_.drive_sn,
+                static_drive_info_.supports_SED,
+                static_drive_info_.sector_size,
+                static_drive_info_.non_sed_pin_info_sector_num)) {
+                case PinStatus::PIN_SUCCESS:
+                    break;
+                case PinStatus::AUTH_FAILURE:
+                    sed_status = PinStatus::AUTH_FAILURE;
+                    break;
+                default:
+                    sed_status = PinStatus::INTERNAL_ERROR;
+                    break;
+            }
+        } else if (status == StoreOperationStatus_AUTHORIZATION_FAILURE) {
+            sed_status = PinStatus::AUTH_FAILURE;
+            server_->StateChanged(StateEvent::RESTORED, success);
+        } else if (status == StoreOperationStatus_ISE_FAILED_VAILD_DB) {
+            sed_status = PinStatus::INTERNAL_ERROR;
+            server_->StateChanged(StateEvent::RESTORED, success);
+        } else {
+            sed_status = PinStatus::INTERNAL_ERROR;
+            server_->StateChanged(StateEvent::STORE_INACCESSIBLE, success);
+        }
+        break;
     #ifndef ISE_AND_LOCK_DISABLED
     case Command_PinOperation_PinOpType_SECURE_ERASE_PINOP:
-    #endif
     {
         if (!ValidPin(sed_manager, command_response, pin_auth, PinIndex::ERASEPIN)) {
             //TODO(Gonzalo): Do not think we need to log anything
@@ -165,26 +203,6 @@ void PinOpHandler::ProcessRequest(const proto::Command &command,
         if (success) {
             sed_status = PinStatus::PIN_SUCCESS;
             server_->StateChanged(StateEvent::RESTORED, success);
-            //If the drive is non-sed, set the erase pin to "" on erase cmd
-            if (!static_drive_info_.supports_SED) {
-                switch (sed_manager.SetPin(
-                    "",
-                    pin_auth.pin(),
-                    PinIndex::ERASEPIN,
-                    static_drive_info_.drive_sn,
-                    static_drive_info_.supports_SED,
-                    static_drive_info_.sector_size,
-                    static_drive_info_.non_sed_pin_info_sector_num)) {
-                    case PinStatus::PIN_SUCCESS:
-                        break;
-                    case PinStatus::AUTH_FAILURE:
-                        sed_status = PinStatus::AUTH_FAILURE;
-                        break;
-                    default:
-                        sed_status = PinStatus::INTERNAL_ERROR;
-                        break;
-                }
-            }
         } else if (status == StoreOperationStatus_AUTHORIZATION_FAILURE) {
             sed_status = PinStatus::AUTH_FAILURE;
             server_->StateChanged(StateEvent::RESTORED, success);
@@ -198,6 +216,7 @@ void PinOpHandler::ProcessRequest(const proto::Command &command,
 
         break;
     }
+    #endif
     default:
         LOG(ERROR) << "Unknown pinop requested " << command.body().pinop().pinoptype();//NO_SPELL
         break;

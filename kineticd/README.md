@@ -261,19 +261,19 @@ Follow the list of steps below to run the X86 Server:
 
 * **Run Standard X86 Kineticd**
 
-        $> sudo ./kineticd --store_partition=/dev/<yourdevice> --metadata_db_path=/metadata.db
+        $> sudo ./kineticd --store_partition=/dev/<yourdevice> --metadata_partition=<metadata partition> --metadata_db_path=/mnt/metadata/metadata.db
 
 
 * **Run X86 Test Suite (All Tests)**
 
-        $> sudo ./kinetic_test --store_test_partition=/dev/<yourdeviceid> --metadata_db_path=/metadata.db
+        $> sudo ./kinetic_test --store_test_partition=/dev/<yourdeviceid> --metadata_partition=<metadata partition> --metadata_db_path=/mnt/metadata/metadata.db
 
 
 * **Run Subset of Unit Tests X86 Example**
 
     For details on supported filters see the [gtest advanced guide](https://code.google.com/p/googletest/wiki/V1_6_AdvancedGuide#Running_a_Subset_of_the_Tests)
 
-        sudo ./kinetic_test --gtest_filter="SkinnyWaistTest/*GetPrev*"--store_test_partition=/dev/<yourdevice> --metadata_db_path=/metadata.db
+        sudo ./kinetic_test --gtest_filter="SkinnyWaistTest/*GetPrev*"--store_test_partition=/dev/<yourdevice> --metadata_partition=<metadata partition> --metadata_db_path=/mnt/metadata/metadata.db
 
 
 - - -
@@ -347,7 +347,7 @@ Partition your local Legacy Lamarr Host Aware device
 ### Memory Leaks with Valgrind ###
 For valgrind, **follow X86 compilation** steps and run the following command:
 
-      sudo valgrind --leak-check=full --show-reachable=yes suppressions=valgrind_linux.supp ./kineticd --store_partition=/dev/sdb --metadata_db_path=/metadata.db
+      sudo valgrind --leak-check=full --show-reachable=yes suppressions=valgrind_linux.supp ./kineticd --store_partition=/dev/sdb --metadata_partition=<metadata partition> --metadata_db_path=/mnt/metadata/metadata.db
 
 
 

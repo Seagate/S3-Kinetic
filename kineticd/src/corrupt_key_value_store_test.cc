@@ -32,7 +32,7 @@ using ::testing::AtLeast;
 class CorruptKeyValueStoreTest : public testing::Test {
     protected:
     virtual void SetUp() {
-        InstantSecureEraserX86::ClearSuperblocks(FLAGS_store_test_partition);
+        InstantSecureEraser::ClearSuperblocks(FLAGS_store_test_partition);
         corrupt_store_ = new KeyValueStore(FLAGS_store_test_partition,
                     FLAGS_table_cache_size,
                     FLAGS_block_size,

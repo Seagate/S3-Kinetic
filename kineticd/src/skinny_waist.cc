@@ -65,9 +65,7 @@ UserDataStatus SkinnyWaist::InitUserDataStore(bool create_if_missing) {
         return UserDataStatus::LOAD_HALTED;
     }
 
-#if BUILD_FOR_ARM == 1
-    MountManagerARM mount_manager = MountManagerARM();
-#endif
+    MountManager mount_manager = MountManager();
 
     VLOG(1) << "Opening LevelDB DB for SMR";//NO_SPELL
     if (!launch_monitor_.OperationAllowed(LaunchStep::INIT_USERS)) {
@@ -81,7 +79,6 @@ UserDataStatus SkinnyWaist::InitUserDataStore(bool create_if_missing) {
         return UserDataStatus::STORE_INACCESSIBLE;
     }
 
-#if BUILD_FOR_ARM == 1
     if (!mount_manager.IsMounted(metadata_partition_, metadata_mountpoint_)) {
         VLOG(1) << "Metadata partition is not yet mounted... Mounting Now";//NO_SPELL
         if (!mount_manager.MountExt4(metadata_partition_, metadata_mountpoint_)) {
@@ -108,7 +105,6 @@ UserDataStatus SkinnyWaist::InitUserDataStore(bool create_if_missing) {
             }
         }
     }
-#endif
 
     if (!user_store_.Init()) {
         LOG(ERROR) << "User Store failed Init";//NO_SPELL
@@ -506,11 +502,7 @@ StoreOperationStatus SkinnyWaist::Put(
         default:
             VLOG(5) << "PUT resulted in internal error";
 
-            #if BUILD_FOR_ARM == 1
-                MountManagerARM mount_manager = MountManagerARM();
-            #else
-                MountManagerX86 mount_manager = MountManagerX86();
-            #endif
+            MountManager mount_manager = MountManager();
             put_errors_++;
             if (mount_manager.CheckFileSystemReadonly(put_errors_,
                 store_mountpoint_, store_partition_)) {
@@ -591,7 +583,33 @@ StoreOperationStatus SkinnyWaist::InstantSecureErase(std::string pin) {
 
     // No authorization check needed, check performed in SetupHandler
 
-    StoreOperationStatus status = primary_store_.Clear(pin);
+    StoreOperationStatus status = primary_store_.Clear(pin, true);
+
+    if (status == StoreOperationStatus_SUCCESS) {
+        launch_monitor_.SuccessfulLoad();
+
+        if (!user_store_.Clear()) {
+            LOG(ERROR) << "IE store status";
+            return StoreOperationStatus_INTERNAL_ERROR;
+        }
+
+        if (!user_store_.CreateDemoUser()) {
+            LOG(ERROR) << "IE Could not create demo user";
+            return StoreOperationStatus_INTERNAL_ERROR;
+        }
+    } else if (status == StoreOperationStatus_ISE_FAILED_VAILD_DB) {
+        launch_monitor_.SuccessfulLoad();
+    }
+    return status;
+}
+
+StoreOperationStatus SkinnyWaist::Erase(std::string pin) {
+    PthreadsMutexGuard guard(&mutex_);
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
+
+    // No authorization check needed, check performed in SetupHandler
+
+    StoreOperationStatus status = primary_store_.Clear(pin, false);
 
     if (status == StoreOperationStatus_SUCCESS) {
         launch_monitor_.SuccessfulLoad();

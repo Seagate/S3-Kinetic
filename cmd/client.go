@@ -543,7 +543,7 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 		bvalue = make([]byte, size)
 	} else {
 		log.Println("ALLOC 5MB")
-		bvalue = make([]byte,1*1048576)
+		bvalue = make([]byte,5*1048576)
 	}
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
 	//log.Println("CVALUE BVALUE", cvalue, &bvalue[0])

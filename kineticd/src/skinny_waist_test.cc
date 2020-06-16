@@ -76,7 +76,7 @@ class SkinnyWaistTest : public testing::Test {
 
     virtual void SetUp() {
         smr::Disk::initializeSuperBlockAddr(FLAGS_store_test_partition);
-        InstantSecureEraserX86::ClearSuperblocks(FLAGS_store_test_partition);
+        InstantSecureEraser::ClearSuperblocks(FLAGS_store_test_partition);
         ASSERT_TRUE(key_value_store_->Init(true));
         ASSERT_TRUE(file_system_store_.Init(true));
         key_value_store_->SetListOwnerReference(&send_pending_status_sender_);
@@ -787,16 +787,16 @@ TYPED_TEST(SkinnyWaistTest, MediaScanHonorsLimit) {
 }
 
 
-TYPED_TEST(SkinnyWaistTest, InstantSecureEraseReportsSuccessButStoreIsNotClear) {
+TYPED_TEST(SkinnyWaistTest, EraseReportsSuccessButStoreIsNotClear) {
     EXPECT_CALL(this->send_pending_status_sender_, SendAllPending(_, _));
     EXPECT_CALL(this->instant_secure_eraser_, Erase("")).WillOnce(Return(PinStatus::PIN_SUCCESS));
     EXPECT_CALL(this->instant_secure_eraser_, MountCreateFileSystem(_)).WillOnce(Return(true));
 
     ASSERT_EQ(StoreOperationStatus_ISE_FAILED_VAILD_DB,
-                this->skinny_waist_.InstantSecureErase(""));
+                this->skinny_waist_.Erase(""));
 }
 
-TYPED_TEST(SkinnyWaistTest, InstantSecureEraseReportsSuccessButMetadataIsNotClear) {
+TYPED_TEST(SkinnyWaistTest, EraseReportsSuccessButMetadataIsNotClear) {
     EXPECT_CALL(this->send_pending_status_sender_, SendAllPending(_, _));
     EXPECT_CALL(this->instant_secure_eraser_, Erase("")).WillOnce(Return(PinStatus::PIN_SUCCESS));
     EXPECT_CALL(this->instant_secure_eraser_, MountCreateFileSystem(_)).WillOnce(Return(true));
@@ -806,11 +806,11 @@ TYPED_TEST(SkinnyWaistTest, InstantSecureEraseReportsSuccessButMetadataIsNotClea
     users.push_back(user);
     ASSERT_EQ(UserStoreInterface::Status::SUCCESS, this->user_store_.Put(users));
     ASSERT_EQ(StoreOperationStatus_ISE_FAILED_VAILD_DB,
-                this->skinny_waist_.InstantSecureErase(""));
+                this->skinny_waist_.Erase(""));
     ASSERT_TRUE(this->user_store_.Get(17, &user));
 }
 
-TYPED_TEST(SkinnyWaistTest, InstantSecureEraseReportsSuccessButLeavesStoreInUsableState) {
+TYPED_TEST(SkinnyWaistTest, EraseReportsSuccessButLeavesStoreInUsableState) {
     EXPECT_CALL(this->send_pending_status_sender_, SendAllPending(_, _));
     EXPECT_CALL(this->instant_secure_eraser_, Erase("")).WillOnce(Return(PinStatus::PIN_SUCCESS));
     EXPECT_CALL(this->instant_secure_eraser_, MountCreateFileSystem(_)).WillOnce(Return(true));
@@ -823,7 +823,7 @@ TYPED_TEST(SkinnyWaistTest, InstantSecureEraseReportsSuccessButLeavesStoreInUsab
 
     RequestContext request_context;
     ASSERT_EQ(StoreOperationStatus_ISE_FAILED_VAILD_DB,
-            this->skinny_waist_.InstantSecureErase(""));
+            this->skinny_waist_.Erase(""));
 
     IncomingStringValue string_value_b("");
     ASSERT_EQ(StoreOperationStatus_SUCCESS,
@@ -1130,36 +1130,36 @@ TEST_F(SkinnyWaistUnitTest, DeleteReturnsInternalErrorOnFailureToDeleteValue) {
                                    false, request_context, token));
 }
 
-TEST_F(SkinnyWaistUnitTest, InstantSecureEraseReturnsInternalErrorWhenClearFails) {
-    EXPECT_CALL(this->primary_store_, Clear(""))
+TEST_F(SkinnyWaistUnitTest, EraseReturnsInternalErrorWhenClearFails) {
+    EXPECT_CALL(this->primary_store_, Clear("", false))
         .WillOnce(Return(StoreOperationStatus_INTERNAL_ERROR));
     EXPECT_EQ(StoreOperationStatus_INTERNAL_ERROR,
-            this->skinny_waist_.InstantSecureErase(""));
+            this->skinny_waist_.Erase(""));
 }
 
-TEST_F(SkinnyWaistUnitTest, InstantSecureEraseReturnsInternalErrorWhenClusterVersionFails) {
-    EXPECT_CALL(this->primary_store_, Clear(""))
+TEST_F(SkinnyWaistUnitTest, EraseReturnsInternalErrorWhenClusterVersionFails) {
+    EXPECT_CALL(this->primary_store_, Clear("", false))
         .WillOnce(Return(StoreOperationStatus_SUCCESS));
     EXPECT_EQ(StoreOperationStatus_INTERNAL_ERROR,
-              this->skinny_waist_.InstantSecureErase(""));
+              this->skinny_waist_.Erase(""));
 }
 
-TEST_F(SkinnyWaistUnitTest, InstantSecureEraseReturnsInternalErrorWhenUserStoreFails) {
-    EXPECT_CALL(this->primary_store_, Clear(""))
+TEST_F(SkinnyWaistUnitTest, EraseReturnsInternalErrorWhenUserStoreFails) {
+    EXPECT_CALL(this->primary_store_, Clear("", false))
         .WillOnce(Return(StoreOperationStatus_SUCCESS));
     EXPECT_CALL(this->user_store_, Clear())
         .WillOnce(Return(false));
     EXPECT_EQ(StoreOperationStatus_INTERNAL_ERROR,
-                this->skinny_waist_.InstantSecureErase(""));
+                this->skinny_waist_.Erase(""));
 }
 
-TEST_F(SkinnyWaistUnitTest, InstantSecureEraseReturnsSuccessWhenAllGoesWell) {
-    EXPECT_CALL(this->primary_store_, Clear(""))
+TEST_F(SkinnyWaistUnitTest, EraseReturnsSuccessWhenAllGoesWell) {
+    EXPECT_CALL(this->primary_store_, Clear("", false))
         .WillOnce(Return(StoreOperationStatus_SUCCESS));
     EXPECT_CALL(this->user_store_, Clear()).WillOnce(Return(true));
     EXPECT_CALL(this->user_store_, CreateDemoUser()).WillOnce(Return(true));
     EXPECT_EQ(StoreOperationStatus_SUCCESS,
-              this->skinny_waist_.InstantSecureErase(""));
+              this->skinny_waist_.Erase(""));
 }
 
 TEST_F(SkinnyWaistUnitTest, SecurityReturnsInternalErrorWhenAppropriate) {

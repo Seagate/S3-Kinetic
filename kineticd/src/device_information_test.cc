@@ -19,7 +19,7 @@ class DeviceInformationTest : public ::testing::Test {
     DeviceInformationTest()
         : authorizer_(), device_information_(
             authorizer_, "database.db", FLAGS_proc_stat_path,
-            FLAGS_store_device.substr(FLAGS_store_device.find_last_of('/') + 1), "temperature-path",
+            FLAGS_store_test_device.substr(FLAGS_store_device.find_last_of('/') + 1), "temperature-path",
             FLAGS_preused_file_path, FLAGS_kineticd_start_log, 8000000000000) {}
 
     MockAuthorizer authorizer_;
