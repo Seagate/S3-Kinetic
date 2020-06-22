@@ -1279,8 +1279,6 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
         fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
         bytes, _ := json.Marshal(&fsMeta)
-
-//        kineticMutex.Lock()
         buf := allocateValBuf(len(bytes))
 	goBuf := allocateValBuf(int(bufSize))
         copy(buf, bytes)
@@ -1289,32 +1287,22 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	if err != nil {
 		return ObjectInfo{}, err
 	}
-//	fsMeta.Meta["etag"] = r.MD5CurrentHexString()
-//	fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
-//	fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
 	//wg.Add(1)
 	//go func() {
 	// Write to kinetic
 	key = bucket + "/" + object
-//        bytes, _ := json.Marshal(&fsMeta)
-//        buf := allocateValBuf(len(bytes))
-//        copy(buf, bytes)
-        //kineticMutex.Lock()
         kc = GetKineticConnection()
 	_, err = kc.CPut(key, goBuf, int(bufSize), kopts)
 	if err != nil {
                 ReleaseConnection(kc.Idx)
-//		kineticMutex.Unlock()
 		return ObjectInfo{}, err
 	}
 	_, err = kc.CPutMeta(key, buf, len(buf), kopts)
         if err != nil {
                 ReleaseConnection(kc.Idx)
-//		kineticMutex.Unlock()
                 return ObjectInfo{}, err
         }
         ReleaseConnection(kc.Idx)
-//	kineticMutex.Unlock()
 	//}()
 	objectInfo := ObjectInfo{
 		Bucket:  bucket,
