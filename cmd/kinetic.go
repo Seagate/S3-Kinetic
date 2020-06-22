@@ -33,6 +33,7 @@ import (
 	//"os/user"
 	"path"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"time"
 	"strings"
@@ -59,7 +60,7 @@ import (
 )
 
 var numberOfKinConns int = 2 
-var maxQueue int = 40
+var maxQueue int = 100
 
 type KConnsPool struct {
 	kcs		map[int]*Client
@@ -438,6 +439,11 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 	if s3utils.CheckValidBucketNameStrict(bucket) != nil {
 		return BucketNameInvalid{Bucket: bucket}
 	}
+        atomic.AddInt64(&ko.activeIOCount, 1)
+        defer func() {
+                atomic.AddInt64(&ko.activeIOCount, -1)
+        }()
+
 	//TODO: Check if Bucket exist before create new one
         kopts := Opts{
                 ClusterVersion:  0,
@@ -485,6 +491,11 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
                 return bi, e
         }
         defer bucketLock.RUnlock()
+        atomic.AddInt64(&ko.activeIOCount, 1)
+        defer func() {
+                atomic.AddInt64(&ko.activeIOCount, -1)
+        }()
+
 	err = nil;
         kopts := Opts{
                 ClusterVersion:  0,
@@ -518,6 +529,11 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
         defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println("LIST BUCKET")
+        atomic.AddInt64(&ko.activeIOCount, 1)
+        defer func() {
+                atomic.AddInt64(&ko.activeIOCount, -1)
+        }()
+
 	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
@@ -532,44 +548,47 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
         var bucketInfos []BucketInfo
         var value []byte
         var lastKey []byte 
-for true {
-        kineticMutex.Lock()
-	kc := GetKineticConnection()
-	keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
-        ReleaseConnection(kc.Idx)
-        kineticMutex.Unlock()
-	if err != nil {
-		return nil, err
-	}
-	//var bucketInfos []BucketInfo
-	//var value []byte
-	for _, key := range keys {
-		var bucketInfo BucketInfo
-		if string(key[:12]) == "meta.bucket." && (string(key[:13]) != "meta.bucket..") {
-			cvalue, size, err := kc.CGet(string(key), 10*1024, kopts)
-			//log.Println("SIZE " , string(key),  size)
-                        if err != nil {
-                                return nil, err
-                        }
-			if (cvalue != nil) {
-				value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-				buf := bytes.NewBuffer(value[:size])
-				dec := gob.NewDecoder(buf)
-				dec.Decode(&bucketInfo)
-				name := []byte(bucketInfo.Name)
-				bucketInfo.Name = string(name[7:])
-				bucketInfos = append(bucketInfos, bucketInfo)
+	for true {
+        	kineticMutex.Lock()
+		kc := GetKineticConnection()
+		keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
+        	ReleaseConnection(kc.Idx)
+        	kineticMutex.Unlock()
+		if err != nil {
+			debug.FreeOSMemory()
+			return nil, err
+		}
+		//var bucketInfos []BucketInfo
+		//var value []byte
+		for _, key := range keys {
+			var bucketInfo BucketInfo
+			if string(key[:12]) == "meta.bucket." && (string(key[:13]) != "meta.bucket..") {
+				cvalue, size, err := kc.CGet(string(key), MetaSize, kopts)
+				//log.Println("SIZE " , string(key),  size)
+                        	if err != nil {
+		                	debug.FreeOSMemory()
+                                	return nil, err
+                        	}
+				if (cvalue != nil) {
+					value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+					buf := bytes.NewBuffer(value[:size])
+					dec := gob.NewDecoder(buf)
+					dec.Decode(&bucketInfo)
+					name := []byte(bucketInfo.Name)
+					bucketInfo.Name = string(name[7:])
+					bucketInfos = append(bucketInfos, bucketInfo)
+				}
 			}
 		}
+		debug.FreeOSMemory()
+		if len(keys) < 800 {
+			break
+		} else {
+			startKey = string(lastKey)
+			endKey = ""
+		}
 	}
-	if len(keys) < 800 {
-		break
-	} else {
-		startKey = string(lastKey)
-		endKey = ""
-	}
-}
-	return bucketInfos, nil
+        return bucketInfos, nil
 }
 
 //THAI:
@@ -577,13 +596,18 @@ for true {
 // with the bucket including pending multipart, object metadata.
 func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error {
     defer common.KUntrace(common.KTrace("Enter"))
-	bucketLock := ko.NewNSLock(ctx, bucket, "")
+    bucketLock := ko.NewNSLock(ctx, bucket, "")
     var err error
-	if err = bucketLock.GetLock(globalObjectTimeout); err != nil {
-		logger.LogIf(ctx, err)
-		return err
-	}
-	defer bucketLock.Unlock()
+    if err = bucketLock.GetLock(globalObjectTimeout); err != nil {
+        logger.LogIf(ctx, err)
+	return err
+    }
+    defer bucketLock.Unlock()
+    atomic.AddInt64(&ko.activeIOCount, 1)
+    defer func() {
+        atomic.AddInt64(&ko.activeIOCount, -1)
+    }()
+
     commonPrefix := ""
 
     // Allocate new results channel to receive ObjectInfo.
@@ -680,6 +704,11 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
                 }
                 defer objectDWLock.Unlock()
         }
+        atomic.AddInt64(&ko.activeIOCount, 1)
+        defer func() {
+                atomic.AddInt64(&ko.activeIOCount, -1)
+        }()
+
         if _, err := ko.statBucketDir(ctx, srcBucket); err != nil {
                 return oi, toObjectErr(err, srcBucket)
         }
@@ -771,6 +800,11 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
 	}
+        atomic.AddInt64(&ko.activeIOCount, 1)
+        defer func() {
+                atomic.AddInt64(&ko.activeIOCount, -1)
+        }()
+
 	//Check to see if Bucket exists
 	//TODO: Kinetic Get(bucket.bucket....)
 
@@ -1033,6 +1067,11 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 		return err
 	}
 	defer objectLock.RUnlock()
+        atomic.AddInt64(&ko.activeIOCount, 1)
+        defer func() {
+                atomic.AddInt64(&ko.activeIOCount, -1)
+        }()
+
         //log.Println(" END: GET KINETIC OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
 
 	return ko.getObject(ctx, bucket, object, offset, length, writer, etag, true)
@@ -1076,7 +1115,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
-        cvalue, size, err := kc.CGet(key, 10*1024, kopts)
+        cvalue, size, err := kc.CGet(key, MetaSize, kopts)
 	ReleaseConnection(kc.Idx)
 	if err != nil {
 		err = errFileNotFound
@@ -1150,7 +1189,10 @@ func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object s
 		return objInfo, err
 	}
 	defer objectLock.Unlock()
-
+        atomic.AddInt64(&ko.activeIOCount, 1)
+        defer func() {
+                atomic.AddInt64(&ko.activeIOCount, -1)
+        }()
 	return ko.putObject(ctx, bucket, object, r, opts)
 }
 
@@ -1233,39 +1275,46 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	} else {
 		return ObjectInfo{}, errInvalidArgument
 	}
-        kineticMutex.Lock()
+        fsMeta.Meta["etag"] = r.MD5CurrentHexString()
+        fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
+        fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
+        bytes, _ := json.Marshal(&fsMeta)
+
+//        kineticMutex.Lock()
+        buf := allocateValBuf(len(bytes))
 	goBuf := allocateValBuf(int(bufSize))
+        copy(buf, bytes)
 	//Read data to buf
 	_, err = readToBuffer(r, goBuf)
 	if err != nil {
 		return ObjectInfo{}, err
 	}
-	fsMeta.Meta["etag"] = r.MD5CurrentHexString()
-	fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
-	fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
+//	fsMeta.Meta["etag"] = r.MD5CurrentHexString()
+//	fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
+//	fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
 	//wg.Add(1)
 	//go func() {
 	// Write to kinetic
 	key = bucket + "/" + object
-        bytes, _ := json.Marshal(&fsMeta)
-        buf := allocateValBuf(len(bytes))
-        copy(buf, bytes)
+//        bytes, _ := json.Marshal(&fsMeta)
+//        buf := allocateValBuf(len(bytes))
+//        copy(buf, bytes)
         //kineticMutex.Lock()
         kc = GetKineticConnection()
 	_, err = kc.CPut(key, goBuf, int(bufSize), kopts)
 	if err != nil {
                 ReleaseConnection(kc.Idx)
-		kineticMutex.Unlock()
+//		kineticMutex.Unlock()
 		return ObjectInfo{}, err
 	}
 	_, err = kc.CPutMeta(key, buf, len(buf), kopts)
         if err != nil {
                 ReleaseConnection(kc.Idx)
-		kineticMutex.Unlock()
+//		kineticMutex.Unlock()
                 return ObjectInfo{}, err
         }
         ReleaseConnection(kc.Idx)
-	kineticMutex.Unlock()
+//	kineticMutex.Unlock()
 	//}()
 	objectInfo := ObjectInfo{
 		Bucket:  bucket,
@@ -1274,10 +1323,9 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 		Size:    bufSize,
 		ETag:    r.MD5CurrentHexString(),
 	}
-
 	// Success.
 	//Force Garbage Collection
-	//runtime.GC()
+	runtime.GC()
 	//PrintMemUsage()
 	return objectInfo, nil
 }
@@ -1303,6 +1351,10 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 		return err
 	}
 	defer objectLock.Unlock()
+        atomic.AddInt64(&ko.activeIOCount, 1)
+        defer func() {
+                atomic.AddInt64(&ko.activeIOCount, -1)
+        }()
 
 	if err := checkDelObjArgs(ctx, bucket, object); err != nil {
 		return err
@@ -1377,6 +1429,11 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
     common.KTrace(fmt.Sprintf("prefix:%s, marker:%s, delimiter:%s, maxKeys:%d", prefix, marker, delimiter, maxKeys))
+        atomic.AddInt64(&ko.activeIOCount, 1)
+        defer func() {
+                atomic.AddInt64(&ko.activeIOCount, -1)
+        }()
+
 	//log.Println("LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
 	var objInfos []ObjectInfo
 	//var eof bool
@@ -1397,69 +1454,76 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	//kc := GetKineticConnection()
 	var lastKey []byte
 	var kc *Client
-for true {
-        kineticMutex.Lock() 
-        kc = GetKineticConnection()
-	keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
-        ReleaseConnection(kc.Idx)
-	kineticMutex.Unlock()
-	if err != nil {
-		return loi, err
-	}
-	for _, key := range keys {
-		lastKey = key
-		var objInfo ObjectInfo
-                //log.Println("KEY ", string(key), string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]))
-		if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
-			//log.Println("KEY ", string(key[5:]))
-			objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
-			if err != nil {
-				return loi, err
-			}
-	                if delimiter == SlashSeparator && prefix != "" {
-                                if  !HasSuffix(string(prefix), SlashSeparator) {
-					objInfo.IsDir = true
-					objInfo.Name = prefix + SlashSeparator
-				} else {
-	                                result := strings.Split(string(key[len("meta.") + len(bucket) +1 + len(prefix):]), SlashSeparator)
-					if len(result) == 1 {
-						//log.Println("0. RESULT ", objInfo.Name)
-					}else if len(result) > 1 { // && len(result) <= 2{
-                                                objInfo.IsDir = true
-                                                objInfo.Name = prefix + result[0] + SlashSeparator
-                                        }
+	var remainedKeys uint32 = uint32(maxKeys)
+	for remainedKeys > 0 {
+		kineticMutex.Lock()
+		kc = GetKineticConnection()
+		keys, err := kc.CGetKeyRange(startKey, endKey, true, true, remainedKeys, false, kopts)
+		ReleaseConnection(kc.Idx)
+		kineticMutex.Unlock()
+		if err != nil {
+		        debug.FreeOSMemory()
+			return loi, err
+		}
+		for _, key := range keys {
+			lastKey = key
+			var objInfo ObjectInfo
+			 //log.Println("KEY ", string(key), string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]))
+			if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
+				//log.Println("KEY ", string(key[5:]))
+				objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
+				if err != nil {
+			                debug.FreeOSMemory()
+					return loi, err
 				}
-			} else if delimiter == SlashSeparator && prefix == "" {
-				result := strings.Split(string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
-				if len(result) > 1 {
-		                       objInfo.IsDir = true
-                                       objInfo.Name = result[0] + SlashSeparator
-				}
-			}
-			if len(objInfos) == 0 {
-                                objInfos = append(objInfos, objInfo)
-			} else {
-				var found bool = false
-				for _, obj := range objInfos {
-					if obj.Name == objInfo.Name {
-						found = true
-						break
+				if delimiter == SlashSeparator && prefix != "" {
+					if  !HasSuffix(string(prefix), SlashSeparator) {
+						objInfo.IsDir = true
+						objInfo.Name = prefix + SlashSeparator
+					} else {
+		                                result := strings.Split(string(key[len("meta.") + len(bucket) +1 + len(prefix):]), SlashSeparator)
+						if len(result) == 1 {
+							//log.Println("0. RESULT ", objInfo.Name)
+						}else if len(result) > 1 { // && len(result) <= 2{
+						        objInfo.IsDir = true
+							objInfo.Name = prefix + result[0] + SlashSeparator
+						}
+					}
+				} else if delimiter == SlashSeparator && prefix == "" {
+					result := strings.Split(string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
+					if len(result) > 1 {
+						objInfo.IsDir = true
+						objInfo.Name = result[0] + SlashSeparator
 					}
 				}
-				if !found {
-                                        objInfos = append(objInfos, objInfo)
-				}
+				if len(objInfos) == 0 {
+				        objInfos = append(objInfos, objInfo)
+				} else {
+					var found bool = false
+					for _, obj := range objInfos {
+						if obj.Name == objInfo.Name {
+							found = true
+							break
+						}
+					}
+					if !found {
+			                        objInfos = append(objInfos, objInfo)
+					}
 
+				}
 			}
 		}
+		if len(keys) == 0 {
+			break
+		}
+		remainedKeys -= uint32(len(keys))
+		if remainedKeys == 0 {
+			break
+		} else {
+			startKey = string(lastKey)
+			endKey = ""
+		}
 	}
-        if len(keys) < 800 {
-                break
-        } else {
-		startKey = string(lastKey)
-		endKey = ""
-	}
-}
 	result := ListObjectsInfo{}
 	for _, objInfo := range objInfos {
 		if objInfo.IsDir && delimiter == SlashSeparator {
@@ -1468,6 +1532,7 @@ for true {
 		}
 		result.Objects = append(result.Objects, objInfo)
 	}
+        debug.FreeOSMemory()
 	return result, nil
 }
 
@@ -1622,6 +1687,7 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
 	    if err != nil {
+                    debug.FreeOSMemory()
 		    return err
 	    }
 
@@ -1631,6 +1697,7 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 		    if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
 			    objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
 			    if err != nil {
+		                    debug.FreeOSMemory()
 				    return err
 			    }
 	            if delimiter == SlashSeparator && prefix != "" {
@@ -1662,6 +1729,7 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 		    endKey = ""
 	    }
     }
+        debug.FreeOSMemory()
 	return nil
 }
 

@@ -37,6 +37,7 @@ import (
 	//"github.com/minio/minio/pkg/kinetic"
         "github.com/minio/minio/pkg/kinetic_proto"
         "github.com/minio/minio/cmd/logger"
+        "runtime/debug"
         //"log"
 	jsoniter "github.com/json-iterator/go"
 	//mioutil "github.com/minio/minio/pkg/ioutil"
@@ -257,6 +258,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
         if err != nil {
+                debug.FreeOSMemory()
                 return result, toObjectErr(err, bucket)
         }
 
@@ -268,6 +270,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 k  := key[len("meta.") + len(bucket) + len(object) + 2:]
 		Keys = append(Keys, k)
 	}
+        debug.FreeOSMemory()
 
         for _, key := range Keys {
 		k := string(key)
@@ -418,6 +421,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
         if err != nil {
+                debug.FreeOSMemory()
                 return oi, toObjectErr(err, bucket)
         }
 	var Keys [][]byte
@@ -425,6 +429,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                 k  := key[len("meta.") + len(bucket) + len(object) + 2:]
                 Keys = append(Keys, k)
         }
+        debug.FreeOSMemory()
 
         // Save consolidated actual size.
         var objectActualSize int64
