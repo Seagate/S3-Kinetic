@@ -13,19 +13,21 @@ import (
 	"errors"
 	"encoding/json"
 	"fmt"
-	"runtime"
+	//"runtime"
+        "runtime/debug"
 	"strings"
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
 	"github.com/minio/minio/pkg/kinetic_proto"
 	"log" //"github.com/sirupsen/logrus"
 	"net"
+	//"sync"
 	"github.com/minio/minio/common"
 )
 
 //var mutexCmd = &sync.Mutex{}
 var SkinnyWaistIF bool = false
-var MetaSize int = 10*1024
+var MetaSize int = 8*1024
 
 type Opts struct {
 	//Command         kinetic_proto.Command_MessageType
@@ -65,7 +67,8 @@ type Client struct {
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
         //log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
-	runtime.GC()
+	//runtime.GC()
+	debug.FreeOSMemory()
 	//PrintMemUsage()
 	fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
@@ -95,7 +98,7 @@ func (c *Client) Read(value []byte) (int, error) {
                 c.ReleaseConn(c.Idx)
 		return 0, err
 	}
-	log.Println("READ PARTS")
+	//log.Println("READ PARTS")
 	for i, part := range  fsMeta.Parts {
 		///log.Println(" PARTS > 0")
 		if i == *(c.NextPartNumber) {
@@ -540,10 +543,10 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 	var cvalue *C.char
 	var bvalue []byte
 	if size > 0 {
-		bvalue = make([]byte, size)
+		bvalue = make([]byte, size+4096)
 	} else {
-		log.Println("ALLOC 5MB")
-		bvalue = make([]byte,5*1048576)
+		log.Println("ALLOC 5MB", key)
+		bvalue = make([]byte, 5*1048576+4096)
 	}
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
 	//log.Println("CVALUE BVALUE", cvalue, &bvalue[0])
