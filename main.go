@@ -32,14 +32,23 @@ import (
 	"C"
 	"os"
 	minio "github.com/minio/minio/cmd"
-
 	// Import gateway
 	_ "github.com/minio/minio/cmd/gateway"
         "github.com/minio/minio/common"
+        //DO NOT DELETE the following lines:
+	//"github.com/pkg/profile"
+        //"net/http"
+	//_ "net/http/pprof"
 )
 
 func main() {
+// DO NOT DELETE THE FOLLOWING LINES. WE CAN USE THEM FOR PROFILING
+//    defer profile.Start(profile.Cpurofile, profile.ProfilePath(".")).Stop()
+//    defer profile.Start(profile.MemProfile, profile.ProfilePath(".")).Stop()
+//    defer profile.Start(profile.TraceProfile, profile.ProfilePath(".")).Stop()
+//    http.ListenAndServe("localhost:8080", nil)
     common.EnableTrace()
     defer common.KUntrace(common.KTrace("Enter"))
+    //go  http.ListenAndServe("172.16.0.144:8080", nil)
     minio.Main(os.Args)
 }
