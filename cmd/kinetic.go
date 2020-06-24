@@ -1388,6 +1388,9 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
     var startKey string
+    if delimiter == "" {
+        delimiter = SlashSeparator
+    }
     if marker == "" {
 	    startKey = "meta." + bucket + delimiter + prefix
     } else {
