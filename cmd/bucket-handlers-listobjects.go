@@ -349,7 +349,7 @@ func (api objectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 		return
 	}
 
-    common.KTrace(fmt.Sprintf("maxKeys: %d, #Keys got: %d", maxKeys, len(listObjectsInfo.Objects)))
+    common.KTrace(fmt.Sprintf("maxKeys from request: %d, #Keys got: %d", maxKeys, len(listObjectsInfo.Objects)))
     if len(listObjectsInfo.Objects) > 1 && len(listObjectsInfo.Objects) < maxKeys {
         listObjectsInfo.IsTruncated = true
         listObjectsInfo.NextMarker = listObjectsInfo.Objects[len(listObjectsInfo.Objects) - 1].Name
@@ -375,17 +375,6 @@ func (api objectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 			}
 		}
 	}
-    common.KTrace(fmt.Sprintf("After FOR: maxKeys: %d, #Keys got: %d", maxKeys, len(listObjectsInfo.Objects)))
-/*
-    if len(listObjectsInfo.Objects) > 0 && len(listObjectsInfo.Objects) < maxKeys {
-        listObjectsInfo.IsTruncated = true
-        if false { //len(listObjectsInfo.Objects) > 0 {
-            listObjectsInfo.NextMarker = listObjectsInfo.Objects[len(listObjectsInfo.Objects) - 1].Name
-        }
-    } else {
-        listObjectsInfo.IsTruncated = false
-    }
-*/
 	response := generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingType, maxKeys, listObjectsInfo)
 
 	// Write success response.

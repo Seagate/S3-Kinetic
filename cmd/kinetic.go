@@ -1377,11 +1377,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
     common.KTrace(fmt.Sprintf("prefix:%s, marker:%s, delimiter:%s, maxKeys:%d", prefix, marker, delimiter, maxKeys))
-	//log.Println("LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
-	//var objInfos []ObjectInfo
 	result := ListObjectsInfo{}
-	//var eof bool
-	//var nextMarker string
 	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
@@ -1397,10 +1393,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     } else {
         startKey = "meta." + bucket + delimiter + marker
     }
-	//startKey := "meta." + bucket + "/" + prefix + marker
 	endKey := "meta." + bucket + "0"
-	//kineticMutex.Lock() 
-	//kc := GetKineticConnection()
 	var lastKey []byte
 	var kc *Client
     maxKeyRange := 800
@@ -1408,119 +1401,36 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     if maxKeys > maxKeyRange {
         nRemainKeys = maxKeyRange
     }
-bStartKeyInclusive := true
-for nRemainKeys > 0 {
+    bStartKeyInclusive := true
+    for nRemainKeys > 0 {
         kineticMutex.Lock()
         kc = GetKineticConnection()
-	keys, err := kc.CGetKeyRange(startKey, endKey, bStartKeyInclusive, true, uint32(nRemainKeys), false, kopts)
+	    keys, err := kc.CGetKeyRange(startKey, endKey, bStartKeyInclusive, true, uint32(nRemainKeys), false, kopts)
         ReleaseConnection(kc.Idx)
-	kineticMutex.Unlock()
-	if err != nil {
-		return loi, err
-	}
-    common.KTrace(fmt.Sprintf("starKey: %s, nRemainKeys: %d, #Keys got: %d", startKey, nRemainKeys, len(keys)))
-    if len(keys) == 0 {
-        break
-    }
-	for _, key := range keys {
-		lastKey = key
-        common.KTrace(fmt.Sprintf("1. key: %s, lastchar: %s", string(key), string(key[len(key) - 1:])))
-		var objInfo ObjectInfo
-                //log.Println("KEY ", string(key), string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]))
-		if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
-			//log.Println("KEY ", string(key[5:]))
-			objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
-			if err != nil {
-				return loi, err
-			}
-/*
-            lastChar := string(key[len(key) - 1:])
-            if lastChar == delimiter {
-			    objInfo.IsDir = true
-                common.KTrace(fmt.Sprintf("=============== DIRECTORY: 2. key: %s, lastchar: %s", string(key), string(key[len(key) - 1:])))
-            }
-*/
-            metaBucket := "meta." + bucket + delimiter
-            objInfo.Name = string(key[len(metaBucket):])
-/*
-	                if delimiter == SlashSeparator && prefix != "" {
-                                if  !HasSuffix(string(prefix), SlashSeparator) {
-					objInfo.IsDir = true
-					objInfo.Name = prefix + SlashSeparator
-				} else {
-        common.KTrace(fmt.Sprintf("else. key: %s", string(key)))
-	                                result := strings.Split(string(key[len("meta.") + len(bucket) +1 + len(prefix):]), SlashSeparator)
-					if len(result) == 1 {
-						//log.Println("0. RESULT ", objInfo.Name)
-					}else if len(result) > 1 { // && len(result) <= 2{
-                                                objInfo.IsDir = true
-                                                objInfo.Name = prefix + result[0] + SlashSeparator
-                                        }
-				}
-			} else if delimiter == SlashSeparator && prefix == "" {
-				result := strings.Split(string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
-        common.KTrace(fmt.Sprintf("else if. key: %s, result: %s, res len: %d", string(key), result, len(result)))
-				if len(result) > 1 {
-		                       objInfo.IsDir = true
-                                       objInfo.Name = result[0] + SlashSeparator
-				}
-			}
-*/
-        result.Objects = append(result.Objects, objInfo) //objInfos, objInfo)
-        nRemainKeys -= 1
-/*
-			if len(result.Objects) == 0 { //objInfos) == 0 {
-        common.KTrace(fmt.Sprintf("if len. key: %s", string(key)))
-                                result.Objects = append(result.Objects, objInfo) //objInfos, objInfo)
-            nRemainKeys -= 1
-			} else {
-        common.KTrace(fmt.Sprintf("else of if len. key: %s", string(key)))
-				var found bool = false
-				for _, obj := range result.Objects { //objInfos {
-					if obj.Name == objInfo.Name {
-						found = true
-						break
-					}
-				}
-				if !found {
-                                        //objInfos = append(objInfos, objInfo)
-                                        result.Objects = append(result.Objects, objInfo)
-            nRemainKeys -= 1
-				}
-
-			}
-*/
-
-		}
-	}
-/*
-        if len(keys) < 800 {
-                break
-        } else {
-		startKey = string(lastKey)
-//		endKey = ""
-	}
-*/
-    startKey = string(lastKey)
-    bStartKeyInclusive = false
-}  // End of FOR 
-/*
-    common.KTrace(fmt.Sprintf("#ObjInfo: %d", len(objInfos)))
-	result := ListObjectsInfo{}
-	for _, objInfo := range objInfos {
-        common.KTrace(objInfo.Name)
-		if objInfo.IsDir && delimiter == SlashSeparator {
-			result.Prefixes = append(result.Prefixes, objInfo.Name)
-			continue
-		}
-		result.Objects = append(result.Objects, objInfo)
-	}
-    common.KTrace(fmt.Sprintf("result len: %d", len(result.Objects)))
-	for _, objInfo := range result.Objects {
-        common.KTrace(objInfo.Name)
-    }
-	return result, nil
-*/
+	    kineticMutex.Unlock()
+	    if err != nil {
+		    return loi, err
+	    }
+        if len(keys) == 0 {
+            break
+        }
+	    for _, key := range keys {
+		    lastKey = key
+		    var objInfo ObjectInfo
+            bucketIndicator := "meta." + bucket + delimiter
+		    if string(key[:5]) == "meta." && prefix == string(key[len(bucketIndicator):len(bucketIndicator)+len(prefix)]) {
+                objInfo.Name = string(key[len(bucketIndicator):])
+			    objInfo, err = ko.getObjectInfo(ctx, bucket, objInfo.Name)
+			    if err != nil {
+				    return loi, err
+			    }
+                result.Objects = append(result.Objects, objInfo)
+                nRemainKeys -= 1
+		    }
+	    }
+        startKey = string(lastKey)
+        bStartKeyInclusive = false
+    }  // End of FOR nRemainKeys > 0
     return result, nil
 }
 
