@@ -19,6 +19,7 @@ package cmd
 import (
 	"net/http"
 	"strings"
+    "fmt"
 
 	"github.com/gorilla/mux"
 	"github.com/minio/minio/cmd/crypto"
@@ -348,6 +349,12 @@ func (api objectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 		return
 	}
 
+    common.KTrace(fmt.Sprintf("maxKeys: %d, #Keys got: %d", maxKeys, len(listObjectsInfo.Objects)))
+    if len(listObjectsInfo.Objects) > 1 && len(listObjectsInfo.Objects) < maxKeys {
+        listObjectsInfo.IsTruncated = true
+        listObjectsInfo.NextMarker = listObjectsInfo.Objects[len(listObjectsInfo.Objects) - 1].Name
+        listObjectsInfo.Objects =  listObjectsInfo.Objects[:len(listObjectsInfo.Objects) - 1]
+    }
 	for i := range listObjectsInfo.Objects {
 		var actualSize int64
 		if listObjectsInfo.Objects[i].IsCompressed() {
@@ -368,6 +375,17 @@ func (api objectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 			}
 		}
 	}
+    common.KTrace(fmt.Sprintf("After FOR: maxKeys: %d, #Keys got: %d", maxKeys, len(listObjectsInfo.Objects)))
+/*
+    if len(listObjectsInfo.Objects) > 0 && len(listObjectsInfo.Objects) < maxKeys {
+        listObjectsInfo.IsTruncated = true
+        if false { //len(listObjectsInfo.Objects) > 0 {
+            listObjectsInfo.NextMarker = listObjectsInfo.Objects[len(listObjectsInfo.Objects) - 1].Name
+        }
+    } else {
+        listObjectsInfo.IsTruncated = false
+    }
+*/
 	response := generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingType, maxKeys, listObjectsInfo)
 
 	// Write success response.
