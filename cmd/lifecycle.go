@@ -82,7 +82,7 @@ func (sys *LifecycleSys) Get(bucketName string) (lc lifecycle.Lifecycle, ok bool
 	lc, ok = sys.bucketLifecycleMap[bucketName]
         //log.Println("4. LIFECYCLE: GET", bucketName, lc)
 
-	return lc, true
+	return lc, ok 
 }
 
 func saveLifecycleConfig(ctx context.Context, objAPI ObjectLayer, bucketName string, bucketLifecycle *lifecycle.Lifecycle) error {
