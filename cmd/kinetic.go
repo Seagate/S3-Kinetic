@@ -1403,7 +1403,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	//kc := GetKineticConnection()
 	var lastKey []byte
 	var kc *Client
-    maxKeyRange := 10
+    maxKeyRange := 800
     nRemainKeys := maxKeys
     if maxKeys > maxKeyRange {
         nRemainKeys = maxKeyRange
