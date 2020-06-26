@@ -1557,6 +1557,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
             }
 	    } // End of FOR _, key := range keys
         startKey = string(lastKey)
+        bStartKeyInclusive = false 
     }  // End of FOR nRemainKeys > 0
     result.NextMarker = curMarker
     if (nRemainKeys > 0) || maxKeys <= maxKeyRange {
