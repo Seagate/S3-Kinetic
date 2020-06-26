@@ -1557,28 +1557,32 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
             }
 	    } // End of FOR _, key := range keys
         startKey = string(lastKey)
-        bStartKeyInclusive = false 
+        bStartKeyInclusive = false
     }  // End of FOR nRemainKeys > 0
     result.NextMarker = curMarker
     if (nRemainKeys > 0) || maxKeys <= maxKeyRange {
         result.IsTruncated = false
     } else {
-        kineticMutex.Lock()
-        kc = GetKineticConnection()
-    common.KTrace(fmt.Sprintf("**** startKey: %s", string(startKey))) //name))
     common.KTrace(fmt.Sprintf("**** lastKey: %s", string(lastKey))) //name))
-	    keys, _:= kc.CGetKeyRange(string(lastKey), endKey, false, true, 1, false, kopts)
-        ReleaseConnection(kc.Idx)
-	    kineticMutex.Unlock()
-        if len(keys) == 0 || string(lastKey) == string(keys[0]) {
-            result.IsTruncated = false
-            result.NextMarker = ""
-    common.KTrace("No more key")
+        lastKeyLen := len(lastKey)
+        if lastKey[lastKeyLen - 1 ] < 255 {
+            lastKey[lastKeyLen - 1]++
         } else {
-            curMarker = string(keys[0][len(bucketPrefix):])
-            result.NextMarker = curMarker //name //string(lastKey)
-            result.IsTruncated = true
+            idx := lastKeyLen - 1
+            for idx > 0 && lastKey[idx] == 255 {
+                idx--
+            }
+            if idx >= 0 {
+                lastKey[idx]++
+                idx++
+            }
+            for ; idx < lastKeyLen; idx++ {
+                lastKey[idx] = 0
+            }
         }
+        curMarker = string(lastKey[len(bucketPrefix):])
+        result.NextMarker = curMarker
+        result.IsTruncated = true
     }
     common.KTrace(fmt.Sprintf("**** nextMarker: %s", curMarker)) //name))
     return result, nil
