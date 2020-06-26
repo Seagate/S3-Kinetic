@@ -1451,7 +1451,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	endKey := "meta." + bucket + prefix + "0"
 	var lastKey []byte
 	var kc *Client
-    maxKeyRange := 5 //800
+    maxKeyRange := 800
     nRemainKeys := maxKeys
 
     if nRemainKeys > maxKeyRange {
