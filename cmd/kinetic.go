@@ -1443,7 +1443,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     bucketPrefix := "meta." + bucket + SlashSeparator
     var startKey string
     if marker == "" {
-	    startKey = bucketPrefix + delimiter
+	    startKey = bucketPrefix + prefix //delimiter + prefix
     } else {
         startKey = bucketPrefix + marker
     }
