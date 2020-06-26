@@ -1448,7 +1448,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
         startKey = bucketPrefix + marker
     }
     common.KTrace(fmt.Sprintf("START KEY: %s", startKey))
-	endKey := "meta." + bucket + prefix + "0"
+	endKey := bucketPrefix + prefix + string(255)
 	var lastKey []byte
 	var kc *Client
     maxKeyRange := 800
