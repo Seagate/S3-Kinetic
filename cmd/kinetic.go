@@ -1232,11 +1232,12 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         }
 	fsMeta := newFSMetaV1()
 	fsMeta.Meta = meta
-
+/*
 	// This is a special case with size as '0' and object ends
 	// with a slash separator, we treat it like a valid operation
 	// and return success.
-	/*if isObjectDir(object, data.Size()) {
+///// new 
+	if isObjectDir(object, data.Size()) {
 		// Check if an object is present as one of the parent dir.
 		if ko.parentDirIsObject(ctx, bucket, path.Dir(object)) {
 			return ObjectInfo{}, toObjectErr(errFileParentIsFile, bucket, object)
@@ -1256,7 +1257,9 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	if ko.parentDirIsObject(ctx, bucket, path.Dir(object)) {
 		return ObjectInfo{}, toObjectErr(errFileParentIsFile, bucket, object)
 	}
-	*/
+
+//////// new ^
+*/
 	// Validate input data size and it can never be less than zero.
 	if data.Size() < -1 {
 		logger.LogIf(ctx, errInvalidArgument)
@@ -1416,7 +1419,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("prefix:%s, marker:%s, delimiter:%s, maxKeys:%d", prefix, marker, delimiter, maxKeys))
+    common.KTrace(fmt.Sprintf("=== prefix:%s, marker:%s, delimiter:%s, maxKeys:%d", prefix, marker, delimiter, maxKeys))
     atomic.AddInt64(&ko.activeIOCount, 1)
     defer func() {
         atomic.AddInt64(&ko.activeIOCount, -1)
@@ -1431,53 +1434,152 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
+    // Default is recursive, if delimiter is set then list non recursive.
+    recursive := true
+    if delimiter == SlashSeparator {
+        recursive = false
+    }
+    common.KTrace(fmt.Sprintf("RECURSIVE IS %d", recursive))
+    bucketPrefix := "meta." + bucket + SlashSeparator
     var startKey string
-    if delimiter == "" {
-        delimiter = SlashSeparator
-    }
     if marker == "" {
-	    startKey = "meta." + bucket + delimiter + prefix
+	    startKey = bucketPrefix + delimiter
     } else {
-        startKey = "meta." + bucket + delimiter + marker
+        startKey = bucketPrefix + marker
     }
-	endKey := "meta." + bucket + "0"
+    common.KTrace(fmt.Sprintf("START KEY: %s", startKey))
+	endKey := "meta." + bucket + prefix + "0"
 	var lastKey []byte
 	var kc *Client
-    maxKeyRange := 800
+    maxKeyRange := 5 //800
     nRemainKeys := maxKeys
-    if maxKeys > maxKeyRange {
+
+    if nRemainKeys > maxKeyRange {
         nRemainKeys = maxKeyRange
+        result.IsTruncated = true
     }
     bStartKeyInclusive := true
-    for nRemainKeys > 0 {
+    prefixDir := ""
+    lastIndex := strings.LastIndex(prefix, SlashSeparator)
+    if lastIndex != -1 {
+        //entryPrefixMatch = prefix[lastIndex+1:]
+        prefixDir = prefix[:lastIndex+1]
+    }
+    marker = strings.TrimPrefix(marker, prefixDir)
+/*
+    var markerBase, markerDir string
+    if marker != "" {
+        // Ex: if marker="four/five.txt", markerDir="four/" markerBase="five.txt"
+        markerSplit := strings.SplitN(marker, SlashSeparator, 2)
+        markerDir = markerSplit[0]
+        if len(markerSplit) == 2 {
+            markerDir += SlashSeparator
+            markerBase = markerSplit[1]
+        }
+    }
+*/
+    //common.KTrace(fmt.Sprintf("=== prefix:%s, prefixDir: %s, marker:%s, delimiter:%s, maxKeys:%d", prefix, prefixDir, marker, delimiter, maxKeys))
+    curMarker := marker
+    name := ""
+    bDone := false
+    for !bDone && nRemainKeys > 0 {
         kineticMutex.Lock()
         kc = GetKineticConnection()
 	    keys, err := kc.CGetKeyRange(startKey, endKey, bStartKeyInclusive, true, uint32(nRemainKeys), false, kopts)
         ReleaseConnection(kc.Idx)
 	    kineticMutex.Unlock()
+        common.KTrace(fmt.Sprintf("starKey: %s, nRemainKeys: %d, #Keys got: %d", startKey, nRemainKeys, len(keys)))
+
+        if len(keys) < nRemainKeys {
+            bDone = true
+            result.IsTruncated = false
+        }
+
 	    if err != nil {
 		    return loi, err
 	    }
-        if len(keys) == 0 {
-            break
-        }
-	    for _, key := range keys {
+        var key []byte
+	    for _, key = range keys {
+            common.KTrace(fmt.Sprintf("key: %s", string(key)))
 		    lastKey = key
 		    var objInfo ObjectInfo
-            bucketIndicator := "meta." + bucket + delimiter
-		    if string(key[:5]) == "meta." && prefix == string(key[len(bucketIndicator):len(bucketIndicator)+len(prefix)]) {
-                objInfo.Name = string(key[len(bucketIndicator):])
-			    objInfo, err = ko.getObjectInfo(ctx, bucket, objInfo.Name)
-			    if err != nil {
-				    return loi, err
-			    }
+            if !HasPrefix(string(key), bucketPrefix) {
+                common.KTrace(fmt.Sprintf("WARNING: Not in bucket: bucket: %s, key: %s, delimiter: %s, marker: %s", bucket, string(key), delimiter, marker))
+                bDone = true
+                break
+                //continue
+            }
+            name = string(key[len(bucketPrefix):])
+            if name != "" {
+                curMarker = name
+            }
+            if prefix != "" && !HasPrefix(name, prefix) {
+                common.KTrace(fmt.Sprintf("WARNING: prefix absent in name: prefix: %s, key: %s, name: %s", prefix, string(key), name))
+                common.KTrace(fmt.Sprintf("WARNING: bucket: %s, key: %s, delimiter: %s, marker: %s", bucket, string(key), delimiter, marker))
+                bDone = true
+                break
+                //continue
+            }
+            //common.KTrace(fmt.Sprintf("key: %s, name: %s, delimiter: %s, marker: %s", string(key), name, delimiter, marker))
+			objInfo, err = ko.getObjectInfo(ctx, bucket, name)
+			if err != nil {
+			    return loi, err
+			}
+		    if recursive {
                 result.Objects = append(result.Objects, objInfo)
                 nRemainKeys -= 1
-		    }
-	    }
+            } else {
+                afterPrefixDir := name[len(prefixDir):]
+                afterPrefixDirSplit := strings.Split(afterPrefixDir, SlashSeparator)
+                common.KTrace(fmt.Sprintf("name: %s, afterPrefixDir: %s, afterPrefixDirSplit: %v", name, afterPrefixDir, afterPrefixDirSplit))
+                if len(afterPrefixDirSplit) > 1 {
+                    name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
+                    objInfo.IsDir = true
+                    objInfo.Name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
+                    common.KTrace(fmt.Sprintf("DIRECTORY: %s", objInfo.Name)) //, PrefixDir: %s, afterPrefixDirSplit: %v", name, afterPrefixDir, afterPrefixDirSplit))
+                }
+                if objInfo.IsDir {
+                    bExist := false
+                    for _, pfix := range result.Prefixes{
+                        if pfix == objInfo.Name {
+                            bExist = true
+                            break
+                        }
+                    }
+                    if !bExist {
+                        result.Prefixes = append(result.Prefixes, objInfo.Name)
+                        nRemainKeys -= 1
+                    }
+                } else {
+                    result.Objects = append(result.Objects, objInfo)
+                    nRemainKeys -= 1
+                }
+            }
+	    } // End of FOR _, key := range keys
         startKey = string(lastKey)
-        bStartKeyInclusive = false
     }  // End of FOR nRemainKeys > 0
+    result.NextMarker = curMarker
+    if (nRemainKeys > 0) || maxKeys <= maxKeyRange {
+        result.IsTruncated = false
+    } else {
+        kineticMutex.Lock()
+        kc = GetKineticConnection()
+    common.KTrace(fmt.Sprintf("**** startKey: %s", string(startKey))) //name))
+    common.KTrace(fmt.Sprintf("**** lastKey: %s", string(lastKey))) //name))
+	    keys, _:= kc.CGetKeyRange(string(lastKey), endKey, false, true, 1, false, kopts)
+        ReleaseConnection(kc.Idx)
+	    kineticMutex.Unlock()
+        if len(keys) == 0 || string(lastKey) == string(keys[0]) {
+            result.IsTruncated = false
+            result.NextMarker = ""
+    common.KTrace("No more key")
+        } else {
+            curMarker = string(keys[0][len(bucketPrefix):])
+            result.NextMarker = curMarker //name //string(lastKey)
+            result.IsTruncated = true
+        }
+    }
+    common.KTrace(fmt.Sprintf("**** nextMarker: %s", curMarker)) //name))
     return result, nil
 }
 

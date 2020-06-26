@@ -350,11 +350,7 @@ func (api objectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 	}
 
     common.KTrace(fmt.Sprintf("maxKeys from request: %d, #Keys got: %d", maxKeys, len(listObjectsInfo.Objects)))
-    if len(listObjectsInfo.Objects) > 1 && len(listObjectsInfo.Objects) < maxKeys {
-        listObjectsInfo.IsTruncated = true
-        listObjectsInfo.NextMarker = listObjectsInfo.Objects[len(listObjectsInfo.Objects) - 1].Name
-        listObjectsInfo.Objects =  listObjectsInfo.Objects[:len(listObjectsInfo.Objects) - 1]
-    }
+    common.KTrace(fmt.Sprintf("<<<< nextMarker: %s", listObjectsInfo.NextMarker))
 	for i := range listObjectsInfo.Objects {
 		var actualSize int64
 		if listObjectsInfo.Objects[i].IsCompressed() {
@@ -376,7 +372,6 @@ func (api objectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 		}
 	}
 	response := generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingType, maxKeys, listObjectsInfo)
-
 	// Write success response.
 	writeSuccessResponseXML(w, encodeResponse(response))
 }
