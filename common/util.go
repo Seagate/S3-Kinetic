@@ -6,11 +6,7 @@ func IncStr(str string) string {
 }
 
 func IncByte(bytes []byte) []byte {
-    bytesLen := len(bytes)
-    if bytesLen == 0 {
-        return bytes
-    }
-    for idx := bytesLen - 1; idx >= 0; idx-- {
+    for idx := len(bytes) - 1; idx >= 0; idx-- {
         bytes[idx]++
         if bytes[idx] > 0 {
             break
