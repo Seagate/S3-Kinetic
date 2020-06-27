@@ -1505,16 +1505,19 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
             common.KTrace(fmt.Sprintf("key: %s", string(key)))
 		    lastKey = key
 		    var objInfo ObjectInfo
+/*
             if !HasPrefix(string(key), bucketPrefix) {
                 common.KTrace(fmt.Sprintf("WARNING: Not in bucket: bucket: %s, key: %s, delimiter: %s, marker: %s", bucket, string(key), delimiter, marker))
                 bDone = true
                 break
                 //continue
             }
+*/
             name = string(key[len(bucketPrefix):])
             if name != "" {
                 curMarker = name
             }
+/*
             if prefix != "" && !HasPrefix(name, prefix) {
                 common.KTrace(fmt.Sprintf("WARNING: prefix absent in name: prefix: %s, key: %s, name: %s", prefix, string(key), name))
                 common.KTrace(fmt.Sprintf("WARNING: bucket: %s, key: %s, delimiter: %s, marker: %s", bucket, string(key), delimiter, marker))
@@ -1522,6 +1525,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
                 break
                 //continue
             }
+*/
             //common.KTrace(fmt.Sprintf("key: %s, name: %s, delimiter: %s, marker: %s", string(key), name, delimiter, marker))
 			objInfo, err = ko.getObjectInfo(ctx, bucket, name)
 			if err != nil {
