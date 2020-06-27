@@ -1,25 +1,19 @@
 package common
 
-func NextStr(str string) string {
+func IncStr(str string) string {
     b := []byte(str)
-    return string(NextBytes(b))
+    return string(IncByte(b))
 }
 
-func NextBytes(bytes []byte) []byte {
+func IncByte(bytes []byte) []byte {
     bytesLen := len(bytes)
-    if bytes[bytesLen - 1 ] < 255 {
-        bytes[bytesLen - 1]++
-    } else {
-        idx := bytesLen - 1
-        for idx > 0 && bytes[idx] == 255 {
-            idx--
-        }
-        if idx >= 0 {
-            bytes[idx]++
-            idx++
-        }
-        for ; idx < bytesLen; idx++ {
-            bytes[idx] = 0
+    if bytesLen == 0 {
+        return bytes
+    }
+    for idx := bytesLen - 1; idx >= 0; idx-- {
+        bytes[idx]++
+        if bytes[idx] > 0 {
+            break
         }
     }
     return bytes

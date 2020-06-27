@@ -1449,7 +1449,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     }
     common.KTrace(fmt.Sprintf("START KEY: %s", startKey))
 	endKey := bucketPrefix + prefix //+ string(255)
-    endKey = common.NextStr(endKey)
+    endKey = common.IncStr(endKey)
 
 	var lastKey []byte
 	var kc *Client
@@ -1566,7 +1566,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
         result.IsTruncated = false
     } else {
     common.KTrace(fmt.Sprintf("**** lastKey: %s", string(lastKey))) //name))
-        nextKey := common.NextBytes(lastKey)
+        nextKey := common.IncByte(lastKey)
 /*
         lastKeyLen := len(lastKey)
         if lastKey[lastKeyLen - 1 ] < 255 {
