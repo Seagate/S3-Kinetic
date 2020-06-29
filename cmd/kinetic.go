@@ -1232,12 +1232,11 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         }
 	fsMeta := newFSMetaV1()
 	fsMeta.Meta = meta
-/*
+
 	// This is a special case with size as '0' and object ends
 	// with a slash separator, we treat it like a valid operation
 	// and return success.
-///// new 
-	if isObjectDir(object, data.Size()) {
+	/*if isObjectDir(object, data.Size()) {
 		// Check if an object is present as one of the parent dir.
 		if ko.parentDirIsObject(ctx, bucket, path.Dir(object)) {
 			return ObjectInfo{}, toObjectErr(errFileParentIsFile, bucket, object)
@@ -1257,9 +1256,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	if ko.parentDirIsObject(ctx, bucket, path.Dir(object)) {
 		return ObjectInfo{}, toObjectErr(errFileParentIsFile, bucket, object)
 	}
-
-//////// new ^
-*/
+    */
 	// Validate input data size and it can never be less than zero.
 	if data.Size() < -1 {
 		logger.LogIf(ctx, errInvalidArgument)
