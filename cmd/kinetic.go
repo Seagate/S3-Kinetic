@@ -1256,7 +1256,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	if ko.parentDirIsObject(ctx, bucket, path.Dir(object)) {
 		return ObjectInfo{}, toObjectErr(errFileParentIsFile, bucket, object)
 	}
-	*/
+    */
 	// Validate input data size and it can never be less than zero.
 	if data.Size() < -1 {
 		logger.LogIf(ctx, errInvalidArgument)
@@ -1416,16 +1416,11 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("prefix:%s, marker:%s, delimiter:%s, maxKeys:%d", prefix, marker, delimiter, maxKeys))
-        atomic.AddInt64(&ko.activeIOCount, 1)
-        defer func() {
-                atomic.AddInt64(&ko.activeIOCount, -1)
-        }()
-
-	//log.Println("LIST OBJECTS in Bucket ", bucket,  prefix,  marker, delimiter, " ", maxKeys)
-	var objInfos []ObjectInfo
-	//var eof bool
-	//var nextMarker string
+    atomic.AddInt64(&ko.activeIOCount, 1)
+    defer func() {
+        atomic.AddInt64(&ko.activeIOCount, -1)
+    }()
+	result := ListObjectsInfo{}
 	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
@@ -1435,93 +1430,102 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
+    // Default is recursive, if delimiter is set then list non recursive.
+    recursive := true
+    if delimiter == SlashSeparator {
+        recursive = false
+    }
+    bucketPrefix := "meta." + bucket + SlashSeparator
+    var startKey string
+    if marker == "" {
+	    startKey = bucketPrefix + prefix
+    } else {
+        startKey = bucketPrefix + marker
+    }
+	endKey := bucketPrefix + prefix
+    endKey = common.IncStr(endKey)
 
-	startKey := "meta." + bucket + "/" + prefix
-	endKey := "meta." + bucket + "0"
-	//kineticMutex.Lock() 
-	//kc := GetKineticConnection()
-	var lastKey []byte
+    maxKeyRange := 400
+    nRemainKeys := maxKeys
+
+    if nRemainKeys > maxKeyRange {
+        nRemainKeys = maxKeyRange
+        result.IsTruncated = true
+    }
+    bStartKeyInclusive := true
+    prefixDir := ""
+    lastIndex := strings.LastIndex(prefix, SlashSeparator)
+    if lastIndex != -1 {
+        prefixDir = prefix[:lastIndex+1]
+    }
+    name := ""
 	var kc *Client
-	var remainedKeys uint32 = uint32(maxKeys)
-	for remainedKeys > 0 {
-		kineticMutex.Lock()
-		kc = GetKineticConnection()
-		keys, err := kc.CGetKeyRange(startKey, endKey, true, true, remainedKeys, false, kopts)
-		ReleaseConnection(kc.Idx)
-		kineticMutex.Unlock()
-		if err != nil {
-		        debug.FreeOSMemory()
-			return loi, err
-		}
-		for _, key := range keys {
-			lastKey = key
-			var objInfo ObjectInfo
-			 //log.Println("KEY ", string(key), string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]))
-			if string(key[:5]) == "meta." && prefix == string(key[len("meta.")+len(bucket)+1:len("meta.")+len(bucket)+1+len(prefix)]) {
-				//log.Println("KEY ", string(key[5:]))
-				objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len("meta.")+len(bucket)+1):]))
-				if err != nil {
-			                debug.FreeOSMemory()
-					return loi, err
-				}
-				if delimiter == SlashSeparator && prefix != "" {
-					if  !HasSuffix(string(prefix), SlashSeparator) {
-						objInfo.IsDir = true
-						objInfo.Name = prefix + SlashSeparator
-					} else {
-		                                result := strings.Split(string(key[len("meta.") + len(bucket) +1 + len(prefix):]), SlashSeparator)
-						if len(result) == 1 {
-							//log.Println("0. RESULT ", objInfo.Name)
-						}else if len(result) > 1 { // && len(result) <= 2{
-						        objInfo.IsDir = true
-							objInfo.Name = prefix + result[0] + SlashSeparator
-						}
-					}
-				} else if delimiter == SlashSeparator && prefix == "" {
-					result := strings.Split(string(key[len("meta.")+len(bucket)+1:]), SlashSeparator)
-					if len(result) > 1 {
-						objInfo.IsDir = true
-						objInfo.Name = result[0] + SlashSeparator
-					}
-				}
-				if len(objInfos) == 0 {
-				        objInfos = append(objInfos, objInfo)
-				} else {
-					var found bool = false
-					for _, obj := range objInfos {
-						if obj.Name == objInfo.Name {
-							found = true
-							break
-						}
-					}
-					if !found {
-			                        objInfos = append(objInfos, objInfo)
-					}
-
-				}
+    bDone := false
+    for !bDone && nRemainKeys > 0 {
+        kineticMutex.Lock()
+        kc = GetKineticConnection()
+	    keys, err := kc.CGetKeyRange(startKey, endKey, bStartKeyInclusive, true, uint32(nRemainKeys), false, kopts)
+        ReleaseConnection(kc.Idx)
+	    kineticMutex.Unlock()
+        if len(keys) < nRemainKeys {
+            bDone = true
+            result.IsTruncated = false
+        }
+	    if err != nil {
+		    return loi, err
+	    }
+        var key []byte
+	    for _, key = range keys {
+		    var objInfo ObjectInfo
+            name = string(key[len(bucketPrefix):])
+			objInfo, err = ko.getObjectInfo(ctx, bucket, name)
+			if err != nil {
+			    return loi, err
 			}
-		}
-		if len(keys) == 0 {
-			break
-		}
-		remainedKeys -= uint32(len(keys))
-		if remainedKeys == 0 {
-			break
-		} else {
-			startKey = string(lastKey)
-			endKey = ""
-		}
-	}
-	result := ListObjectsInfo{}
-	for _, objInfo := range objInfos {
-		if objInfo.IsDir && delimiter == SlashSeparator {
-			result.Prefixes = append(result.Prefixes, objInfo.Name)
-			continue
-		}
-		result.Objects = append(result.Objects, objInfo)
-	}
-        debug.FreeOSMemory()
-	return result, nil
+		    if recursive {
+                result.Objects = append(result.Objects, objInfo)
+                nRemainKeys -= 1
+            } else {
+                // TODO:  Tri:  Need to rework this when DIR is considered as OBJECT when do put.
+                afterPrefixDir := name[len(prefixDir):]
+                afterPrefixDirSplit := strings.Split(afterPrefixDir, SlashSeparator)
+                if len(afterPrefixDirSplit) > 1 {
+                    name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
+                    objInfo.IsDir = true
+                    objInfo.Name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
+                }
+                if objInfo.IsDir {
+                    bExist := false
+                    for _, pfix := range result.Prefixes {
+                        if pfix == objInfo.Name {
+                            bExist = true
+                            break
+                        }
+                    }
+                    if !bExist {
+                        result.Prefixes = append(result.Prefixes, objInfo.Name)
+                        nRemainKeys -= 1
+                    }
+                } else {
+                    result.Objects = append(result.Objects, objInfo)
+                    nRemainKeys -= 1
+                }
+            }
+	    } // End of FOR _, key := range keys
+        if len(keys) > 0 {
+            // The last key becomes startKey
+            startKey = string(keys[len(keys) - 1])
+        }
+        bStartKeyInclusive = false
+    }  // End of FOR !nDone && nRemainKeys > 0
+    if (nRemainKeys > 0) || maxKeys <= maxKeyRange {
+        result.IsTruncated = false
+    } else {
+        nextKey := common.IncStr(startKey)
+        result.NextMarker = nextKey[len(bucketPrefix):]
+        result.IsTruncated = true
+    }
+    return result, nil
 }
 
 // Returns function "listDir" of the type listDirFunc.
