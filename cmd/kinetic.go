@@ -1419,7 +1419,6 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("=== prefix:%s, marker:%s, delimiter:%s, maxKeys:%d", prefix, marker, delimiter, maxKeys))
     atomic.AddInt64(&ko.activeIOCount, 1)
     defer func() {
         atomic.AddInt64(&ko.activeIOCount, -1)
@@ -1439,21 +1438,17 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     if delimiter == SlashSeparator {
         recursive = false
     }
-    common.KTrace(fmt.Sprintf("RECURSIVE IS %d", recursive))
     bucketPrefix := "meta." + bucket + SlashSeparator
     var startKey string
     if marker == "" {
-	    startKey = bucketPrefix + prefix //delimiter + prefix
+	    startKey = bucketPrefix + prefix
     } else {
         startKey = bucketPrefix + marker
     }
-    common.KTrace(fmt.Sprintf("START KEY: %s", startKey))
-	endKey := bucketPrefix + prefix //+ string(255)
+	endKey := bucketPrefix + prefix
     endKey = common.IncStr(endKey)
 
-	var lastKey []byte
-	var kc *Client
-    maxKeyRange := 800
+    maxKeyRange := 400
     nRemainKeys := maxKeys
 
     if nRemainKeys > maxKeyRange {
@@ -1464,25 +1459,10 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     prefixDir := ""
     lastIndex := strings.LastIndex(prefix, SlashSeparator)
     if lastIndex != -1 {
-        //entryPrefixMatch = prefix[lastIndex+1:]
         prefixDir = prefix[:lastIndex+1]
     }
-    marker = strings.TrimPrefix(marker, prefixDir)
-/*
-    var markerBase, markerDir string
-    if marker != "" {
-        // Ex: if marker="four/five.txt", markerDir="four/" markerBase="five.txt"
-        markerSplit := strings.SplitN(marker, SlashSeparator, 2)
-        markerDir = markerSplit[0]
-        if len(markerSplit) == 2 {
-            markerDir += SlashSeparator
-            markerBase = markerSplit[1]
-        }
-    }
-*/
-    //common.KTrace(fmt.Sprintf("=== prefix:%s, prefixDir: %s, marker:%s, delimiter:%s, maxKeys:%d", prefix, prefixDir, marker, delimiter, maxKeys))
-    curMarker := marker
     name := ""
+	var kc *Client
     bDone := false
     for !bDone && nRemainKeys > 0 {
         kineticMutex.Lock()
@@ -1490,43 +1470,17 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	    keys, err := kc.CGetKeyRange(startKey, endKey, bStartKeyInclusive, true, uint32(nRemainKeys), false, kopts)
         ReleaseConnection(kc.Idx)
 	    kineticMutex.Unlock()
-        common.KTrace(fmt.Sprintf("starKey: %s, nRemainKeys: %d, #Keys got: %d", startKey, nRemainKeys, len(keys)))
-
         if len(keys) < nRemainKeys {
             bDone = true
             result.IsTruncated = false
         }
-
 	    if err != nil {
 		    return loi, err
 	    }
         var key []byte
 	    for _, key = range keys {
-            common.KTrace(fmt.Sprintf("key: %s", string(key)))
-		    lastKey = key
 		    var objInfo ObjectInfo
-/*
-            if !HasPrefix(string(key), bucketPrefix) {
-                common.KTrace(fmt.Sprintf("WARNING: Not in bucket: bucket: %s, key: %s, delimiter: %s, marker: %s", bucket, string(key), delimiter, marker))
-                bDone = true
-                break
-                //continue
-            }
-*/
             name = string(key[len(bucketPrefix):])
-            if name != "" {
-                curMarker = name
-            }
-/*
-            if prefix != "" && !HasPrefix(name, prefix) {
-                common.KTrace(fmt.Sprintf("WARNING: prefix absent in name: prefix: %s, key: %s, name: %s", prefix, string(key), name))
-                common.KTrace(fmt.Sprintf("WARNING: bucket: %s, key: %s, delimiter: %s, marker: %s", bucket, string(key), delimiter, marker))
-                bDone = true
-                break
-                //continue
-            }
-*/
-            //common.KTrace(fmt.Sprintf("key: %s, name: %s, delimiter: %s, marker: %s", string(key), name, delimiter, marker))
 			objInfo, err = ko.getObjectInfo(ctx, bucket, name)
 			if err != nil {
 			    return loi, err
@@ -1535,18 +1489,17 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
                 result.Objects = append(result.Objects, objInfo)
                 nRemainKeys -= 1
             } else {
+                // TODO:  Tri:  Need to rework this when DIR is considered as OBJECT when do put.
                 afterPrefixDir := name[len(prefixDir):]
                 afterPrefixDirSplit := strings.Split(afterPrefixDir, SlashSeparator)
-                common.KTrace(fmt.Sprintf("name: %s, afterPrefixDir: %s, afterPrefixDirSplit: %v", name, afterPrefixDir, afterPrefixDirSplit))
                 if len(afterPrefixDirSplit) > 1 {
                     name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
                     objInfo.IsDir = true
                     objInfo.Name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
-                    common.KTrace(fmt.Sprintf("DIRECTORY: %s", objInfo.Name)) //, PrefixDir: %s, afterPrefixDirSplit: %v", name, afterPrefixDir, afterPrefixDirSplit))
                 }
                 if objInfo.IsDir {
                     bExist := false
-                    for _, pfix := range result.Prefixes{
+                    for _, pfix := range result.Prefixes {
                         if pfix == objInfo.Name {
                             bExist = true
                             break
@@ -1562,38 +1515,19 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
                 }
             }
 	    } // End of FOR _, key := range keys
-        startKey = string(lastKey)
+        if len(keys) > 0 {
+            // The last key becomes startKey
+            startKey = string(keys[len(keys) - 1])
+        }
         bStartKeyInclusive = false
-    }  // End of FOR nRemainKeys > 0
-    result.NextMarker = curMarker
+    }  // End of FOR !nDone && nRemainKeys > 0
     if (nRemainKeys > 0) || maxKeys <= maxKeyRange {
         result.IsTruncated = false
     } else {
-    common.KTrace(fmt.Sprintf("**** lastKey: %s", string(lastKey))) //name))
-        nextKey := common.IncByte(lastKey)
-/*
-        lastKeyLen := len(lastKey)
-        if lastKey[lastKeyLen - 1 ] < 255 {
-            lastKey[lastKeyLen - 1]++
-        } else {
-            idx := lastKeyLen - 1
-            for idx > 0 && lastKey[idx] == 255 {
-                idx--
-            }
-            if idx >= 0 {
-                lastKey[idx]++
-                idx++
-            }
-            for ; idx < lastKeyLen; idx++ {
-                lastKey[idx] = 0
-            }
-        }
-*/
-        curMarker = string(nextKey[len(bucketPrefix):])
-        result.NextMarker = curMarker
+        nextKey := common.IncStr(startKey)
+        result.NextMarker = nextKey[len(bucketPrefix):]
         result.IsTruncated = true
     }
-    common.KTrace(fmt.Sprintf("**** nextMarker: %s", curMarker)) //name))
     return result, nil
 }
 

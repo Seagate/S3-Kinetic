@@ -19,7 +19,6 @@ package cmd
 import (
 	"net/http"
 	"strings"
-    "fmt"
 
 	"github.com/gorilla/mux"
 	"github.com/minio/minio/cmd/crypto"
@@ -349,8 +348,6 @@ func (api objectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 		return
 	}
 
-    common.KTrace(fmt.Sprintf("maxKeys from request: %d, #Keys got: %d", maxKeys, len(listObjectsInfo.Objects)))
-    common.KTrace(fmt.Sprintf("<<<< nextMarker: %s", listObjectsInfo.NextMarker))
 	for i := range listObjectsInfo.Objects {
 		var actualSize int64
 		if listObjectsInfo.Objects[i].IsCompressed() {
@@ -372,6 +369,7 @@ func (api objectAPIHandlers) ListObjectsV1Handler(w http.ResponseWriter, r *http
 		}
 	}
 	response := generateListObjectsV1Response(bucket, prefix, marker, delimiter, encodingType, maxKeys, listObjectsInfo)
+
 	// Write success response.
 	writeSuccessResponseXML(w, encodeResponse(response))
 }
