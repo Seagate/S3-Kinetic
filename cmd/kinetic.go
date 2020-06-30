@@ -591,7 +591,17 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
         return bucketInfos, nil
 }
 
-//THAI:
+func (ko *KineticObjects) isBucketEmpty(ctx context.Context, bucket string) (empty bool, err error) {
+    empty = false
+    var prefix, marker, delimiter = "", "", ""
+    maxKeys := 1
+    objLst, err := ko.ListObjects(ctx, bucket, prefix, marker, delimiter, maxKeys)
+    if err == nil {
+        empty = (len(objLst.Objects) == 0 && len(objLst.Prefixes) == 0)
+    }
+    return empty, err
+}
+
 // DeleteBucket - delete a bucket and all the metadata associated
 // with the bucket including pending multipart, object metadata.
 func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error {
@@ -607,6 +617,15 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
     defer func() {
         atomic.AddInt64(&ko.activeIOCount, -1)
     }()
+
+    var empty bool
+    empty, err = ko.isBucketEmpty(ctx, bucket)
+    if err != nil {
+        return err
+    }
+    if !empty {
+        return errBucketNotEmpty
+    }
 
     commonPrefix := ""
 
