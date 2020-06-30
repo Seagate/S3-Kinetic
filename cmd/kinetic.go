@@ -1501,7 +1501,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 				}
 			}
 		}
-		if len(keys) == 0 {
+		if len(keys) < 800 {
 			break
 		}
 		remainedKeys -= uint32(len(keys))
@@ -1509,7 +1509,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 			break
 		} else {
 			startKey = string(lastKey)
-			endKey = ""
+			endKey = "0"
 		}
 	}
 	result := ListObjectsInfo{}
