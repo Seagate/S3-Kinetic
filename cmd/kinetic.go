@@ -593,9 +593,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 
 func (ko *KineticObjects) isBucketEmpty(ctx context.Context, bucket string) (empty bool, err error) {
     empty = false
-    prefix := ""
-    marker := ""
-    delimiter := ""
+    var prefix, marker, delimiter = "", "", ""
     maxKeys := 1
     objLst, err := ko.ListObjects(ctx, bucket, prefix, marker, delimiter, maxKeys)
     if err == nil {
