@@ -1618,6 +1618,8 @@ func toAPIErrorCode(ctx context.Context, err error) (apiErr APIErrorCode) {
 		apiErr = ErrEntityTooSmall
 	case errAuthentication:
 		apiErr = ErrAccessDenied
+    case errBucketNotEmpty:
+        apiErr = ErrBucketNotEmpty
 	case auth.ErrInvalidAccessKeyLength:
 		apiErr = ErrAdminInvalidAccessKey
 	case auth.ErrInvalidSecretKeyLength:
