@@ -713,8 +713,7 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
 // if source object and destination object are same we only
 // update metadata.
 func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (oi ObjectInfo, e error) {
-        defer common.KUntrace(common.KTrace("Enter"))
-	//log.Println(" COPY OBJECTS", srcInfo)
+    defer common.KUntrace(common.KTrace("Enter"))
         cpSrcDstSame := isStringEqual(pathJoin(srcBucket, srcObject), pathJoin(dstBucket, dstObject))
         if !cpSrcDstSame {
                 objectDWLock := ko.NewNSLock(ctx, dstBucket, dstObject)
@@ -734,15 +733,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 
 
 	if cpSrcDstSame && srcInfo.metadataOnly {
-                metaKey := "meta." +  srcBucket + srcObject
-                wlk, err := ko.rwPool.Write(metaKey)
-                if err != nil {
-                        logger.LogIf(ctx, err)
-                        return oi, toObjectErr(err, srcBucket, srcObject)
-                }
-                // This close will allow for locks to be synchronized on `fs.json`.
-                defer wlk.Close()
-
+                key := srcBucket + SlashSeparator + srcObject
                 // Save objects' metadata in `fs.json`.
                 fsMeta := newFSMetaV1()
 		kopts := Opts{
@@ -756,7 +747,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
                 }
 	        kineticMutex.Lock()
 		kc := GetKineticConnection()
-		cvalue, size, err := kc.CGetMeta(metaKey, kopts)
+		cvalue, size, err := kc.CGetMeta(key, kopts)
 	        ReleaseConnection(kc.Idx)
 		if err != nil {
 			err = errFileNotFound
@@ -774,7 +765,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 	                        return oi, toObjectErr(err, srcBucket, srcObject)
 			}
 		}
-		metaKey = "meta." + dstBucket + dstObject
+        key = dstBucket + SlashSeparator + dstObject
                 fsMeta.Meta = srcInfo.UserDefined
                 fsMeta.Meta["etag"] = srcInfo.ETag
 	        bytes, _ := json.Marshal(&fsMeta)
@@ -782,9 +773,9 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 		copy(buf, bytes)
 
 	        kc = GetKineticConnection()
-		 _, err = kc.CPutMeta(metaKey, buf, len(buf), kopts)
+		 _, err = kc.CPutMeta(key, buf, len(buf), kopts)
 		if err != nil {
-	        	ReleaseConnection(kc.Idx)
+            ReleaseConnection(kc.Idx)
 			kineticMutex.Unlock()
                         return oi, toObjectErr(err, dstBucket, dstObject)
 		}
@@ -801,7 +792,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 	        ReleaseConnection(kc.Idx)
                 kineticMutex.Unlock()
                 return fsMeta.ToKVObjectInfo(srcBucket, srcObject, fi), nil
-	}
+	} // End of IF cpSrcDstSame && srcInfo.metadataOnly
         if err := checkPutObjectArgs(ctx, dstBucket, dstObject, ko, srcInfo.PutObjReader.Size()); err != nil {
                 return ObjectInfo{}, err
         }
