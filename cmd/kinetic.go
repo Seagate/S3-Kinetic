@@ -791,7 +791,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
                 // Return the new object info.
 	        ReleaseConnection(kc.Idx)
                 kineticMutex.Unlock()
-                return fsMeta.ToKVObjectInfo(srcBucket, srcObject, fi), nil
+                return fsMeta.KVInfoToObjectInfo(srcBucket, srcObject, fi), nil
 	} // End of IF cpSrcDstSame && srcInfo.metadataOnly
         if err := checkPutObjectArgs(ctx, dstBucket, dstObject, ko, srcInfo.PutObjReader.Size()); err != nil {
                 return ObjectInfo{}, err
@@ -1015,7 +1015,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 
 	}
     kineticMutex.Unlock()
-	return fsMeta.ToKVObjectInfo(bucket, object, fi), err
+	return fsMeta.KVInfoToObjectInfo(bucket, object, fi), err
 }
 
 // getObjectInfoWithLock - reads object metadata and replies back ObjectInfo.
