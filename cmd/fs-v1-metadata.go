@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"os"
 	pathutil "path"
-	"strconv"
 	"time"
 	//"log"
 	jsoniter "github.com/json-iterator/go"
@@ -148,7 +147,7 @@ func isFSMetaValid(version string) bool {
 }
 
 //THAI
-func (m fsMetaV1) ToKVObjectInfo(bucket, object string, fi *KVInfo) ObjectInfo {
+func (m fsMetaV1) KVInfoToObjectInfo(bucket, object string, fi *KVInfo) ObjectInfo {
 	if len(m.Meta) == 0 {
 		m.Meta = make(map[string]string)
 	}
@@ -172,8 +171,8 @@ func (m fsMetaV1) ToKVObjectInfo(bucket, object string, fi *KVInfo) ObjectInfo {
 	objInfo.ModTime = timeSentinel
 	if fi != nil {
 		objInfo.ModTime = fi.ModTime()
-		//objInfo.Size = fi.Size()   //Thai
-		objInfo.Size, _ = strconv.ParseInt(m.Meta["size"], 10, 64)
+		objInfo.Size = fi.Size()   //Thai
+		//objInfo.Size, _ = strconv.ParseInt(m.Meta["size"], 10, 64)
 		if fi.IsDir() {
 			// Directory is always 0 bytes in S3 API, treat it as such.
 			objInfo.Size = 0
