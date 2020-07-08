@@ -31,6 +31,7 @@ import (
 	"github.com/minio/minio/pkg/bucket/policy"
 	"github.com/minio/minio/pkg/event"
 	"github.com/minio/minio/pkg/handlers"
+	"github.com/minio/minio/common"
 )
 
 // PolicySys - policy subsystem.
@@ -41,6 +42,7 @@ type PolicySys struct {
 
 // Set - sets policy to given bucket name.  If policy is empty, existing policy is removed.
 func (sys *PolicySys) Set(bucketName string, policy policy.Policy) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if globalIsGateway {
 		// Set policy is a non-op under gateway mode.
 		return
@@ -58,6 +60,7 @@ func (sys *PolicySys) Set(bucketName string, policy policy.Policy) {
 
 // Remove - removes policy for given bucket name.
 func (sys *PolicySys) Remove(bucketName string) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	sys.Lock()
 	defer sys.Unlock()
 
@@ -66,6 +69,7 @@ func (sys *PolicySys) Remove(bucketName string) {
 
 // IsAllowed - checks given policy args is allowed to continue the Rest API.
 func (sys *PolicySys) IsAllowed(args policy.Args) bool {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if globalIsGateway {
 		// When gateway is enabled, no cached value
 		// is used to validate bucket policies.
@@ -93,6 +97,7 @@ func (sys *PolicySys) IsAllowed(args policy.Args) bool {
 
 // Loads policies for all buckets into PolicySys.
 func (sys *PolicySys) load(buckets []BucketInfo, objAPI ObjectLayer) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	for _, bucket := range buckets {
 		config, err := objAPI.GetBucketPolicy(context.Background(), bucket.Name)
 		if err != nil {
@@ -122,6 +127,7 @@ func (sys *PolicySys) load(buckets []BucketInfo, objAPI ObjectLayer) error {
 
 // Init - initializes policy system from policy.json of all buckets.
 func (sys *PolicySys) Init(buckets []BucketInfo, objAPI ObjectLayer) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	if objAPI == nil {
 		return errInvalidArgument
 	}
@@ -138,12 +144,14 @@ func (sys *PolicySys) Init(buckets []BucketInfo, objAPI ObjectLayer) error {
 
 // NewPolicySys - creates new policy system.
 func NewPolicySys() *PolicySys {
+    defer common.KUntrace(common.KTrace("Enter"))
 	return &PolicySys{
 		bucketPolicyMap: make(map[string]policy.Policy),
 	}
 }
 
 func getConditionValues(request *http.Request, locationConstraint string, username string, claims map[string]interface{}) map[string][]string {
+    defer common.KUntrace(common.KTrace("Enter"))
 	currTime := UTCNow()
 	principalType := func() string {
 		if username != "" {
@@ -195,6 +203,7 @@ func getConditionValues(request *http.Request, locationConstraint string, userna
 
 // getPolicyConfig - get policy config for given bucket name.
 func getPolicyConfig(objAPI ObjectLayer, bucketName string) (*policy.Policy, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Construct path to policy.json for the given bucket.
 	configFile := path.Join(bucketConfigPrefix, bucketName, bucketPolicyConfig)
 
@@ -211,6 +220,7 @@ func getPolicyConfig(objAPI ObjectLayer, bucketName string) (*policy.Policy, err
 }
 
 func savePolicyConfig(ctx context.Context, objAPI ObjectLayer, bucketName string, bucketPolicy *policy.Policy) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	data, err := json.Marshal(bucketPolicy)
 	if err != nil {
 		return err
@@ -223,6 +233,7 @@ func savePolicyConfig(ctx context.Context, objAPI ObjectLayer, bucketName string
 }
 
 func removePolicyConfig(ctx context.Context, objAPI ObjectLayer, bucketName string) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Construct path to policy.json for the given bucket.
 	configFile := path.Join(bucketConfigPrefix, bucketName, bucketPolicyConfig)
 
@@ -239,6 +250,7 @@ func removePolicyConfig(ctx context.Context, objAPI ObjectLayer, bucketName stri
 
 // PolicyToBucketAccessPolicy - converts policy.Policy to minio-go/policy.BucketAccessPolicy.
 func PolicyToBucketAccessPolicy(bucketPolicy *policy.Policy) (*miniogopolicy.BucketAccessPolicy, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Return empty BucketAccessPolicy for empty bucket policy.
 	if bucketPolicy == nil {
 		return &miniogopolicy.BucketAccessPolicy{Version: policy.DefaultVersion}, nil
@@ -262,6 +274,7 @@ func PolicyToBucketAccessPolicy(bucketPolicy *policy.Policy) (*miniogopolicy.Buc
 
 // BucketAccessPolicyToPolicy - converts minio-go/policy.BucketAccessPolicy to policy.Policy.
 func BucketAccessPolicyToPolicy(policyInfo *miniogopolicy.BucketAccessPolicy) (*policy.Policy, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	data, err := json.Marshal(policyInfo)
 	if err != nil {
 		// This should not happen because policyInfo is valid to convert to JSON data.

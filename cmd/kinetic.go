@@ -1771,8 +1771,8 @@ func (ko *KineticObjects) GetBucketPolicy(ctx context.Context, bucket string) (*
 
 // DeleteBucketPolicy deletes all policies on bucket
 func (ko *KineticObjects) DeleteBucketPolicy(ctx context.Context, bucket string) error {
-        defer common.KUntrace(common.KTrace("Enter"))
-	return nil
+    defer common.KUntrace(common.KTrace("Enter"))
+    return removePolicyConfig(ctx, ko, bucket)
 }
 
 // SetBucketLifecycle sets lifecycle on bucket
