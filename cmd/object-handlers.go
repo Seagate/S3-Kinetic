@@ -30,7 +30,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-    "fmt"
 
 	"github.com/gorilla/mux"
 	miniogo "github.com/minio/minio-go/v6"

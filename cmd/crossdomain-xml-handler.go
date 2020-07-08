@@ -17,6 +17,7 @@
 package cmd
 
 import "net/http"
+import "github.com/minio/minio/common"
 
 // Standard cross domain policy information located at https://s3.amazonaws.com/crossdomain.xml
 const crossDomainXML = `<?xml version="1.0"?><!DOCTYPE cross-domain-policy SYSTEM "http://www.adobe.com/xml/dtds/cross-domain-policy.dtd"><cross-domain-policy><allow-access-from domain="*" secure="false" /></cross-domain-policy>`
@@ -39,6 +40,7 @@ func setCrossDomainPolicy(h http.Handler) http.Handler {
 }
 
 func (c crossDomainPolicy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	// Look for 'crossdomain.xml' in the incoming request.
 	switch r.URL.Path {
 	case crossDomainXMLEntity:
