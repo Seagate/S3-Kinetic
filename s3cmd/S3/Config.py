@@ -17,6 +17,27 @@ import sys
 import json
 from . import Progress
 from .SortedDict import SortedDict
+import datetime
+from .ExitCodes import EX_OSFILE
+
+try:
+    import dateutil.parser
+    import dateutil.tz
+except ImportError:
+    sys.stderr.write(u"""
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ImportError trying to import dateutil.parser and dateutil.tz.
+Please install the python dateutil module:
+$ sudo apt-get install python-dateutil
+  or
+$ sudo yum install python-dateutil
+  or
+$ pip install python-dateutil
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+""")
+    sys.stderr.flush()
+    sys.exit(EX_OSFILE)
+
 try:
     # python 3 support
     import httplib
@@ -53,6 +74,12 @@ def config_unicodise(string, encoding = "utf-8", errors = "replace"):
         return unicode(string, encoding, errors)
     except UnicodeDecodeError:
         raise UnicodeDecodeError("Conversion to unicode failed: %r" % string)
+
+def config_date_to_python(date):
+    """
+    Convert a string formated like '2020-06-27T15:56:34Z' into a python datetime 
+    """
+    return dateutil.parser.parse(date, fuzzy=True)
 
 def is_bool_true(value):
     """Check to see if a string is true, yes, on, or 1
@@ -94,6 +121,8 @@ class Config(object):
     secret_key = u""
     access_token = u""
     _access_token_refresh = True
+    _access_token_expiration = None
+    _access_token_last_update = None
     host_base = u"s3.amazonaws.com"
     host_bucket = u"%(bucket)s.s3.amazonaws.com"
     kms_key = u""    #can't set this and Server Side Encryption at the same time
@@ -218,6 +247,11 @@ class Config(object):
     throttle_max = 100
     public_url_use_https = False
     connection_pooling = True
+    # How long in seconds a connection can be kept idle in the pool and still
+    # be alive. AWS s3 is supposed to close connections that are idle for 20
+    # seconds or more, but in real life, undocumented, it closes https conns
+    # after around 6s of inactivity.
+    connection_max_age = 5
 
     ## Creating a singleton
     def __new__(self, configfile = None, access_key=None, secret_key=None, access_token=None):
@@ -268,7 +302,7 @@ class Config(object):
         Get credentials from IAM authentication
         """
         try:
-            conn = httplib.HTTPConnection(host='169.254.169.254', timeout = 2)
+            conn = httplib.HTTPConnection(host='169.254.169.254', timeout=2)
             conn.request('GET', "/latest/meta-data/iam/security-credentials/")
             resp = conn.getresponse()
             files = resp.read()
@@ -281,6 +315,11 @@ class Config(object):
                     Config().update_option('access_key', config_unicodise(creds['AccessKeyId']))
                     Config().update_option('secret_key', config_unicodise(creds['SecretAccessKey']))
                     Config().update_option('access_token', config_unicodise(creds['Token']))
+                    expiration = config_date_to_python(config_unicodise(creds['Expiration']))
+                    # Add a timedelta to prevent any expiration if the EC2 machine is not at the right date
+                    self._access_token_expiration = expiration - datetime.timedelta(minutes=15)
+                    self._access_token_last_update = config_date_to_python(config_unicodise(creds['LastUpdated']))
+                    # Others variables : Code / Type
                 else:
                     raise IOError
             else:
@@ -290,6 +329,13 @@ class Config(object):
 
     def role_refresh(self):
         if self._access_token_refresh:
+            now = datetime.datetime.now(dateutil.tz.tzutc())
+            if self._access_token_expiration \
+               and now < self._access_token_expiration \
+               and self._access_token_last_update \
+               and self._access_token_last_update <= now:
+                # current token is still valid. No need to refresh it
+                return
             try:
                 self.role_config()
             except Exception:

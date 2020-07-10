@@ -89,12 +89,14 @@ else:
 
 config_file = None
 if os.getenv("HOME"):
-    config_file = os.path.join(unicodise(os.getenv("HOME"), encoding), ".s3cfg")
+    config_file = os.path.join(unicodise(os.getenv("HOME"), encoding),
+                               ".s3cfg")
 elif os.name == "nt" and os.getenv("USERPROFILE"):
-    config_file = os.path.join(unicodise(os.getenv("USERPROFILE"), encoding),
-                               os.getenv("APPDATA") and unicodise(os.getenv("APPDATA"), encoding)
-                               or 'Application Data',
-                               "s3cmd.ini")
+    config_file = os.path.join(
+        unicodise(os.getenv("USERPROFILE"), encoding),
+        os.getenv("APPDATA") and unicodise(os.getenv("APPDATA"), encoding)
+        or 'Application Data',
+        "s3cmd.ini")
 
 
 ## Unpack testsuite/ directory
@@ -161,8 +163,8 @@ def test(label, cmd_args = [], retcode = 0, must_find = [], must_not_find = [], 
         print(u"\x1b[31;1mFAIL%s\x1b[0m" % (message))
         count_fail += 1
         command_output()
-        #return 1
-        sys.exit(1)
+        return 1
+        #sys.exit(1)
     def success(message = ""):
         global count_pass
         if message:
@@ -240,7 +242,7 @@ def test_s3cmd(label, cmd_args = [], **kwargs):
         if config_file:
             cmd_args.insert(2, "-c")
             cmd_args.insert(3, config_file)
-
+        #print(" CMD ARGS: %s" % cmd_args)
     return test(label, cmd_args, **kwargs)
 
 def test_mkdir(label, dir_name):

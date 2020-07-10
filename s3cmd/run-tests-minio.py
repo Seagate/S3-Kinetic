@@ -89,12 +89,14 @@ else:
 
 config_file = None
 if os.getenv("HOME"):
-    config_file = os.path.join(unicodise(os.getenv("HOME"), encoding), ".s3cfg")
+    config_file = os.path.join(unicodise(os.getenv("HOME"), encoding),
+                               ".s3cfg")
 elif os.name == "nt" and os.getenv("USERPROFILE"):
-    config_file = os.path.join(unicodise(os.getenv("USERPROFILE"), encoding),
-                               os.getenv("APPDATA") and unicodise(os.getenv("APPDATA"), encoding)
-                               or 'Application Data',
-                               "s3cmd.ini")
+    config_file = os.path.join(
+        unicodise(os.getenv("USERPROFILE"), encoding),
+        os.getenv("APPDATA") and unicodise(os.getenv("APPDATA"), encoding)
+        or 'Application Data',
+        "s3cmd.ini")
 
 
 ## Unpack testsuite/ directory
@@ -161,8 +163,8 @@ def test(label, cmd_args = [], retcode = 0, must_find = [], must_not_find = [], 
         print(u"\x1b[31;1mFAIL%s\x1b[0m" % (message))
         count_fail += 1
         command_output()
-        #return 1
-        sys.exit(1)
+        return 1
+        #sys.exit(1)
     def success(message = ""):
         global count_pass
         if message:
@@ -488,12 +490,12 @@ test_s3cmd("Move multiple files",
 ## ====== Clean up local destination dir
 test_flushdir("Clean testsuite-out/", "testsuite-out")
 
-## ====== Sync from S3 FAILED
-#must_find = [ "'%s/xyz/binary/random-crap.md5' -> 'testsuite-out/xyz/binary/random-crap.md5'" % pbucket(1) ]
-#if have_encoding:
-#    must_find.append(u"'%(pbucket)s/xyz/encodings/%(encoding)s/%(pattern)s' -> 'testsuite-out/xyz/encodings/%(encoding)s/%(pattern)s' " % { 'encoding' : encoding, 'pattern' : enc_pattern, 'pbucket' : pbucket(1) })
-#test_s3cmd("Sync from S3", ['sync', '%s/xyz' % pbucket(1), 'testsuite-out'],
-#    must_find = must_find)
+## ====== Sync from S3
+must_find = [ "'%s/xyz/binary/random-crap.md5' -> 'testsuite-out/xyz/binary/random-crap.md5'" % pbucket(1) ]
+if have_encoding:
+    must_find.append(u"'%(pbucket)s/xyz/encodings/%(encoding)s/%(pattern)s' -> 'testsuite-out/xyz/encodings/%(encoding)s/%(pattern)s' " % { 'encoding' : encoding, 'pattern' : enc_pattern, 'pbucket' : pbucket(1) })
+test_s3cmd("Sync from S3", ['sync', '%s/xyz' % pbucket(1), 'testsuite-out'],
+    must_find = must_find)
 
 ## ====== Remove 'demo' directory
 test_rmdir("Remove 'dir-test/'", "testsuite-out/xyz/dir-test/")
@@ -503,10 +505,10 @@ test_rmdir("Remove 'dir-test/'", "testsuite-out/xyz/dir-test/")
 test_mkdir("Create file-dir dir", "testsuite-out/xyz/dir-test/file-dir")
 
 
-## ====== Skip dst dirs FAILED
-#test_s3cmd("Skip over dir", ['sync', '%s/xyz' % pbucket(1), 'testsuite-out'],
-#           must_find = "ERROR: Download of 'xyz/dir-test/file-dir' failed (Reason: testsuite-out/xyz/dir-test/file-dir is a directory)",
-#           retcode = EX_PARTIAL)
+## ====== Skip dst dirs
+test_s3cmd("Skip over dir", ['sync', '%s/xyz' % pbucket(1), 'testsuite-out'],
+           must_find = "ERROR: Download of 'xyz/dir-test/file-dir' failed (Reason: testsuite-out/xyz/dir-test/file-dir is a directory)",
+           retcode = EX_PARTIAL)
 
 
 ## ====== Clean up local destination dir
@@ -591,11 +593,11 @@ test_s3cmd("Rename (NoSuchKey)", ['mv', '%s/xyz/etc/logo.png' % pbucket(1), '%s/
 test_s3cmd("Sync more from S3 (invalid src)", ['sync', '--delete-removed', '%s/xyz/DOESNOTEXIST' % pbucket(1), 'testsuite-out'],
     must_not_find = [ "delete: 'testsuite-out/logo.png'" ])
 
-## ====== Sync more from S3 FAILED
-#test_s3cmd("Sync more from S3", ['sync', '--delete-removed', '%s/xyz' % pbucket(1), 'testsuite-out'],
-#    must_find = [ "'%s/xyz/etc2/Logo.PNG' -> 'testsuite-out/xyz/etc2/Logo.PNG'" % pbucket(1),
-#                  "'%s/xyz/demo/some-file.xml' -> 'testsuite-out/xyz/demo/some-file.xml'" % pbucket(1) ],
-#    must_not_find_re = [ "not-deleted.*etc/logo.png", "delete: 'testsuite-out/logo.png'" ])
+## ====== Sync more from S3
+test_s3cmd("Sync more from S3", ['sync', '--delete-removed', '%s/xyz' % pbucket(1), 'testsuite-out'],
+    must_find = [ "'%s/xyz/etc2/Logo.PNG' -> 'testsuite-out/xyz/etc2/Logo.PNG'" % pbucket(1),
+                  "'%s/xyz/demo/some-file.xml' -> 'testsuite-out/xyz/demo/some-file.xml'" % pbucket(1) ],
+    must_not_find_re = [ "not-deleted.*etc/logo.png", "delete: 'testsuite-out/logo.png'" ])
 
 
 ## ====== Make dst dir for get
@@ -617,10 +619,10 @@ test_s3cmd("Put unicode filenames", ['put', u'testsuite/encodings/UTF-8/ŪņЇЌ
 test_mkdir("Make dst dir for get", "testsuite-out")
 
 
-## ====== put/get non-ASCII filenames FAILED
-#test_s3cmd("Get unicode filenames", ['get', u'%s/xyz/encodings/UTF-8/ŪņЇЌœđЗ/Žůžo' % pbucket(1), 'testsuite-out'],
-#           retcode = 0,
-#           must_find = [ '->' ])
+## ====== put/get non-ASCII filenames
+test_s3cmd("Get unicode filenames", ['get', u'%s/xyz/encodings/UTF-8/ŪņЇЌœđЗ/Žůžo' % pbucket(1), 'testsuite-out'],
+           retcode = 0,
+           must_find = [ '->' ])
 
 
 ## ====== Get multiple files
