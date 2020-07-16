@@ -1888,9 +1888,7 @@ func (api objectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 
 func (api objectAPIHandlers) abortMultipartIfError(err *error, ctx context.Context, bucket, object, uploadID string) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("uploadID = %s", uploadID))
     if *err != nil {
-        common.KTrace(fmt.Sprintf("ERROR err = %+v", *err))
 	    objAPI := api.ObjectAPI()
         if objAPI != nil {
             objAPI.AbortMultipartUpload(ctx, bucket, object, uploadID)
