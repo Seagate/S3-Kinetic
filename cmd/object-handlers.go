@@ -30,6 +30,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+    "fmt"
 
 	"github.com/gorilla/mux"
 	miniogo "github.com/minio/minio-go/v6"
@@ -1885,9 +1886,20 @@ func (api objectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 	writeSuccessResponseXML(w, encodedSuccessResponse)
 }
 
+func (api objectAPIHandlers) abortMultipartIfError(err *error, ctx context.Context, bucket, object, uploadID string) {
+    defer common.KUntrace(common.KTrace("Enter"))
+    if *err != nil {
+	    objAPI := api.ObjectAPI()
+        if objAPI != nil {
+            objAPI.AbortMultipartUpload(ctx, bucket, object, uploadID)
+        }
+    }
+}
 // PutObjectPartHandler - uploads an incoming part for an ongoing multipart operation.
 func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http.Request) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
+    var err error
+    err = nil
 	ctx := newContext(r, w, "PutObjectPart")
 
 	defer logger.AuditLog(w, r, "PutObjectPart", mustGetClaimsFromToken(r))
@@ -1897,14 +1909,7 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrServerNotInitialized), r.URL, guessIsBrowserReq(r))
 		return
 	}
-	if crypto.S3KMS.IsRequested(r.Header) {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r)) // SSE-KMS is not supported
-		return
-	}
-	if !api.EncryptionEnabled() && crypto.IsRequested(r.Header) {
-		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
-		return
-	}
+	uploadID := r.URL.Query().Get("uploadId")
 	vars := mux.Vars(r)
 	bucket := vars["bucket"]
 	object, err := url.PathUnescape(vars["object"])
@@ -1912,12 +1917,24 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
+    defer api.abortMultipartIfError(&err, ctx, bucket, object, uploadID)
 
+	if crypto.S3KMS.IsRequested(r.Header) {
+        err = fmt.Errorf("Error")  // Non-nil err would make the defering api.abortMultiPartIfError() to clean up multipart dir.
+		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r)) // SSE-KMS is not supported
+		return
+	}
+	if !api.EncryptionEnabled() && crypto.IsRequested(r.Header) {
+        err = fmt.Errorf("Error")
+		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrNotImplemented), r.URL, guessIsBrowserReq(r))
+		return
+	}
 	// To detect if the client has disconnected.
 	r.Body = &detectDisconnect{r.Body, r.Context().Done()}
 
 	// X-Amz-Copy-Source shouldn't be set for this call.
 	if _, ok := r.Header[xhttp.AmzCopySource]; ok {
+        err = fmt.Errorf("Error")
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidCopySource), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -1937,6 +1954,7 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 	if rAuthType == authTypeStreamingSigned {
 		if sizeStr, ok := r.Header[xhttp.AmzDecodedContentLength]; ok {
 			if sizeStr[0] == "" {
+                err = fmt.Errorf("Error")
 				writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentLength), r.URL, guessIsBrowserReq(r))
 				return
 			}
@@ -1948,17 +1966,18 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 		}
 	}
 	if size == -1 {
+        err = fmt.Errorf("Error")
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentLength), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
 	/// maximum Upload size for multipart objects in a single operation
 	if isMaxAllowedPartSize(size) {
+        err = fmt.Errorf("Error")
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrEntityTooLarge), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-	uploadID := r.URL.Query().Get("uploadId")
 	partIDString := r.URL.Query().Get("partNumber")
 
 	partID, err := strconv.Atoi(partIDString)
@@ -1969,6 +1988,7 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 
 	// check partID with maximum part ID for multipart objects
 	if isMaxPartID(partID) {
+        err = fmt.Errorf("Error")
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrInvalidMaxParts), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -1981,6 +2001,7 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 	)
 	reader = r.Body
 	if s3Error = isPutActionAllowed(rAuthType, bucket, object, r, iampolicy.PutObjectAction); s3Error != ErrNone {
+        err = fmt.Errorf("Error")
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -1990,16 +2011,19 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 		// Initialize stream signature verifier.
 		reader, s3Error = newSignV4ChunkedReader(r)
 		if s3Error != ErrNone {
+            err = fmt.Errorf("Error")
 			writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 			return
 		}
 	case authTypeSignedV2, authTypePresignedV2:
 		if s3Error = isReqAuthenticatedV2(r); s3Error != ErrNone {
+            err = fmt.Errorf("Error")
 			writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 			return
 		}
 	case authTypePresigned, authTypeSigned:
 		if s3Error = reqSignatureV4Verify(r, globalServerRegion, serviceS3); s3Error != ErrNone {
+            err = fmt.Errorf("Error")
 			writeErrorResponse(ctx, w, errorCodes.ToAPIErr(s3Error), r.URL, guessIsBrowserReq(r))
 			return
 		}
@@ -2075,6 +2099,7 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 		li.UserDefined = CleanMinioInternalMetadataKeys(li.UserDefined)
 		if crypto.IsEncrypted(li.UserDefined) {
 			if !crypto.SSEC.IsRequested(r.Header) && crypto.SSEC.IsEncrypted(li.UserDefined) {
+                err = fmt.Errorf("Error")
 				writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrSSEMultipartEncrypted), r.URL, guessIsBrowserReq(r))
 				return
 			}
