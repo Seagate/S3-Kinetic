@@ -768,6 +768,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
         key = dstBucket + SlashSeparator + dstObject
                 fsMeta.Meta = srcInfo.UserDefined
                 fsMeta.Meta["etag"] = srcInfo.ETag
+        fsMeta.Meta["size"] =  strconv.FormatInt(fsMeta.KoInfo.Size, 10)
 	        bytes, _ := json.Marshal(&fsMeta)
 	        buf := allocateValBuf(len(bytes))
 		copy(buf, bytes)

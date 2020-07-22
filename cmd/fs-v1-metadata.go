@@ -26,6 +26,7 @@ import (
 	"os"
 	pathutil "path"
 	"time"
+    "strconv"
 	//"log"
 	jsoniter "github.com/json-iterator/go"
 	xhttp "github.com/minio/minio/cmd/http"
@@ -171,8 +172,8 @@ func (m fsMetaV1) KVInfoToObjectInfo(bucket, object string, fi *KVInfo) ObjectIn
 	objInfo.ModTime = timeSentinel
 	if fi != nil {
 		objInfo.ModTime = fi.ModTime()
-		objInfo.Size = fi.Size()   //Thai
-		//objInfo.Size, _ = strconv.ParseInt(m.Meta["size"], 10, 64)
+		//objInfo.Size = fi.Size()   //Thai
+		objInfo.Size, _ = strconv.ParseInt(m.Meta["size"], 10, 64)
 		if fi.IsDir() {
 			// Directory is always 0 bytes in S3 API, treat it as such.
 			objInfo.Size = 0
