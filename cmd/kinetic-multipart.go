@@ -252,7 +252,6 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 
 	startKey := "meta." + bucket + "/" + object + "."
 	endKey := common.IncStr(startKey)
-    common.KTrace(fmt.Sprintf("startKey = %s", startKey))
         kineticMutex.Lock()
         kc := GetKineticConnection()
         keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
@@ -274,7 +273,6 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 
         for _, key := range Keys {
 		k := string(key)
-        common.KTrace(fmt.Sprintf("k = %s", k))
 		if k == fs.metaJSONFile {
                         continue
                 }
@@ -307,24 +305,19 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 	}
         var parts []PartInfo
         var actualSize int64
-        common.KTrace("Before FOR partNumber")
         for partNumber, etag := range partsMap {
                 partFile := getPartKO(Keys, partNumber, etag)
-        common.KTrace(fmt.Sprintf("partFile = %s", partFile))
                 if partFile == "" {
                         return result, InvalidPart{}
                 }
                 // Read the actualSize from the pathFileName.
                 subParts := strings.Split(partFile, ".")
-        common.KTrace(fmt.Sprintf("subParts = %+v", subParts))
                 actualSize, err = strconv.ParseInt(subParts[len(subParts)-1], 10, 64)
-        common.KTrace(fmt.Sprintf("err = %+v", err))
                 if err != nil {
                         return result, InvalidPart{}
                 }
                 parts = append(parts, PartInfo{PartNumber: partNumber, ETag: etag, ActualSize: actualSize})
         }
-        common.KTrace("After FOR partNumber")
         sort.Slice(parts, func(i int, j int) bool {
                 return parts[i].PartNumber < parts[j].PartNumber
         })
