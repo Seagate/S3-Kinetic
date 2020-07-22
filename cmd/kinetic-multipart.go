@@ -186,7 +186,7 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
         if etag == "" {
                 etag = GenETag()
         }
-	key :=  bucket + "/" + object + "." +  uploadID + "." + fs.encodePartFile(partID, etag, data.ActualSize())
+	key :=  bucket + "/" + object + "." + fs.encodePartFile(partID, etag, data.ActualSize())
         meta := make(map[string]string)
         fsMeta := newFSMetaV1()
 	fsMeta.Meta = meta
@@ -250,7 +250,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 Priority:        kinetic_proto.Command_NORMAL,
         }
 
-	startKey := "meta." + bucket + "/" + object + "." + uploadID + "."
+	startKey := "meta." + bucket + "/" + object + "."
 	endKey := common.IncStr(startKey)
     common.KTrace(fmt.Sprintf("startKey = %s", startKey))
         kineticMutex.Lock()
@@ -351,7 +351,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                         result.NextPartNumberMarker = result.Parts[partsCount-1].PartNumber
                 }
         }
-	    keyPrefix := bucket + "/" + object + "." + uploadID + "."
+	    keyPrefix := bucket + "/" + object + "."
         for i, part := range result.Parts {
                 var stat KVInfo
                 stat, err = koStat(keyPrefix + fs.encodePartFile(part.PartNumber, part.ETag, part.ActualSize))
@@ -422,7 +422,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                 Priority:        kinetic_proto.Command_NORMAL,
         }
 
-        startKey := "meta." + bucket + "/" + object + "." + uploadID + "."
+        startKey := "meta." + bucket + "/" + object + "."
         endKey := common.IncStr(startKey)
 	kineticMutex.Lock()
         kc := GetKineticConnection()
@@ -464,7 +464,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                 }
 
                 var fi KVInfo
-                keyPrefix := bucket + "/" + object + "." + uploadID + "."
+                keyPrefix := bucket + "/" + object + "."
                 fi, err := koStat(keyPrefix + getPartKO(Keys, part.PartNumber, part.ETag))
                 if err != nil {
                         if err == errFileNotFound || err == errFileAccessDenied {
@@ -493,7 +493,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
 				Timeout:         60000, //60 sec
 				Priority:        kinetic_proto.Command_NORMAL,
 			}
-            keyPrefix := "meta." + bucket + "/" + object + "." + uploadID + "."
+            keyPrefix := "meta." + bucket + "/" + object + "."
 			metaKey := keyPrefix + getPartKO(Keys, part.PartNumber, part.ETag)
 	                kineticMutex.Lock()
 			kc := GetKineticConnection()
@@ -593,7 +593,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
 
 func (fs *KineticObjects) AbortMultipartUpload(ctx context.Context, bucket, object, uploadID string) error {
     defer common.KUntrace(common.KTrace("Enter"))
-    startKey := "meta." + bucket + "/" + object + "." + uploadID +  "."
+    startKey := "meta." + bucket + "/" + object + "."
     endKey := common.IncStr(startKey)
     kopts := Opts {
         ClusterVersion:  0,
