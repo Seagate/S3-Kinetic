@@ -366,7 +366,6 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 	}
 	defer gr.Close()
 	objInfo := gr.ObjInfo
-
 	// filter object lock metadata if permission does not permit
 	getRetPerms := checkRequestAuthType(ctx, r, policy.GetObjectRetentionAction, bucket, object)
 	legalHoldPerms := checkRequestAuthType(ctx, r, policy.GetObjectLegalHoldAction, bucket, object)
@@ -413,7 +412,7 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		statusCodeWritten = true
 		w.WriteHeader(http.StatusPartialContent)
 	}
-	buf := make([]byte, objInfo.Size)
+	buf := make([]byte, objInfo.Size + 1)  // Plus 1 for zero size file
 	if _, err = io.CopyBuffer(httpWriter, gr, buf); err != nil {
 		// Write object content to response body
 		//if _, err = io.Copy(httpWriter, gr); err != nil {
