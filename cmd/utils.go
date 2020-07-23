@@ -141,11 +141,11 @@ const (
 	// using 'curl' and presigned URL.
 	globalMaxObjectSize = 5 * humanize.TiByte
 
-	// Minimum Part size for multipart upload is 5MiB
-	globalMinPartSize = 5 * humanize.MiByte
+	// Minimum Part size for multipart upload is 1MiB
+	globalMinPartSize = 1 * humanize.MiByte // s3cmd client defaults to 5 * humanize.MiByte
 
-	// Maximum Part size for multipart upload is 5GiB
-	globalMaxPartSize = 5 * humanize.GiByte
+	// Maximum Part size for multipart upload is 5MiB
+	globalMaxPartSize = 5 * humanize.MiByte // s3cmd client defaults to 5 * humanize.GiByte
 
 	// Maximum Part ID for multipart upload is 10000
 	// (Acceptable values range from 1 to 10000 inclusive)
