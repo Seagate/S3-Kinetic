@@ -1,5 +1,6 @@
 		HOW TO INSTALL AND RUN MINIO-KINETIC
 			Ver 1.7
+		Date: 07/23/2020
 
 NOTE: - This procedure will work for ubuntu 16.04, 18.04.
       - Also works for g++ gcc compiler 5 and 7
