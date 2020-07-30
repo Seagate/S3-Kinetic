@@ -514,6 +514,10 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         kineticMutex.Lock()
         kc = GetKineticConnection()
         cvalue, size, err := kc.CGet(key, 0, kopts)
+        if err == nil {
+            // Remove the temporary metaJSONFile
+            kc.Delete(key, kopts)
+        }
         ReleaseConnection(kc.Idx)
         if err != nil {
                 err = errFileNotFound

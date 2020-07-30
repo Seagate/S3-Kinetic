@@ -28,10 +28,12 @@ import (
 	"os"
 	pathutil "path"
 	"runtime"
+    "fmt"
 //        "github.com/minio/minio/pkg/kinetic"
         "github.com/minio/minio/pkg/kinetic_proto"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/lock"
+	"github.com/minio/minio/common"
 )
 
 //This is for kinetic
@@ -48,6 +50,7 @@ func readToBuffer(reader io.Reader, buf []byte) (int64, error) {
 // any parent directories, handles long paths for
 // windows automatically.
 func fsRemoveFile(ctx context.Context, filePath string) (err error) {
+    defer common.KUntrace(common.KTrace(fmt.Sprintf("Enter: filePath = %d", filePath)))
 	if filePath == "" {
 		logger.LogIf(ctx, errInvalidArgument)
 		return errInvalidArgument
@@ -359,6 +362,7 @@ func fsOpenFile(ctx context.Context, readPath string, offset int64) (io.ReadClos
 
 // Creates a file and copies data from incoming reader. Staging buffer is used by io.CopyBuffer.
 func fsCreateFile(ctx context.Context, filePath string, reader io.Reader, buf []byte, fallocSize int64) (int64, error) {
+    defer common.KUntrace(common.KTrace(fmt.Sprintf("Enter: filePath = %d", filePath)))
 	if filePath == "" || reader == nil {
 		logger.LogIf(ctx, errInvalidArgument)
 		return 0, errInvalidArgument
@@ -438,6 +442,7 @@ func fsFAllocate(fd int, offset int64, len int64) (err error) {
 // Renames source path to destination path, fails if the destination path
 // parents are not already created.
 func fsSimpleRenameFile(ctx context.Context, sourcePath, destPath string) error {
+    defer common.KUntrace(common.KTrace(fmt.Sprintf("Enter: sourcePath = %s, destPath = %s", sourcePath, destPath)))
 	if err := checkPathLength(sourcePath); err != nil {
 		logger.LogIf(ctx, err)
 		return err
@@ -458,6 +463,7 @@ func fsSimpleRenameFile(ctx context.Context, sourcePath, destPath string) error 
 // Renames source path to destination path, creates all the
 // missing parents if they don't exist.
 func fsRenameFile(ctx context.Context, sourcePath, destPath string) error {
+    defer common.KUntrace(common.KTrace(fmt.Sprintf("Enter: sourcePath = %d, destPath = %d", sourcePath, destPath)))
 	if err := checkPathLength(sourcePath); err != nil {
 		logger.LogIf(ctx, err)
 		return err

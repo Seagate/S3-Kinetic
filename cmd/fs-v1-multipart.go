@@ -31,6 +31,7 @@ import (
         //"log"
 	jsoniter "github.com/json-iterator/go"
 	mioutil "github.com/minio/minio/pkg/ioutil"
+	"github.com/minio/minio/common"
 )
 
 
@@ -277,7 +278,7 @@ func (fs *FSObjects) CopyObjectPart(ctx context.Context, srcBucket, srcObject, d
 }
 
 func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID string, partID int, r *PutObjReader, opts ObjectOptions) (pi PartInfo, e error) {
-	////log.Println("1. PutObjectPart")
+    defer common.KUntrace(common.KTrace("Enter"))
 	data := r.Reader
 	if err := checkPutObjectPartArgs(ctx, bucket, object, fs); err != nil {
 		return pi, toObjectErr(err, bucket)
@@ -311,7 +312,7 @@ func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID
 	buf := make([]byte, bufSize)
 
 	tmpPartPath := pathJoin(fs.fsPath, minioMetaTmpBucket, fs.fsUUID, uploadID+"."+mustGetUUID()+"."+strconv.Itoa(partID))
-	////log.Println("TEMP PART PATH ", tmpPartPath)
+    common.KTrace(fmt.Sprintf("tmpPartPath = %s", tmpPartPath))
 	bytesWritten, err := fsCreateFile(ctx, tmpPartPath, data, buf, data.Size())
 	if err != nil {
 		fsRemoveFile(ctx, tmpPartPath)
@@ -336,7 +337,7 @@ func (fs *FSObjects) PutObjectPart(ctx context.Context, bucket, object, uploadID
 	}
 
 	partPath := pathJoin(uploadIDDir, fs.encodePartFile(partID, etag, data.ActualSize()))
-	////log.Println(" PART PATH: ", partPath)
+    common.KTrace(fmt.Sprintf("partPath = %s", partPath))
 	// Make sure not to create parent directories if they don't exist - the upload might have been aborted.
 	if err = fsSimpleRenameFile(ctx, tmpPartPath, partPath); err != nil {
 		if err == errFileNotFound || err == errFileAccessDenied {
