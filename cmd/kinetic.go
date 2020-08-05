@@ -1450,7 +1450,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     }
     prefixParts := strings.Split(prefix, "*")
     bRegexp := false
-    if len(prefixParts) > 0 && len(prefixParts[0]) < len(prefix) {
+    if len(prefixParts[0]) < len(prefix) {
         bRegexp = true
     }
     bucketPrefix := "meta." + bucket + SlashSeparator
