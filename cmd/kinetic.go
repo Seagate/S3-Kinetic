@@ -47,6 +47,7 @@ import (
 	"github.com/minio/minio/cmd/logger"
 
 	"log"
+    "regexp"
 	"github.com/minio/minio/pkg/lock"
 	"github.com/minio/minio/pkg/madmin"
         bucketsse "github.com/minio/minio/pkg/bucket/encryption"
@@ -1427,6 +1428,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    //common.KTrace(fmt.Sprintf("bucket = %s, prefix = %s, marker = %s, delimiter = %s, maxKeys = %d", bucket, prefix, marker, delimiter, maxKeys))
     atomic.AddInt64(&ko.activeIOCount, 1)
     defer func() {
         atomic.AddInt64(&ko.activeIOCount, -1)
@@ -1446,14 +1448,20 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     if delimiter == SlashSeparator {
         recursive = false
     }
+    prefixParts := strings.Split(prefix, "*")
+    bRegexp := false
+    if len(prefixParts[0]) < len(prefix) {
+        bRegexp = true
+    }
     bucketPrefix := "meta." + bucket + SlashSeparator
     var startKey string
+
     if marker == "" {
-	    startKey = bucketPrefix + prefix
+	    startKey = bucketPrefix + prefixParts[0]
     } else {
         startKey = bucketPrefix + marker
     }
-	endKey := bucketPrefix + prefix
+	endKey := bucketPrefix + prefixParts[0]
     endKey = common.IncStr(endKey)
 
     maxKeyRange := 400
@@ -1472,6 +1480,11 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     name := ""
 	var kc *Client
     bDone := false
+    // Prepare regular expression for key matching
+    regexpStr := bucketPrefix
+    for _, prefixPart := range prefixParts {
+        regexpStr  += ".*" + prefixPart     // ".*":  zero or more of any character
+    }
     for !bDone && nRemainKeys > 0 {
         kineticMutex.Lock()
         kc = GetKineticConnection()
@@ -1487,6 +1500,12 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	    }
         var key []byte
 	    for _, key = range keys {
+            if bRegexp {
+                matched, err := regexp.MatchString(regexpStr, string(key))
+                if err != nil || !matched {
+                    continue
+                }
+            }
 		    var objInfo ObjectInfo
             name = string(key[len(bucketPrefix):])
 			objInfo, err = ko.getObjectInfo(ctx, bucket, name)
