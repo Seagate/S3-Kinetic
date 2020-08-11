@@ -76,7 +76,6 @@ var kConnsPool KConnsPool
 var identity int64 = 1
 var hmacKey string = "asdfasdf"
 
-var wg = sync.WaitGroup{}
 var kineticMutex = &sync.Mutex{}
 
 
@@ -163,22 +162,24 @@ type KVInfo struct {
 }
 
 func ReleaseConnection(ix int) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 	kConnsPool.Lock()
-	kConnsPool.inUsed[ix] = false
-	kConnsPool.totalInUsed--
-	if  kConnsPool.totalInUsed < 0 {
-		fmt.Println(" CONNECTION ERROR")
-	}
-	kConnsPool.cond.Broadcast()
-	kConnsPool.Unlock()
+    if kConnsPool.inUsed[ix] == true {
+        kConnsPool.inUsed[ix] = false
+        kConnsPool.totalInUsed--
+        common.KTrace(fmt.Sprintf("totalInused = %d", kConnsPool.totalInUsed))
+        if  kConnsPool.totalInUsed < 0 {
+            panic("ERROR: Total number of connections in use is negative")
+        }
+        kConnsPool.cond.Broadcast()
+    }
+    kConnsPool.Unlock()
 }
 
 func GetKineticConnection() *Client {
         defer common.KUntrace(common.KTrace("Enter"))
 	kConnsPool.Lock()
 	var kc *Client = nil
-	//start := time.Now()
 	for true {
 		if kConnsPool.totalInUsed < maxQueue {
 			for i:=0; i< maxQueue; i++ {
@@ -190,6 +191,7 @@ func GetKineticConnection() *Client {
 					}
 					kConnsPool.inUsed[i] = true
 					kConnsPool.totalInUsed++;
+                    common.KTrace(fmt.Sprintf("totalInused = %d", kConnsPool.totalInUsed))
 					break;
 				}
 			}
@@ -873,8 +875,6 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	}
 	// Read the object, doesn't exist returns an s3 compatible error.
 	size := length
-	closeFn := func() {
-	}
 	// Check if range is valid
 	if off > size || off+length > size {
 		err = InvalidRange{off, length, size}
@@ -889,6 +889,10 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	var reader1 io.Reader = kc
 	reader := io.LimitReader(reader1, length)
 	//log.Println("END: GetObjectNInfo", bucket, object)
+    closeFn := func() {
+        kc.ReleaseConn(kc.Idx)
+    }
+
 	return objReaderFn(reader, h, opts.CheckCopyPrecondFn, closeFn)
 }
 
