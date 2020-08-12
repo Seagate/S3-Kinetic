@@ -1354,80 +1354,80 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 	if err := objectLock.GetLock(globalOperationTimeout); err != nil {
 		return err
 	}
-	defer objectLock.Unlock()
-        atomic.AddInt64(&ko.activeIOCount, 1)
-        defer func() {
-                atomic.AddInt64(&ko.activeIOCount, -1)
-        }()
+    defer objectLock.Unlock()
+    atomic.AddInt64(&ko.activeIOCount, 1)
+    defer func() {
+        atomic.AddInt64(&ko.activeIOCount, -1)
+    }()
 
-	if err := checkDelObjArgs(ctx, bucket, object); err != nil {
-		return err
-	}
-        kopts := Opts{
-                ClusterVersion:  0,
-                Force:           true,
-                Tag:             []byte{},
-                Algorithm:       kinetic_proto.Command_SHA1,
-                Synchronization: kinetic_proto.Command_WRITEBACK,
-                Timeout:         60000, //60 sec
-                Priority:        kinetic_proto.Command_NORMAL,
-        }
+    if err := checkDelObjArgs(ctx, bucket, object); err != nil {
+        return err
+    }
+    kopts := Opts{
+        ClusterVersion:  0,
+        Force:           true,
+        Tag:             []byte{},
+        Algorithm:       kinetic_proto.Command_SHA1,
+        Synchronization: kinetic_proto.Command_WRITEBACK,
+        Timeout:         60000, //60 sec
+        Priority:        kinetic_proto.Command_NORMAL,
+    }
+    key := bucket + SlashSeparator + object
+    kineticMutex.Lock()
+    kc := GetKineticConnection()
+    fsMeta := fsMetaV1{}
+    cvalue, size, err := kc.CGetMeta(key, kopts)
+    if err != nil {
+        err = errFileNotFound
+        ReleaseConnection(kc.Idx)
+	    kineticMutex.Unlock()
+        return  err
+    }
+    var fsMetaBytes []byte
+    if (cvalue != nil) {
+        fsMetaBytes = (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+        err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
+    }
+    if len(fsMeta.Parts) == 0 {
         key := bucket + SlashSeparator + object
-        kineticMutex.Lock()
-        kc := GetKineticConnection()
-        fsMeta := fsMetaV1{}
-        cvalue, size, err := kc.CGetMeta(key, kopts)
-        if err != nil {
-            err = errFileNotFound
-            ReleaseConnection(kc.Idx)
-	        kineticMutex.Unlock()
-                return  err
-        }
-        var fsMetaBytes []byte
-        if (cvalue != nil) {
-		fsMetaBytes = (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-	        err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-	}
-        if len(fsMeta.Parts) == 0 {
-		key := bucket + SlashSeparator + object
-		err = kc.Delete(key, kopts)
-	        if err != nil {
-                        ReleaseConnection(kc.Idx)
-	                kineticMutex.Unlock()
-		        return err
-		}
-		metakey := "meta." + key
-		err = kc.Delete(metakey, kopts)
-	        if err != nil {
-                        ReleaseConnection(kc.Idx)
-	                kineticMutex.Unlock()
-		        return err
-		}
-                ReleaseConnection(kc.Idx)
-	        kineticMutex.Unlock()
-		return nil
-	}
-        for _, part := range  fsMeta.Parts {
-                key =  bucket + SlashSeparator + object + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
-                kc.Delete(key, kopts)
-	}
-        key = bucket + SlashSeparator + object
         err = kc.Delete(key, kopts)
         if err != nil {
-                ReleaseConnection(kc.Idx)
-                kineticMutex.Unlock()
-                return err
+            ReleaseConnection(kc.Idx)
+            kineticMutex.Unlock()
+            return err
         }
         metakey := "meta." + key
         err = kc.Delete(metakey, kopts)
         if err != nil {
-                ReleaseConnection(kc.Idx)
-                kineticMutex.Unlock()
-                return err
+            ReleaseConnection(kc.Idx)
+            kineticMutex.Unlock()
+            return err
         }
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
-	return nil
+        return nil
+    }
+    for _, part := range  fsMeta.Parts {
+        key =  bucket + SlashSeparator + object + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
+        kc.Delete(key, kopts)
+	}
+    key = bucket + SlashSeparator + object
+    err = kc.Delete(key, kopts)
+    if err != nil {
+        ReleaseConnection(kc.Idx)
+        kineticMutex.Unlock()
+        return err
+    }
+    metakey := "meta." + key
+    err = kc.Delete(metakey, kopts)
+    if err != nil {
+        ReleaseConnection(kc.Idx)
+        kineticMutex.Unlock()
+        return err
+    }
+    ReleaseConnection(kc.Idx)
+    kineticMutex.Unlock()
+    return nil
 }
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
