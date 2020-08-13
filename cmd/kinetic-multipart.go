@@ -421,7 +421,6 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         nxtVer = fs.computeNextVersion(objVer)
     }
     startKey := "meta." + bucket + "/" + object + "." + nxtVer + "."
-    common.KTrace(fmt.Sprintf("startKey = %s", startKey))
     endKey := common.IncStr(startKey)
 	kineticMutex.Lock()
     kc := GetKineticConnection()
@@ -436,9 +435,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     for _, key := range keys {
         // key has format meta.bucket/object.ver.partId.etag-1.fsize (where etag = md5?)
         // k has format partId.etag-1.fsize
-        common.KTrace(fmt.Sprintf("key = %s", string(key)))
         k  := key[len(startKey):]
-        common.KTrace(fmt.Sprintf("k = %s", string(k)))
         Keys = append(Keys, k)
     }
     debug.FreeOSMemory()
