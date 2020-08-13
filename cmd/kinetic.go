@@ -1964,17 +1964,30 @@ func (ko *KineticObjects) deleteKeys(keys [][]byte) error {
     return err
 }
 
-func (fs *KineticObjects) deleteParts(objKey, version string) error {
-    defer common.KUntrace(common.KTrace(fmt.Sprintf("objVer = %s", version)))
+func (ko *KineticObjects) deleteParts(objKey, version string) error {
+    // Get the new version multipart keys to delete
     startKey := objKey + "." + version + "."
     endKey := common.IncStr(startKey)
     kineticMutex.Lock()
     kc := GetKineticConnection()
-    keys, err := kc.CGetKeyRange(startKey, endKey, true, false, 800, false, fs.option())
+    objKeys, err := kc.CGetKeyRange(startKey, endKey, true, false, 800, false, ko.option())
     ReleaseConnection(kc.Idx)
     kineticMutex.Unlock()
     if err == nil {
-        err = fs.deleteKeys(keys)
+        err = ko.deleteKeys(objKeys)
+        if err == nil {
+            // Get the new version multipart meta keys to delete
+            startKey = "meta." + startKey
+            endKey := common.IncStr(startKey)
+            kineticMutex.Lock()
+            kc = GetKineticConnection()
+            metaKeys, err := kc.CGetKeyRange(startKey, endKey, true, false, 800, false, ko.option())
+            ReleaseConnection(kc.Idx)
+            kineticMutex.Unlock()
+            if err == nil {
+                err = ko.deleteKeys(metaKeys)
+            }
+        }
     }
     return err
 }

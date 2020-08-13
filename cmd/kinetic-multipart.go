@@ -421,6 +421,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         nxtVer = fs.computeNextVersion(objVer)
     }
     startKey := "meta." + bucket + "/" + object + "." + nxtVer + "."
+    common.KTrace(fmt.Sprintf("startKey = %s", startKey))
     endKey := common.IncStr(startKey)
 	kineticMutex.Lock()
     kc := GetKineticConnection()
@@ -435,7 +436,9 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     for _, key := range keys {
         // key has format meta.bucket/object.ver.partId.etag-1.fsize (where etag = md5?)
         // k has format partId.etag-1.fsize
+        common.KTrace(fmt.Sprintf("key = %s", string(key)))
         k  := key[len(startKey):]
+        common.KTrace(fmt.Sprintf("k = %s", string(k)))
         Keys = append(Keys, k)
     }
     debug.FreeOSMemory()
@@ -598,37 +601,19 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
 // no affect and further requests to the same uploadID would not be
 // honored.
 
-func (fs *KineticObjects) AbortMultipartUpload(ctx context.Context, bucket, object, uploadID string) error {
+func (ko *KineticObjects) AbortMultipartUpload(ctx context.Context, bucket, object, uploadID string) error {
     defer common.KUntrace(common.KTrace("Enter"))
-    startKey := "meta." + bucket + "/" + object + "."
-    endKey := common.IncStr(startKey)
-    kopts := Opts {
-        ClusterVersion:  0,
-        Force:           true,
-        Tag:             []byte{},
-        Algorithm:       kinetic_proto.Command_SHA1,
-        Synchronization: kinetic_proto.Command_WRITEBACK,
-        Timeout:         60000, //60 sec
-        Priority:        kinetic_proto.Command_NORMAL,
-    }
+    // Delete temorary json file.
+    // If this file name has version in it then it doesn't have to be deleted separately
+    objKey := bucket + SlashSeparator + object
+    jsonKey := objKey + "." + ko.metaJSONFile
+    kineticMutex.Lock()
     kc := GetKineticConnection()
-    keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
+    kc.Delete(jsonKey, ko.option())
     ReleaseConnection(kc.Idx)
-    if err != nil {
-        return err
-    }
-    if len(keys) > 0 {
-        kineticMutex.Lock()
-        kc := GetKineticConnection()
-        for _, metaKey := range keys {
-            common.KTrace(fmt.Sprintf("metaKey = %s", string(metaKey)))
-            kc.Delete(string(metaKey), kopts)
-            objKey := metaKey[len("meta."):len(metaKey)]
-            common.KTrace(fmt.Sprintf("objKey = %s", string(objKey)))
-            kc.Delete(string(objKey), kopts)
-        }
-        ReleaseConnection(kc.Idx)
-        kineticMutex.Unlock()
-    }
-	return nil
+    kineticMutex.Unlock()
+    // Delete all multiparts belong to the new version object
+    nxtVer := ko.nextVersion(bucket, object)
+    err := ko.deleteParts(objKey, nxtVer)
+    return err
 }
