@@ -1408,7 +1408,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         return nil
     }
     for _, part := range  fsMeta.Parts {
-        key =  bucket + SlashSeparator + object + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
+        key =  bucket + SlashSeparator + object + "." +  fsMeta.Version + "." + fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
         kc.Delete(key, kopts)
 	}
     key = bucket + SlashSeparator + object
