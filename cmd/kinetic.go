@@ -1927,11 +1927,17 @@ func (ko *KineticObjects) version(key string) (string, error) {
     return version, err
 }
 func (ko* KineticObjects) initialVersion() string {
-    return "00000"
+    ver := fmt.Sprintf("%.5d", 0)
+    return ver
 }
-
+// computeNextVersion
+// Version is in the range [0..99999]
+// return:  next version string with length of 5 chars
 func (ko* KineticObjects) computeNextVersion(curVer string) string {
-    return common.IncStr(curVer)
+    nVer, _ := strconv.Atoi(curVer)
+    nNxtVer := (nVer + 1) % (100000)
+    nxtVer := fmt.Sprintf("%.5d", nNxtVer)
+    return nxtVer
 }
 
 func (ko* KineticObjects) nextVersion(bucket, obj string) string {
@@ -1941,7 +1947,7 @@ func (ko* KineticObjects) nextVersion(bucket, obj string) string {
     if version == "" {
         nxtVer = ko.initialVersion()
     } else {
-        nxtVer = common.IncStr(version)
+        nxtVer = ko.computeNextVersion(version)
     }
     return nxtVer
 }
