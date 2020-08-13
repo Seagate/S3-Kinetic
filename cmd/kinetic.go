@@ -1888,3 +1888,94 @@ func (ko *KineticObjects) IsReady(_ context.Context) bool {
         return err == nil
 }
 
+func (ko *KineticObjects) makeKey(bucket, obj string) string {
+    key := bucket + SlashSeparator + obj
+    return key
+}
+
+func (ko *KineticObjects) option() Opts {
+    return Opts {
+            ClusterVersion:  0,
+            Force:           true,
+            Tag:             []byte{},
+            Algorithm:       kinetic_proto.Command_SHA1,
+            Synchronization: kinetic_proto.Command_WRITEBACK,
+            Timeout:         60000, //60 sec
+            Priority:        kinetic_proto.Command_NORMAL,
+        }
+}
+
+func (ko *KineticObjects) version(key string) (string, error) {
+    var version string = ""
+    option := ko.option()
+    kineticMutex.Lock()
+    kc := GetKineticConnection()
+    cvalue, size, err := kc.CGetMeta(key, option)
+    ReleaseConnection(kc.Idx)
+    kineticMutex.Unlock()
+    if err == nil && cvalue != nil {
+        //value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+        // Work: value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size]
+        value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))
+        meta := fsMetaV1{}
+        err = json.Unmarshal(value[:size], &meta)
+        common.KTrace(fmt.Sprintf("err = %+v, Meta: %+v", err, meta))
+        if err == nil {
+            version = meta.Version
+        }
+    }
+    return version, err
+}
+func (ko* KineticObjects) initialVersion() string {
+    return "00000"
+}
+
+func (ko* KineticObjects) computeNextVersion(curVer string) string {
+    return common.IncStr(curVer)
+}
+
+func (ko* KineticObjects) nextVersion(bucket, obj string) string {
+    objKey := ko.makeKey(bucket, obj)
+    version, _ := ko.version(objKey)
+    var nxtVer string
+    if version == "" {
+        nxtVer = ko.initialVersion()
+    } else {
+        nxtVer = common.IncStr(version)
+    }
+    return nxtVer
+}
+
+func (ko *KineticObjects) deleteKeys(keys [][]byte) error {
+    defer common.KUntrace(common.KTrace("Enter"))
+    var err error = nil
+    opt := ko.option()
+    kineticMutex.Lock()
+    kc := GetKineticConnection()
+    defer ReleaseConnection(kc.Idx)
+    defer kineticMutex.Unlock()
+
+    for _, key := range keys {
+        err = kc.Delete(string(key), opt)
+        if err != nil {
+            break
+        }
+    }
+    return err
+}
+
+func (fs *KineticObjects) deleteParts(objKey, version string) error {
+    defer common.KUntrace(common.KTrace(fmt.Sprintf("objVer = %s", version)))
+    startKey := objKey + "." + version + "."
+    endKey := common.IncStr(startKey)
+    kineticMutex.Lock()
+    kc := GetKineticConnection()
+    keys, err := kc.CGetKeyRange(startKey, endKey, true, false, 800, false, fs.option())
+    ReleaseConnection(kc.Idx)
+    kineticMutex.Unlock()
+    if err == nil {
+        err = fs.deleteKeys(keys)
+    }
+    return err
+}
+
