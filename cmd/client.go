@@ -98,11 +98,10 @@ func (c *Client) Read(value []byte) (int, error) {
                 c.ReleaseConn(c.Idx)
 		return 0, err
 	}
-	//log.Println("READ PARTS")
+    partKeyPrefix := string(c.Key) + "." + fsMeta.Version
 	for i, part := range  fsMeta.Parts {
-		///log.Println(" PARTS > 0")
 		if i == *(c.NextPartNumber) {
-			key := string(c.Key)+ "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
+			key := partKeyPrefix + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
 			cvalue, size, err := c.CGet(key, 0, c.Opts)
 			if err != nil {
 				c.ReleaseConn(c.Idx)
@@ -522,7 +521,7 @@ func (c *Client) AbortBatch(cmd Opts) error {
 }
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
 	metaKey := "meta." + key
 	metaSize := MetaSize
 	return c.CGet(metaKey, metaSize, acmd)
@@ -531,7 +530,7 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
         //log.Println(" CALL CGET ", key, size)
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
