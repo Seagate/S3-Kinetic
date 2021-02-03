@@ -29,9 +29,9 @@ typedef struct _CPrimaryStoreValue{
 
 void CInitMain();
 
-void Get(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, char* value, uint32_t* size);
+char* Get(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, char* value, uint32_t* size);
 
-void Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size, _Bool sync, int64_t sequence, int64_t connID);
+int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size, _Bool sync, int64_t sequence, int64_t connID);
 
 #ifdef _cplusplus
 }
