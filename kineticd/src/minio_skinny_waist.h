@@ -21,6 +21,18 @@
 extern "C" {
 #endif
 
+typedef struct CKVObject {
+	char* key_;
+	char* value_;
+
+	// Meta data
+	int keySize_;
+	int valueSize_;
+	char* version_;
+	char* tag_;
+	int32_t algorithm_;
+} CKVObject;
+
 typedef struct _CPrimaryStoreValue {
     char* version;
     char* tag;
@@ -40,7 +52,7 @@ int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStore
 
 int Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64_t sequence, int64_t connID);
 
-void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32 maxReturned,
+void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32_t maxReturned,
                  bool reverse, char* results, int* size);
 
 

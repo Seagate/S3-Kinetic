@@ -401,6 +401,61 @@ bool PrimaryStore::Write(BatchSet* batchSet, Command& commandResponse, const std
     return (commandResponse.status().code() == Command_Status_StatusCode_SUCCESS);
 }
 
+StoreOperationStatus PrimaryStore::checkDiskSpace() {
+    StoreOperationStatus diskSpaceStatus = StoreOperationStatus_SUCCESS;
+    uint64_t total_bytes, used_bytes;
+    if (!device_information_.GetCapacity(&total_bytes, &used_bytes)) {
+        LOG(ERROR) << "IE Store Status";
+        diskSpaceStatus = StoreOperationStatus_INTERNAL_ERROR;
+    }
+    if (diskSpaceStatus == StoreOperationStatus_SUCCESS &&
+        total_bytes - used_bytes < kMinFreeSpace) {
+        smr::Disk::noSpace(smr::Disk::DiskStatus::NO_SPACE);
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": >>>>>>>>>> Disk space is at no space threshold" << endl;
+    }
+    return diskSpaceStatus;
+}
+
+StoreOperationStatus PrimaryStore::NPut(DBObject* obj, RequestContext& reqContxt) {
+    Event e;
+    profiler_.BeginAutoScoped(kPrimaryStorePut, &e);
+
+    if (corrupt_) {
+        return StoreOperationStatus_STORE_CORRUPT;
+    }
+    StoreOperationStatus diskSpaceStatus = checkDiskSpace();
+    if (diskSpaceStatus != StoreOperationStatus_SUCCESS) {
+    	return diskSpaceStatus;
+    }
+    InternalValueRecord internal_value_record;
+
+    //Always has empty value;
+    std::string value_str = "";
+    internal_value_record.set_value(value_str);
+    internal_value_record.set_version(obj->version());
+    internal_value_record.set_tag(obj->tag());
+    internal_value_record.set_algorithm(obj->algorithm());
+    internal_value_record.set_createdTime(obj->createdTime());
+
+    std::string packed_value;
+
+    if (!internal_value_record.SerializeToString(&packed_value)) {
+        LOG(ERROR) << "Failed to serialize internal value record ";
+        return StoreOperationStatus_INTERNAL_ERROR;
+    };
+
+    LevelDBData* myValue = new LevelDBData();
+    myValue->type = LevelDBDataType::MEM_INTERNAL;
+    myValue->headerSize = packed_value.size();
+    myValue->header = new char[myValue->headerSize];
+
+    memcpy(myValue->header, packed_value.data(), packed_value.size());
+    myValue->dataSize = value->size();
+    myValue->data = value->GetUserValue();
+    myValue->memType = MEMORYType::MEM_FOR_CLIENT;
+
+
+}
 StoreOperationStatus PrimaryStore::Put(
         const std::string& key,
         const PrimaryStoreValue& primary_store_value,
@@ -413,16 +468,9 @@ StoreOperationStatus PrimaryStore::Put(
     if (corrupt_) {
         return StoreOperationStatus_STORE_CORRUPT;
     }
-    static StoreOperationStatus diskSpaceStatus = StoreOperationStatus_SUCCESS;
-    uint64_t total_bytes, used_bytes;
-    if (!device_information_.GetCapacity(&total_bytes, &used_bytes)) {
-        LOG(ERROR) << "IE Store Status";
-        return StoreOperationStatus_INTERNAL_ERROR;
-    }
-    if (diskSpaceStatus == StoreOperationStatus_SUCCESS &&
-        total_bytes - used_bytes < kMinFreeSpace) {
-        smr::Disk::noSpace(smr::Disk::DiskStatus::NO_SPACE);
-        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": >>>>>>>>>> Disk space is at no space threshold" << endl;
+    StoreOperationStatus diskSpaceStatus = checkDiskSpace();
+    if (diskSpaceStatus != StoreOperationStatus_SUCCESS) {
+    	return diskSpaceStatus;
     }
     InternalValueRecord internal_value_record;
 

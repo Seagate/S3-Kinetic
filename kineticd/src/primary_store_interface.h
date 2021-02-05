@@ -9,6 +9,7 @@
 #include "outgoing_value.h"
 #include "kinetic.pb.h"
 #include "request_context.h"
+#include "KVObject.h"
 
 using namespace com::seagate::kinetic::proto; //NOLINT
 
@@ -82,6 +83,9 @@ class PrimaryStoreInterface {
     virtual bool Write(BatchSet* batchSet, Command& commandResponse, const std::tuple<int64_t, int64_t> token,
         int64_t user_id, RequestContext& request_context) = 0;
     virtual StoreOperationStatus DoesKeyExist(const string& key) = 0;
+
+    virtual StoreOperationStatus NPut(KVObject* obj, RequestContext& reqContext) = 0;
+
 };
 
 } // namespace kinetic

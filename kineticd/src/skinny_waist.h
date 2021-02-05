@@ -15,6 +15,7 @@
 #include "user_store_interface.h"
 #include "launch_monitor.h"
 #include "leveldb/status.h"
+#include "KVObject.h"
 
 using namespace leveldb; //NOLINT
 
@@ -40,6 +41,11 @@ class SkinnyWaist : public SkinnyWaistInterface {
         ClusterVersionStoreInterface& cluster_version_store,
         LaunchMonitorInterface& launch_monitor);
     ~SkinnyWaist();
+
+    virtual StoreOperationStatus NPut(KVObject* obj, RequestContext& reqContext);
+    virtual StoreOperationStatus NDel(Key* obj, RequestContext& reqContext) {
+        return StoreOperationStatus_UNSUPPORTABLE;
+    }
 
     UserDataStatus InitUserDataStore(bool create_if_missing = false);
 

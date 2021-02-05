@@ -21,14 +21,14 @@ extern "C" {
 }
 
 SkinnyWaist *pskinny_waist__ = NULL;
-
+/*
 typedef struct _CPrimaryStoreValue {
     char* version;
     char* tag;
     //char* value;
     int32_t algorithm;
 } _CPrimaryStoreValue;
-
+*/
 char* s;
 extern "C" {
 char* allocate_pvalue_buffer(int n) {
@@ -59,6 +59,15 @@ int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStore
     return status;
 }
 
+int NPut(CKVObject* C_kvObj, int64_t userId) {
+    KVObject kvObj(C_kvObj);
+    RequestContext reqContext;
+    reqContext.setUserId(userId);
+    reqContext.setSsl(false);
+    StoreOperationStatus status = ::pskinny_waist__->NPut(&kvObj, reqContext);
+    return status;
+}
+ 
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
     kineticd_idle = false;
 

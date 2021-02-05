@@ -432,6 +432,86 @@ StoreOperationStatus SkinnyWaist::GetKeyRange(
     }
 }
 
+StoreOperationStatus SkinnyWaist::matchVersion(const std::string& key,
+    const std::string& current_version) {
+	PrimaryStoreValue existing_primary_store_value;
+	StoreOperationStatus status =
+		primary_store_.Get(key, &existing_primary_store_value, NULL);
+
+	if (status == StoreOperationStatus_SUCCESS) {
+		if (existing_primary_store_value.version != current_version) {
+			status = StoreOperationStatus_VERSION_MISMATCH;
+		}
+	} else {
+		if (status == StoreOperationStatus_STORE_CORRUPT) {
+			// Do nothing
+		} else if (getStatus == StoreOperationStatus_NOT_FOUND) {
+			if (current_version == "") {
+				status = StoreOperationStatus_VERSION_MISMATCH;
+			}
+		} else {
+			status = StoreOperationStatus_INTERNAL_ERROR;
+		}
+	}
+	return status;
+/*
+
+	if (get_existing_result == StoreOperationStatus_STORE_CORRUPT) {
+		return StoreOperationStatus_STORE_CORRUPT;
+	}
+
+	if (get_existing_result != StoreOperationStatus_SUCCESS &&
+		get_existing_result != StoreOperationStatus_NOT_FOUND) {
+		return StoreOperationStatus_INTERNAL_ERROR;
+	}
+	bool key_exists = get_existing_result == StoreOperationStatus_SUCCESS;
+
+	if ((key_exists && existing_primary_store_value.version != current_version) ||
+		(!key_exists && current_version.length())) {
+		return StoreOperationStatus_VERSION_MISMATCH;
+	}
+*/
+}
+StoreOperationStatus SkiinyWaist::processByStatus(StoreOperationStatus status) {
+    switch (status) {
+        case StoreOperationStatus_SUCCESS:
+            VLOG(5) << "PUT succeeded";
+            put_errors_ = 0;
+            break;
+        case StoreOperationStatus_NO_SPACE:
+            VLOG(5) << "PUT failed because drive does not have enough remaining space";
+            break;
+        case StoreOperationStatus_MEDIA_FAULT:
+            break;
+        case StoreOperationStatus_FROZEN:
+            break;
+        case StoreOperationStatus_STORE_CORRUPT:
+            VLOG(5) << "PUT failed because db corrupt";
+            break;
+        case StoreOperationStatus_SUPERBLOCK_IO:
+            VLOG(5) << "Superblock is not writable";
+            break;
+        default:
+            VLOG(5) << "PUT resulted in internal error";
+
+            MountManager mount_manager = MountManager();
+            put_errors_++;
+            if (mount_manager.CheckFileSystemReadonly(put_errors_,
+                store_mountpoint_, store_partition_)) {
+                LOG(ERROR) << "File system is read only need to power cycle drive";
+                #if !defined(PRODUCT_LAMARRKV)
+                // Restart system by tripping the porz only if it is not LAMARRKV
+                #ifdef VECTOR_PORZ
+                syscall(SYS_pull_PORZ);
+                #endif
+                #endif
+            }
+            LOG(ERROR) << "IE store status";
+            status = StoreOperationStatus_INTERNAL_ERROR;
+    }
+    return status;
+
+}
 StoreOperationStatus SkinnyWaist::Put(
         int64_t user_id,
         const std::string& key,
@@ -459,64 +539,18 @@ StoreOperationStatus SkinnyWaist::Put(
     // Clients who don't care about version checking can gain
     // performance by setting a flag. If they set that flag
     // we skip all version checking and thus save some leveldb calls
+    StoreOperationStatus status;
+
     if (!ignore_current_version) {
-        VLOG(5) << "PUT checking existing value";
-        PrimaryStoreValue existing_primary_store_value;
-        StoreOperationStatus get_existing_result =
-            primary_store_.Get(key, &existing_primary_store_value, NULL);
-
-        if (get_existing_result == StoreOperationStatus_STORE_CORRUPT) {
-            return StoreOperationStatus_STORE_CORRUPT;
-        }
-
-        if (get_existing_result != StoreOperationStatus_SUCCESS &&
-            get_existing_result != StoreOperationStatus_NOT_FOUND) {
-            return StoreOperationStatus_INTERNAL_ERROR;
-        }
-        bool key_exists = get_existing_result == StoreOperationStatus_SUCCESS;
-
-        if ((key_exists && existing_primary_store_value.version != current_version) ||
-            (!key_exists && current_version.length())) {
-            return StoreOperationStatus_VERSION_MISMATCH;
-        }
+    	status = matchVersion(key, current_version);
+    	if (status != StoreOperationStatus_SUCCESS) {
+    		return status;
+    	}
     }
 
-    switch (primary_store_.Put(key, primary_store_value, value, guarantee_durable, token)) {
-        case StoreOperationStatus_SUCCESS:
-            VLOG(5) << "PUT succeeded";
-            put_errors_ = 0;
-            return StoreOperationStatus_SUCCESS;
-        case StoreOperationStatus_NO_SPACE:
-            VLOG(5) << "PUT failed because drive does not have enough remaining space";
-            return StoreOperationStatus_NO_SPACE;
-        case StoreOperationStatus_MEDIA_FAULT:
-            return StoreOperationStatus_MEDIA_FAULT;
-        case StoreOperationStatus_FROZEN:
-            return StoreOperationStatus_FROZEN;
-        case StoreOperationStatus_STORE_CORRUPT:
-            VLOG(5) << "PUT failed because db corrupt";
-            return StoreOperationStatus_STORE_CORRUPT;
-        case StoreOperationStatus_SUPERBLOCK_IO:
-            VLOG(5) << "Superblock is not writable";
-            return StoreOperationStatus_SUPERBLOCK_IO;
-        default:
-            VLOG(5) << "PUT resulted in internal error";
-
-            MountManager mount_manager = MountManager();
-            put_errors_++;
-            if (mount_manager.CheckFileSystemReadonly(put_errors_,
-                store_mountpoint_, store_partition_)) {
-                LOG(ERROR) << "File system is read only need to power cycle drive";
-                #if !defined(PRODUCT_LAMARRKV)
-                // Restart system by tripping the porz only if it is not LAMARRKV
-                #ifdef VECTOR_PORZ
-                syscall(SYS_pull_PORZ);
-                #endif
-                #endif
-            }
-            LOG(ERROR) << "IE store status";
-            return StoreOperationStatus_INTERNAL_ERROR;
-    }
+    status = primary_store_.Put(key, primary_store_value, value, guarantee_durable, token);
+    status = processByStatus(status);
+    return status;
 }
 
 StoreOperationStatus SkinnyWaist::Delete(
@@ -867,3 +901,24 @@ bool SkinnyWaist::Crc64Integrity(std::string value_str, std::string tag_str) {
     /// this algorithm in it's tag
     return true;
 }
+
+
+StoreOperationStatus SkinnyWaist::NPut(KVObject* obj, RequestContext& reqContext) {
+	if (obj == NULL || obj->key().str() == "") {
+		return StoreOperationStatus_INVALID_REQUEST;
+	}
+    if (!authorizer_.AuthorizeKey(reqContext.userId(), Domain::kWrite, obj->key().str(), reqContext)) {
+        return StoreOperationStatus_AUTHORIZATION_FAILURE;
+    }
+	StoreOperationStatus status;
+	if (!reqContext.ignoreVersion()) {
+		status = matchVersion(obj->key().str(), reqContext.version());
+		if (status != StoreOperationStatus_SUCCESS) {
+			return status;
+		}
+	}
+    status = primary_store_.NPut(obj, reqContext);
+    status = processByStatus(status);
+    return status;
+}
+

@@ -658,12 +658,28 @@ func (c *Client) Delete(key string, cmd Opts) error {
 func (c *Client) CPutMeta(key string, value []byte, size int, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
 	metaKey := "meta." + key
-	return c.CPut(metaKey, value, size, cmd)
+	return uint32(size), nil //c.CPut(metaKey, value, size, cmd)
 
+}
+
+type MetaData struct {
+	Created time.Time
+}
+func (c *Client) createMetaData(key string) []byte {        
+	var bucketInfo BucketInfo
+	bucketInfo.Name = key
+	bucketInfo.Created = time.Now()
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	enc.Encode(bucketInfo)
+    gbuf := allocateValBuf(buf.Len())
+	copy(gbuf, buf.Bytes())    
+	return gbuf
 }
 
 func (c *Client) CPut(key string, value []byte, size int, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
+        /*
 	//start := time.Now()
 	var psv C._CPrimaryStoreValue
 	psv.version = C.CString(string(cmd.NewVersion))
@@ -681,6 +697,37 @@ func (c *Client) CPut(key string, value []byte, size int, cmd Opts) (uint32, err
 	status = C.Put(1, cKey, C.CString(currentVersion), &psv, cValue, C.size_t(size), false, 1, 1)
         //log.Println("MINIO CPUT DONE ", toKineticError(KineticError(int(status))), time.Since(start))
         return uint32(size),  toKineticError(KineticError(int(status)))
+typedef struct CKVObject {
+	char* key_;
+	char* value_;
+
+	// Meta data
+	int keySize_;
+	int valueSize_;
+	char* version_;
+	char* tag_;
+	int32_t algorithm_;
+} CKVObject;
+        currentVersion := "1"
+
+*/
+    //var kvObj C.CKVObject
+    kvObj := C.struct_CKVObject
+    kvObj.key_ = C.CString(key)
+    kvObj.keySize_ = len(key)
+	if  size  > 0 {
+		kvObj.value_ = (*C.char)(unsafe.Pointer(&value[0]))
+	} else {
+		kvObj.value_  = (*C.char)(nil)
+		size = 0
+	}
+	kvObj.valueSize_= size
+    kvObj.version_ = C.CString(string(cmd.NewVersion))
+    kvObj.tag_ = C.CString(string(cmd.Tag))
+    kvObj.algorithm_ = C.int(cmd.Algorithm)
+    userId := C.int(1)
+    status := C.Put(&kvObj, userId)
+    return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
 
