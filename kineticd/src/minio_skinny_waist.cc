@@ -22,7 +22,7 @@ extern "C" {
 }
 
 SkinnyWaist *pskinny_waist__ = NULL;
-
+/*
 typedef struct CKVObject {
 	char* key_;
 	char* value_;
@@ -34,7 +34,7 @@ typedef struct CKVObject {
 	char* tag_;
 	int32_t algorithm_;
 } CKVObject;
-
+*/
 typedef struct _CPrimaryStoreValue {
     char* version;
     char* tag;
@@ -72,18 +72,6 @@ int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStore
     return status;
 }
 
-int NPut(CKVObject* C_kvObj, int64_t userId) {
-/*
-    KVObject kvObj(C_kvObj);
-    RequestContext reqContext;
-    reqContext.setUserId(userId);
-    reqContext.setSsl(false);
-    StoreOperationStatus status = ::pskinny_waist__->NPut(&kvObj, reqContext);
-    return status;
-*/
-    return 1;
-}
- 
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
     kineticd_idle = false;
 
@@ -153,4 +141,17 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
     *size = totalSize;
 }
 
+//==========
+// Operations with new signatures
+//==========
+
+int NPut(CKVObject* C_kvObj, int64_t userId) {
+    KVObject kvObj(C_kvObj);
+    RequestContext reqContext;
+    reqContext.setUserId(userId);
+    reqContext.setSsl(false);
+    StoreOperationStatus status = ::pskinny_waist__->NPut(&kvObj, reqContext);
+    return status;
+}
+ 
 }

@@ -21,7 +21,19 @@
 extern "C" {
 #endif
 
-typedef struct _CPrimaryStoreValue{
+typedef struct CKVObject {
+	char* key_;
+	char* value_;
+
+	// Meta data
+	int keySize_;
+	int valueSize_;
+	char* version_;
+	char* tag_;
+	int32_t algorithm_;
+} CKVObject;
+
+typedef struct _CPrimaryStoreValue {
     char* version;
     char* tag;
     char* value;

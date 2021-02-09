@@ -3,6 +3,18 @@
 
 //#include "minio_skinny_waist.h"
 
+typedef struct CKVObject {
+        char* key_;
+        char* value_;
+
+        // Meta data
+        int keySize_;
+        int valueSize_;
+        char* version_;
+        char* tag_;
+        int32_t algorithm_;
+} CKVObject;
+
 namespace com {
 namespace seagate {
 namespace kinetic {
@@ -86,16 +98,14 @@ private:
 
 class KVObject {
 public:
-/*
-    KVObject(struct CKVObject* ckvObj) {
-//KVObject::KVObject(struct CKVObject* ckvObj) {
+//    KVObject(struct CKVObject* ckvObj) {
+KVObject(struct CKVObject* ckvObj) {
     key_ = Key(ckvObj->key_, ckvObj->keySize_);
     value_ = Value(ckvObj->value_, ckvObj->valueSize_);
     value_.setTag(ckvObj->tag_);
     value_.setAlgorithm(ckvObj->algorithm_);
     value_.setVersion(ckvObj->version_); 
 }
-*/
     const string& version() { return value_.version(); }
     const string& tag() { return value_.tag(); }
     int32_t algorithm() { return value_.algorithm(); }
