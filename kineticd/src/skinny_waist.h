@@ -43,7 +43,7 @@ class SkinnyWaist : public SkinnyWaistInterface {
     ~SkinnyWaist();
 
     virtual StoreOperationStatus NPut(KVObject* obj, RequestContext& reqContext);
-    virtual StoreOperationStatus NDel(Key* obj, RequestContext& reqContext) {
+    virtual StoreOperationStatus NDel(Key* key, RequestContext& reqContext) {
         return StoreOperationStatus_UNSUPPORTABLE;
     }
 
@@ -133,6 +133,8 @@ class SkinnyWaist : public SkinnyWaistInterface {
     }
 
     private:
+    StoreOperationStatus matchVersion(const std::string& key, const std::string& current_version);
+    StoreOperationStatus processByStatus(StoreOperationStatus status);
     /// Functions For MediaScan Integrity Checks
     bool Sha1Integrity(std::string value_str, std::string tag_str);
     bool Sha2Integrity(std::string value_str, std::string tag_str);

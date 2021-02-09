@@ -78,25 +78,29 @@ TEST_F(AuthorizerTest, AuthorizeGlobalSucceedsIfThereIsAnApplicableDomain) {
 
 TEST_F(AuthorizerTest, AuthorizeGlobalSucceedsIfTlsRequiredTrueAndRequestIsSSL) {
     CreateUserWithSingleDomain(100, 0, "", Domain::kSetup, true);
-    RequestContext request_context = {true};
+    RequestContext request_context; // .= {true};
+    request_context.setSsl(true);
     EXPECT_TRUE(authorizer_.AuthorizeGlobal(100, Domain::kSetup, request_context));
 }
 
 TEST_F(AuthorizerTest, AuthorizeGlobalFailsIfTlsRequiredTrueAndRequestNotSSL) {
     CreateUserWithSingleDomain(100, 0, "", Domain::kSetup, true);
-    RequestContext request_context = {false};
+    RequestContext request_context; // = {false};
+    request_context.setSsl(false);
     EXPECT_FALSE(authorizer_.AuthorizeGlobal(100, Domain::kSetup, request_context));
 }
 
 TEST_F(AuthorizerTest, AuthorizeGlobalSucceedsIfTlsRequiredFalseAndRequestIsSSL) {
     CreateUserWithSingleDomain(100, 0, "", Domain::kSetup, false);
-    RequestContext request_context = {true};
+    RequestContext request_context; // = {true};
+    request_context.setSsl(true);
     EXPECT_TRUE(authorizer_.AuthorizeGlobal(100, Domain::kSetup, request_context));
 }
 
 TEST_F(AuthorizerTest, AuthorizeGlobalSucceedsIfTlsRequiredFalseAndRequestIsNotSSL) {
     CreateUserWithSingleDomain(100, 0, "", Domain::kSetup, false);
-    RequestContext request_context = {false};
+    RequestContext request_context; // = {false};
+    request_context.setSsl(false);
     EXPECT_TRUE(authorizer_.AuthorizeGlobal(100, Domain::kSetup, request_context));
 }
 

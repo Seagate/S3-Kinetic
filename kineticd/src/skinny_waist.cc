@@ -10,6 +10,9 @@
 #include <sys/syscall.h>
 
 #include <sys/syscall.h>
+#include "store_operation_status.h"
+#include "KVObject.h"
+
 using com::seagate::kinetic::SkinnyWaist;
 using com::seagate::kinetic::StoreOperationStatus;
 
@@ -445,7 +448,7 @@ StoreOperationStatus SkinnyWaist::matchVersion(const std::string& key,
 	} else {
 		if (status == StoreOperationStatus_STORE_CORRUPT) {
 			// Do nothing
-		} else if (getStatus == StoreOperationStatus_NOT_FOUND) {
+		} else if (status == StoreOperationStatus_NOT_FOUND) {
 			if (current_version == "") {
 				status = StoreOperationStatus_VERSION_MISMATCH;
 			}
@@ -472,7 +475,7 @@ StoreOperationStatus SkinnyWaist::matchVersion(const std::string& key,
 	}
 */
 }
-StoreOperationStatus SkiinyWaist::processByStatus(StoreOperationStatus status) {
+StoreOperationStatus SkinnyWaist::processByStatus(StoreOperationStatus status) {
     switch (status) {
         case StoreOperationStatus_SUCCESS:
             VLOG(5) << "PUT succeeded";
@@ -904,15 +907,15 @@ bool SkinnyWaist::Crc64Integrity(std::string value_str, std::string tag_str) {
 
 
 StoreOperationStatus SkinnyWaist::NPut(KVObject* obj, RequestContext& reqContext) {
-	if (obj == NULL || obj->key().str() == "") {
+	if (obj == NULL || strcmp(obj->key().data(), "") == 0) {
 		return StoreOperationStatus_INVALID_REQUEST;
 	}
-    if (!authorizer_.AuthorizeKey(reqContext.userId(), Domain::kWrite, obj->key().str(), reqContext)) {
+    if (!authorizer_.AuthorizeKey(reqContext.userId(), Domain::kWrite, obj->key().data(), reqContext)) {
         return StoreOperationStatus_AUTHORIZATION_FAILURE;
     }
 	StoreOperationStatus status;
 	if (!reqContext.ignoreVersion()) {
-		status = matchVersion(obj->key().str(), reqContext.version());
+		status = matchVersion(obj->key().data(), obj->version());
 		if (status != StoreOperationStatus_SUCCESS) {
 			return status;
 		}

@@ -9,7 +9,7 @@
 #include "outgoing_value.h"
 #include "kinetic.pb.h"
 #include "request_context.h"
-#include "KVObject.h"
+//#include "KVObject.h"
 
 using namespace com::seagate::kinetic::proto; //NOLINT
 
@@ -55,6 +55,8 @@ class PrimaryStoreIteratorInterface {
     virtual bool Tag(std::string *tag) = 0;
     virtual bool Algorithm(int32_t *algorithm) = 0;
 };
+
+class KVObject;
 
 class PrimaryStoreInterface {
     public:

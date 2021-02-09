@@ -89,6 +89,9 @@ class MockSkinnyWaist : public SkinnyWaistInterface {
     MOCK_METHOD5(Write, bool(BatchSet* batchSet, Command& command_response, const std::tuple<int64_t, int64_t> token,
         int64_t user_id, RequestContext& request_context));
     MOCK_METHOD1(Flush, leveldb::Status(bool toSST));
+
+    MOCK_METHOD2(NPut, StoreOperationStatus(KVObject* obj, RequestContext& reqContext));
+    MOCK_METHOD2(NDel, StoreOperationStatus(Key* key, RequestContext& reqContext));
 };
 
 } // namespace kinetic

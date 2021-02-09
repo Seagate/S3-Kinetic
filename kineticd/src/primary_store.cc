@@ -22,6 +22,7 @@
 #include "server.h"
 #include "smrdisk/ValueFileCache.h"
 #include "smrdisk/Disk.h"
+#include "KVObject.h"
 
 using namespace com::seagate::kinetic::cmd; //NOLINT
 namespace com {
@@ -416,7 +417,7 @@ StoreOperationStatus PrimaryStore::checkDiskSpace() {
     return diskSpaceStatus;
 }
 
-StoreOperationStatus PrimaryStore::NPut(DBObject* obj, RequestContext& reqContxt) {
+StoreOperationStatus PrimaryStore::NPut(KVObject* obj, RequestContext& reqContxt) {
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStorePut, &e);
 
@@ -435,7 +436,7 @@ StoreOperationStatus PrimaryStore::NPut(DBObject* obj, RequestContext& reqContxt
     internal_value_record.set_version(obj->version());
     internal_value_record.set_tag(obj->tag());
     internal_value_record.set_algorithm(obj->algorithm());
-    internal_value_record.set_createdTime(obj->createdTime());
+    //internal_value_record.set_createdTime(obj->createdTime());
 
     std::string packed_value;
 
@@ -450,12 +451,41 @@ StoreOperationStatus PrimaryStore::NPut(DBObject* obj, RequestContext& reqContxt
     myValue->header = new char[myValue->headerSize];
 
     memcpy(myValue->header, packed_value.data(), packed_value.size());
-    myValue->dataSize = value->size();
-    myValue->data = value->GetUserValue();
+    myValue->dataSize = obj->size();
+    myValue->data = obj->value().data(); //value->GetUserValue();
     myValue->memType = MEMORYType::MEM_FOR_CLIENT;
-
-
+    StoreOperationStatus status = NPut(obj, reqContxt);
+    status = handlePutResponse(status, myValue);
+    return status;
 }
+
+StoreOperationStatus PrimaryStore::handlePutResponse(StoreOperationStatus status,
+    LevelDBData* value) {
+    switch (status) {
+        case StoreOperationStatus_SUCCESS:
+            return StoreOperationStatus_SUCCESS;
+        case StoreOperationStatus_NO_SPACE:
+            delete [] value->header;
+            delete value;
+            LOG(ERROR) << "Failed to persist key/value in dbase. No space available.";//NO_SPELL
+            return StoreOperationStatus_NO_SPACE;
+        case StoreOperationStatus_FROZEN:
+            delete [] value->header;
+            delete value;
+            LOG(ERROR) << "Failed to persist key/value in dbase. No space available.";//NO_SPELL
+            return StoreOperationStatus_FROZEN;
+        case StoreOperationStatus_SUPERBLOCK_IO:
+            delete [] value->header;
+            delete value;
+            return StoreOperationStatus_SUPERBLOCK_IO;
+        default:
+            delete [] value->header;
+            delete value;
+            LOG(ERROR) << "Failed to persist key/value in dbase ";//NO_SPELL
+            return StoreOperationStatus_INTERNAL_ERROR;
+    }
+}
+
 StoreOperationStatus PrimaryStore::Put(
         const std::string& key,
         const PrimaryStoreValue& primary_store_value,

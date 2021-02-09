@@ -2,7 +2,7 @@
 #define KINETIC_SKINNY_WAIST_INTERFACE_H_
 #include "connection_time_handler.h"
 #include "leveldb/status.h"
-#include "KVObject.h"
+//#include "KVObject.h"
 
 enum class UserDataStatus {
     STORE_INACCESSIBLE,
@@ -26,6 +26,9 @@ using com::seagate::kinetic::cmd::BatchSet;
 /**
 * Implementations must be threadsafe
 */
+class KVObject;
+class Key;
+
 class SkinnyWaistInterface {
     public:
     virtual ~SkinnyWaistInterface() {}

@@ -10,6 +10,7 @@
 #include "kernel_mem_mgr.h"
 #include "mem/DynamicMemory.h"
 #include "store_operation_status.h"
+//#include "KVObject.h"
 
 using namespace std; // NOLINT
 using namespace com::seagate::kinetic; // NOLINT
@@ -21,14 +22,26 @@ extern "C" {
 }
 
 SkinnyWaist *pskinny_waist__ = NULL;
-/*
+
+typedef struct CKVObject {
+	char* key_;
+	char* value_;
+
+	// Meta data
+	int keySize_;
+	int valueSize_;
+	char* version_;
+	char* tag_;
+	int32_t algorithm_;
+} CKVObject;
+
 typedef struct _CPrimaryStoreValue {
     char* version;
     char* tag;
     //char* value;
     int32_t algorithm;
 } _CPrimaryStoreValue;
-*/
+
 char* s;
 extern "C" {
 char* allocate_pvalue_buffer(int n) {
@@ -60,12 +73,15 @@ int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStore
 }
 
 int NPut(CKVObject* C_kvObj, int64_t userId) {
+/*
     KVObject kvObj(C_kvObj);
     RequestContext reqContext;
     reqContext.setUserId(userId);
     reqContext.setSsl(false);
     StoreOperationStatus status = ::pskinny_waist__->NPut(&kvObj, reqContext);
     return status;
+*/
+    return 1;
 }
  
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
@@ -136,4 +152,5 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
     //cout << " RESULTS " << string(results) << endl;
     *size = totalSize;
 }
+
 }

@@ -1,7 +1,7 @@
 #ifndef _KV_OBJECT_H_
 #define _KV_OBJECT_H_
 
-#include "minio_skinny_waist.h"
+//#include "minio_skinny_waist.h"
 
 namespace com {
 namespace seagate {
@@ -17,7 +17,7 @@ public:
 		data_ = key;
                 size_ = size;
 	}
-	const char* data() {
+	const char* data() const {
 		return data_;
 	}
 	int size() {
@@ -74,6 +74,8 @@ public:
 	const string& tag() { return metaData_.tag(); }
 	const string& version() { return metaData_.version(); }
 	int32_t algorithm() { return metaData_.algorithm(); }
+	int size() { return metaData_.size(); }
+        char* data() const { return data_; }
 
 private:
 	char* data_;
@@ -81,15 +83,25 @@ private:
 };
 
 
+
 class KVObject {
 public:
+/*
     KVObject(struct CKVObject* ckvObj) {
-        key_ = Key(ckvObj->key_, ckvObj->keySize_);
-        value_ = Value(ckvObj->value_, ckvObj->valueSize_);
-        value_.setTag(ckvObj->tag_);
-        value_.setAlgorithm(ckvObj->algorithm_);
-        value_.setVersion(ckvObj->version_); 
-    }
+//KVObject::KVObject(struct CKVObject* ckvObj) {
+    key_ = Key(ckvObj->key_, ckvObj->keySize_);
+    value_ = Value(ckvObj->value_, ckvObj->valueSize_);
+    value_.setTag(ckvObj->tag_);
+    value_.setAlgorithm(ckvObj->algorithm_);
+    value_.setVersion(ckvObj->version_); 
+}
+*/
+    const string& version() { return value_.version(); }
+    const string& tag() { return value_.tag(); }
+    int32_t algorithm() { return value_.algorithm(); }
+    int size() { return value_.size(); }
+    const Value& value() { return value_; }
+    const Key& key() { return key_; }
 
 private:
 	Key key_;

@@ -53,6 +53,7 @@ class MockPrimaryStore : public PrimaryStoreInterface {
     MOCK_METHOD5(Write, bool(BatchSet* batchSet, Command& command_response, const std::tuple<int64_t, int64_t> token,
         int64_t user_id, RequestContext& request_context));
     MOCK_METHOD1(DoesKeyExist, StoreOperationStatus(const string& key));
+    MOCK_METHOD2(NPut, StoreOperationStatus(KVObject* obj, RequestContext& reqContext));
 };
 
 } // namespace kinetic
