@@ -7,11 +7,13 @@ namespace kinetic {
 
 class RequestContext {
 public:
-    RequestContext() { //int64 userId) {
-        userId_ = 1; //userId;
-	is_ssl = false;
-	writeThrough_ = false;
-	ignoreVersion_ = true;
+    RequestContext() {
+        userId_ = 1;
+	    is_ssl = false;
+	    writeThrough_ = false;
+	    ignoreVersion_ = true;
+        seq_ = 1;
+        connId_ = 1;
     }
 
     bool ssl() { return is_ssl; }
@@ -23,12 +25,18 @@ public:
 
     bool ignoreVersion() { return ignoreVersion_; }
     void setIgnoreVersion(bool ignore) { ignoreVersion_ = ignore; }
+    void setSeq(int64_t seq) { seq_ = seq; }
+    int64_t seq() { return seq_; }
+    void setConnId(int64_t connId) { connId_ = connId; }
+    int64_t connId() { return connId_; }
 
     bool is_ssl;
 private:
     int64_t userId_;
     bool writeThrough_;
     bool ignoreVersion_;
+    int64_t seq_;
+    int64_t connId_;
 };
 
 } // namespace kinetic

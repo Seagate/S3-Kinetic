@@ -145,11 +145,18 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
 // Operations with new signatures
 //==========
 
-int NPut(CKVObject* C_kvObj, int64_t userId) {
+int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx) { //int64_t userId) {
+cout << "NPut: Enter" << endl;
+cout << "usrId = " << C_reqCtx->userId_ << ", writeThru = " << C_reqCtx->writeThrough_ << endl;
     KVObject kvObj(C_kvObj);
     RequestContext reqContext;
-    reqContext.setUserId(userId);
-    reqContext.setSsl(false);
+    reqContext.setUserId(C_reqCtx->userId_);
+    reqContext.setSsl(C_reqCtx->ssl_ == 1); //false);
+    reqContext.setWriteThrough(C_reqCtx->writeThrough_ == 1); //false);
+    reqContext.setIgnoreVersion(C_reqCtx->ignoreVersion_ == 1); //false);
+    reqContext.setSeq(C_reqCtx->seq_);
+    reqContext.setConnId(C_reqCtx->connId_);
+cout << "Calling skinny waist.NPut()" << endl;
     StoreOperationStatus status = ::pskinny_waist__->NPut(&kvObj, reqContext);
     return status;
 }

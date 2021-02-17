@@ -417,15 +417,18 @@ StoreOperationStatus PrimaryStore::checkDiskSpace() {
     return diskSpaceStatus;
 }
 
-StoreOperationStatus PrimaryStore::NPut(KVObject* obj, RequestContext& reqContxt) {
+StoreOperationStatus PrimaryStore::NPut(KVObject* obj, RequestContext& reqCtx) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStorePut, &e);
 
     if (corrupt_) {
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Corrupt Exit" << endl;
         return StoreOperationStatus_STORE_CORRUPT;
     }
     StoreOperationStatus diskSpaceStatus = checkDiskSpace();
     if (diskSpaceStatus != StoreOperationStatus_SUCCESS) {
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": No diskspae Exit" << endl;
     	return diskSpaceStatus;
     }
     InternalValueRecord internal_value_record;
@@ -440,22 +443,30 @@ StoreOperationStatus PrimaryStore::NPut(KVObject* obj, RequestContext& reqContxt
 
     std::string packed_value;
 
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Call serialize" << endl;
     if (!internal_value_record.SerializeToString(&packed_value)) {
         LOG(ERROR) << "Failed to serialize internal value record ";
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Fail to serialize Exit" << endl;
         return StoreOperationStatus_INTERNAL_ERROR;
     };
 
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
     LevelDBData* myValue = new LevelDBData();
     myValue->type = LevelDBDataType::MEM_INTERNAL;
     myValue->headerSize = packed_value.size();
     myValue->header = new char[myValue->headerSize];
 
     memcpy(myValue->header, packed_value.data(), packed_value.size());
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
     myValue->dataSize = obj->size();
     myValue->data = obj->value().data(); //value->GetUserValue();
     myValue->memType = MEMORYType::MEM_FOR_CLIENT;
-    StoreOperationStatus status = NPut(obj, reqContxt);
+    std::tuple<uint64_t, int64_t> token {reqCtx.seq(), reqCtx.connId()}; // NOLINT
+    // TODO: avoid key copy
+    string sKey(obj->key().data(), obj->key().size());
+    StoreOperationStatus status = key_value_store_.Put(sKey, (char*) myValue, reqCtx.writeThrough(), token);
     status = handlePutResponse(status, myValue);
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
     return status;
 }
 

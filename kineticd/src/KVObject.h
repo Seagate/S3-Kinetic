@@ -15,6 +15,23 @@ typedef struct CKVObject {
         int32_t algorithm_;
 } CKVObject;
 
+typedef struct CRequestContext {
+    CRequestContext() {
+        userId_ = 1;
+	    ssl_ = 0; //false;
+	    writeThrough_ = 0; //false;
+	    ignoreVersion_ = 1; //true;
+        seq_ = 1;
+        connId_ = 1;
+    }
+    int ssl_;
+    int64_t userId_;
+    int writeThrough_;
+    int ignoreVersion_;
+    int64_t seq_;
+    int64_t connId_;
+} CRequestContext;
+
 namespace com {
 namespace seagate {
 namespace kinetic {
@@ -32,7 +49,7 @@ public:
 	const char* data() const {
 		return data_;
 	}
-	int size() {
+	int size() const {
 		return size_;
 	}
 private:

@@ -680,6 +680,7 @@ func (c *Client) createMetaData(key string) []byte {
 */
 func (c *Client) CPut(key string, value []byte, size int, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
+    print("key: ", key, ", value: " , value, ", size: ", size)
         /*
 	//start := time.Now()
 	var psv C._CPrimaryStoreValue
@@ -723,12 +724,23 @@ typedef struct CKVObject {
 		kvObj.value_  = (*C.char)(nil)
 		size = 0
 	}
+    common.KTrace("1") 
 	kvObj.valueSize_= C.int(size)
     kvObj.version_ = C.CString(string(cmd.NewVersion))
     kvObj.tag_ = C.CString(string(cmd.Tag))
     kvObj.algorithm_ = C.int(cmd.Algorithm)
-    userId := C.long(1)
-    status := C.NPut(&kvObj, userId)
+    //userId := C.long(1)
+    common.KTrace("2") 
+    var reqCtx C.CRequestContext
+    reqCtx.userId_ = C.long(1)
+    reqCtx.seq_ = C.long(1)
+    reqCtx.connId_ = C.long(1)
+    reqCtx.is_ssl = C.int(0)
+    reqCtx.writeThrough_ = C.int(0)
+    reqCtx.ignoreVersion_ = C.int(1)
+    
+    status := C.NPut(&kvObj, &reqCtx) //userId)
+    common.KTrace("3") 
     return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
