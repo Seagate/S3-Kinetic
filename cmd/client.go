@@ -522,15 +522,17 @@ func (c *Client) AbortBatch(cmd Opts) error {
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-	metaKey := "meta." + key
+	//metaKey := "meta." + key
 	metaSize := MetaSize
-	return c.CGet(metaKey, metaSize, acmd)
+	//return nil, uint32(MetaSize), nil //c.CGet(metaKey, metaSize, acmd)
+	return c.CGet(key, metaSize, acmd)
 }
 
 
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("key:%s, size:%d", key, size))
         //log.Println(" CALL CGET ", key, size)
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
@@ -551,6 +553,7 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 	//log.Println("CVALUE BVALUE", cvalue, &bvalue[0])
 	var err error = nil
 	if status != 0 || cvalue == nil {
+        common.KTrace("Not Found")
 		err =  errKineticNotFound //errors.New("NOT FOUND")
 	}
         //log.Println(" CGET DONE ", err, cvalue)
@@ -654,14 +657,16 @@ func (c *Client) Delete(key string, cmd Opts) error {
 	}
 	return err
 }
+
+/*
 func (c *Client) CPutMeta(key string, value []byte, size int, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-	metaKey := "meta." + key
+//	metaKey := "meta." + key
 	//return uint32(size), nil //c.CPut(metaKey, value, size, cmd)
-	return c.CPut(metaKey, value, size, cmd)
+	return c.CPut(key, value, size, cmd)
 
 }
-/*
+
 type MetaData struct {
 	Created time.Time
 }

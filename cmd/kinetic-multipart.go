@@ -206,12 +206,14 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
 	        kineticMutex.Unlock()
 		return pi, err
 	}
+/*
 	_, err = kc.CPutMeta(key, buf, len(bytes), kopts)
         if err != nil {
 		ReleaseConnection(kc.Idx)
 	        kineticMutex.Unlock()
                 return pi, err
         }
+*/
         ReleaseConnection(kc.Idx)
 	kineticMutex.Unlock()
 	//log.Println("END: PutObjectPart", key, bufSize)
@@ -564,12 +566,14 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         return oi, err
     }
     //Only Meta data for the object
+/*
     _, err = kc.CPutMeta(key, value, len(value), kopts)
     if err != nil {
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
         return oi, err
     }
+*/
     ReleaseConnection(kc.Idx)
     kineticMutex.Unlock()
     // Delete previous partial objects
