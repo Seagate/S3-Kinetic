@@ -279,8 +279,10 @@ StoreOperationStatus PrimaryStore::Get(
     if (value == NULL) {
         ignore_value = true;
     }
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "IGNORE VALUE = " << ignore_value << endl;
     switch (key_value_store_.Get(key, packed_value, ignore_value, true, buff)) {
         case StoreOperationStatus_SUCCESS:
+            cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "Successful, key = " << key << endl;
             break;
         case StoreOperationStatus_NOT_FOUND:
             delete[] packed_value;
@@ -330,6 +332,7 @@ StoreOperationStatus PrimaryStore::Get(
     primary_store_value->version = internal_value_record.version();
     primary_store_value->tag = internal_value_record.tag();
     primary_store_value->algorithm = internal_value_record.algorithm();
+    primary_store_value->meta = internal_value_record.meta();
 
     if (value != NULL) {
         if (myData.type != LevelDBDataType::MEM_INTERNAL) {
@@ -439,6 +442,7 @@ StoreOperationStatus PrimaryStore::NPut(KVObject* obj, RequestContext& reqCtx) {
     internal_value_record.set_version(obj->version());
     internal_value_record.set_tag(obj->tag());
     internal_value_record.set_algorithm(obj->algorithm());
+    internal_value_record.set_meta(obj->clientMeta());
     //internal_value_record.set_createdTime(obj->createdTime());
 
     std::string packed_value;

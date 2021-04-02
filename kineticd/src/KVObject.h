@@ -7,6 +7,10 @@ typedef struct CKVObject {
         char* key_;
         char* value_;
 
+        // Meta string from marshalling the fsMetaV1 from Minio.
+        char* meta_;
+        int metaSize_;
+
         // Meta data
         int keySize_;
         int valueSize_;
@@ -74,12 +78,15 @@ public:
     int32_t algorithm() { return algorithm_; }
     void setVersion(char* version) { version_ = string(version); }
     const string& version() { return version_; }
+    void setClientMeta(char* meta, int size) { clientMeta_ = string(meta, size); }
+    const string& clientMeta() const { return clientMeta_; }
 
 private:
     int size_;
     string version_;
     string tag_;
     int32_t algorithm_;
+    string clientMeta_;
 };
 
 class Value {
@@ -94,17 +101,18 @@ public:
 	void setMetaData(MetaData& metaData) {
 		metaData_ = metaData;
 	}
-	const MetaData& metaData() {
+	const MetaData& metaData() const {
 		return metaData_;
 	}
 	void setTag(char* tag) { metaData_.setTag(tag); }
 	void setVersion(char* version) { metaData_.setVersion(version); }
 	void setAlgorithm(int32_t algorithm) { metaData_.setAlgorithm(algorithm); }
+    void setClientMeta(char* meta, int size) { metaData_.setClientMeta(meta, size); }
 	const string& tag() { return metaData_.tag(); }
 	const string& version() { return metaData_.version(); }
 	int32_t algorithm() { return metaData_.algorithm(); }
 	int size() { return metaData_.size(); }
-        char* data() const { return data_; }
+    char* data() const { return data_; }
 
 private:
 	char* data_;
@@ -129,6 +137,7 @@ KVObject(struct CKVObject* ckvObj) {
     int size() { return value_.size(); }
     const Value& value() { return value_; }
     const Key& key() { return key_; }
+    const string& clientMeta() { return value_.metaData().clientMeta(); }
 
 private:
 	Key key_;

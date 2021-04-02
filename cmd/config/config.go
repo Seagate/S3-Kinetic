@@ -28,6 +28,7 @@ import (
 	"github.com/minio/minio/pkg/auth"
 	"github.com/minio/minio/pkg/env"
 	"github.com/minio/minio/pkg/madmin"
+	"github.com/minio/minio/common"
 )
 
 // Error config error type
@@ -416,8 +417,10 @@ func LookupWorm() (bool, error) {
 
 // New - initialize a new server config.
 func New() Config {
+    defer common.KUntrace(common.KTrace("Enter"))
 	srvCfg := make(Config)
 	for _, k := range SubSystems.ToSlice() {
+        common.KTrace(fmt.Sprintf("Key k = %s", k))
 		srvCfg[k] = map[string]KVS{}
 		srvCfg[k][Default] = DefaultKVS[k]
 	}

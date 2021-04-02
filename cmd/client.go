@@ -124,13 +124,13 @@ func (c *Client) Read(value []byte) (int, error) {
 	return 0, err
 }
 
-
+/*
 func (c *Client) Write(p []byte, size int) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
 	n, err := c.Put(string(c.Key), p, size, c.Opts)
 	return int(n), err
 }
-
+*/
 //Close: close socket
 func (c *Client) Close() {
         defer common.KUntrace(common.KTrace("Enter"))
@@ -524,6 +524,7 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
 	//metaKey := "meta." + key
 	metaSize := MetaSize
+    acmd.MetaDataOnly = true
 	//return nil, uint32(MetaSize), nil //c.CGet(metaKey, metaSize, acmd)
 	return c.CGet(key, metaSize, acmd)
 }
@@ -549,10 +550,14 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 		log.Println("ALLOC 5MB", key)
 		bvalue = make([]byte, 5*1048576+4096)
 	}
+    if acmd.MetaDataOnly {
+        cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
+    } else {
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
+    }
 	//log.Println("CVALUE BVALUE", cvalue, &bvalue[0])
 	var err error = nil
-	if status != 0 || cvalue == nil {
+	if status != 0 || cvalue == nil { //(!acmd.MetaDataOnly && cvalue == nil {
         common.KTrace("Not Found")
 		err =  errKineticNotFound //errors.New("NOT FOUND")
 	}
@@ -683,7 +688,7 @@ func (c *Client) createMetaData(key string) []byte {
 	return gbuf
 }
 */
-func (c *Client) CPut(key string, value []byte, size int, cmd Opts) (uint32, error) {
+func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
     print("key: ", key, ", value: " , value, ", size: ", size)
         /*
@@ -729,9 +734,16 @@ typedef struct CKVObject {
 		kvObj.value_  = (*C.char)(nil)
 		size = 0
 	}
-    common.KTrace("1") 
+    if metaSize > 0 {
+        kvObj.meta_ = (*C.char)(unsafe.Pointer(&meta[0]))
+    } else {
+        kvObj.meta_ = (*C.char)(nil)
+        metaSize = 0
+    }
+    kvObj.metaSize_ = C.int(metaSize)
+    common.KTrace("1")
 	kvObj.valueSize_= C.int(size)
-    kvObj.version_ = C.CString(string(cmd.NewVersion))
+    kvObj.version_ = C.CString(string("1")) //cmd.NewVersion))
     kvObj.tag_ = C.CString(string(cmd.Tag))
     kvObj.algorithm_ = C.int(cmd.Algorithm)
     //userId := C.long(1)
@@ -743,17 +755,17 @@ typedef struct CKVObject {
     reqCtx.is_ssl = C.int(0)
     reqCtx.writeThrough_ = C.int(0)
     reqCtx.ignoreVersion_ = C.int(1)
-    
+    common.KTrace(fmt.Sprintf("kvObject: %+v", kvObj)) 
     status := C.NPut(&kvObj, &reqCtx) //userId)
     common.KTrace("3") 
     return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
 
-func (c *Client) Put(key string, value []byte, size int, cmd Opts) (uint32, error) {
+func (c *Client) Put(key string, meta []byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
         if SkinnyWaistIF {
-		return c.CPut(key, value, size, cmd)
+		return c.CPut(key, meta, metaSize, value, size, cmd)
 	}
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}

@@ -38,8 +38,8 @@ typedef struct CKVObject {
 typedef struct _CPrimaryStoreValue {
     char* version;
     char* tag;
-    //char* value;
     int32_t algorithm;
+    char* meta;
 } _CPrimaryStoreValue;
 
 char* s;
@@ -64,12 +64,35 @@ int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStore
     primaryStoreValue.tag = string(psvalue->tag);
     primaryStoreValue.value = "";
     primaryStoreValue.algorithm = psvalue->algorithm;
+    primaryStoreValue.meta = psvalue->meta;
     IncomingBuffValue ivalue(value, size);
     RequestContext requestContext;
     requestContext.is_ssl = false;
     StoreOperationStatus status = ::pskinny_waist__->Put(user_id, string(key), string(current_version), primaryStoreValue,
                                                          &ivalue, true, sync, requestContext, token);
     return status;
+}
+
+char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
+    kineticd_idle = false;
+
+    PrimaryStoreValue primaryStoreValue;
+    primaryStoreValue.version = string(psvalue->version);
+    primaryStoreValue.tag = string(psvalue->tag);
+    primaryStoreValue.value = "";
+    primaryStoreValue.algorithm = psvalue->algorithm;
+    primaryStoreValue.meta = "";
+    NullableOutgoingValue *ovalue = NULL; //new NullableOutgoingValue();
+    RequestContext requestContext;
+    requestContext.is_ssl = false;
+    StoreOperationStatus status = ::pskinny_waist__->Get(user_id, string(key), &primaryStoreValue, requestContext,  ovalue, bvalue);
+    *st = int(-1);
+    if (status == StoreOperationStatus::StoreOperationStatus_SUCCESS) {
+        *st = 0;
+    }
+    //char* meta = new char[primaryStoreValue.meta.size()];
+    strncpy(bvalue, primaryStoreValue.meta.data(), primaryStoreValue.meta.size());
+    return bvalue; // meta; //primaryStoreValue.meta;
 }
 
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
@@ -80,6 +103,7 @@ char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* 
     primaryStoreValue.tag = string(psvalue->tag);
     primaryStoreValue.value = "";
     primaryStoreValue.algorithm = psvalue->algorithm;
+    primaryStoreValue.meta = "";
     NullableOutgoingValue *ovalue = new NullableOutgoingValue();
     RequestContext requestContext;
     requestContext.is_ssl = false;
@@ -147,6 +171,7 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
 
 int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx) { //int64_t userId) {
 cout << "NPut: Enter" << endl;
+cout << "version = " << string(C_kvObj->version_) << endl;
 cout << "usrId = " << C_reqCtx->userId_ << ", writeThru = " << C_reqCtx->writeThrough_ << endl;
     KVObject kvObj(C_kvObj);
     RequestContext reqContext;

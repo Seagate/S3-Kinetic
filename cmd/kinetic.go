@@ -231,6 +231,7 @@ func allocateValBuf(bufSize int) []byte {
 func initKineticMeta(kc *Client) error {
         defer common.KUntrace(common.KTrace("Enter"))
 	value := allocateValBuf(0)
+	meta := allocateValBuf(0)
 	bucketKey := "bucket." + minioMetaBucket
 	kopts := Opts{
 		ClusterVersion:  0,
@@ -241,7 +242,7 @@ func initKineticMeta(kc *Client) error {
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
-	_, err := kc.CPut(bucketKey, value, 0, kopts)
+	_, err := kc.CPut(bucketKey, meta, 0, value, 0, kopts)
         if err != nil {
                 return  err
         }
@@ -261,7 +262,7 @@ func initKineticMeta(kc *Client) error {
         }
 */
 	bucketKey = "bucket." + minioMetaTmpBucket
-	_, err = kc.CPut(bucketKey, value, 0, kopts)
+	_, err = kc.CPut(bucketKey, meta, 0, value, 0, kopts)
         if err != nil {
                 return  err
         }
@@ -279,7 +280,7 @@ func initKineticMeta(kc *Client) error {
         }
 */
 	bucketKey = "bucket." + minioMetaMultipartBucket
-	_, err = kc.CPut(bucketKey, value, 0, kopts)
+	_, err = kc.CPut(bucketKey, meta, 0, value, 0, kopts)
 /*
 	bucketInfo.Name = bucketKey
 	bucketInfo.Created = time.Now()
@@ -420,6 +421,7 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
 	bi := BucketInfo{}
         if (cvalue != nil) {
                 value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(value)))
                 buf := bytes.NewBuffer(value[:size])
                 dec := gob.NewDecoder(buf)
                 dec.Decode(&bi)
@@ -487,7 +489,8 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
         kc = GetKineticConnection()
 //	_, err = kc.CPutMeta(bucketKey, gbuf, buf.Len(), kopts)
 //TODO
-    kc.CPut(bucketKey, gbuf, buf.Len(), kopts)
+	meta := allocateValBuf(0)
+    kc.CPut(bucketKey, meta, 0, gbuf, buf.Len(), kopts)
     err = nil
 	ReleaseConnection(kc.Idx)
 	kineticMutex.Unlock()
@@ -531,6 +534,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
         }
         if (cvalue != nil) {
 		value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(value)))
         common.KTrace(fmt.Sprintf("value: %s", string(value)))
 //        log.Println("value:", string(value), ", size:", size, ", err:", err)
 		buf := bytes.NewBuffer(value[:size])
@@ -579,6 +583,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 		//var value []byte
         common.KTrace(fmt.Sprintf("#keys = %d", len(keys)))
 		for _, key := range keys {
+            common.KTrace(fmt.Sprintf("key = %s", key))
 			var bucketInfo BucketInfo
 			//if string(key[:12]) == "meta.bucket." && (string(key[:13]) != "meta.bucket..") {
 			if string(key[:7]) == "bucket." && (string(key[:8]) != "bucket..") {
@@ -1027,6 +1032,8 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		fsMeta.Meta = make(map[string]string)
 		err = json.Unmarshal(value[:size], &fsMeta)
+common.KTrace(fmt.Sprintf("Client fsMeta : %+v.", fsMeta))
+common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(value)))
 		if err != nil {
 			kineticMutex.Unlock()
 			return oi, err
@@ -1314,6 +1321,8 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
         fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
         bytes, _ := json.Marshal(&fsMeta)
+common.KTrace(fmt.Sprintf("Client fsMeta : %+v.", fsMeta))
+common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(bytes)))
         buf := allocateValBuf(len(bytes))
 	goBuf := allocateValBuf(int(bufSize))
         copy(buf, bytes)
@@ -1327,7 +1336,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	// Write to kinetic
 	key = bucket + "/" + object
         kc = GetKineticConnection()
-	_, err = kc.CPut(key, goBuf, int(bufSize), kopts)
+	_, err = kc.CPut(key, buf, int(len(bytes)), goBuf, int(bufSize), kopts)
 	if err != nil {
                 ReleaseConnection(kc.Idx)
 		return ObjectInfo{}, err
@@ -1453,7 +1462,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    //common.KTrace(fmt.Sprintf("bucket = %s, prefix = %s, marker = %s, delimiter = %s, maxKeys = %d", bucket, prefix, marker, delimiter, maxKeys))
+    common.KTrace(fmt.Sprintf("bucket = %s, prefix = %s, marker = %s, delimiter = %s, maxKeys = %d", bucket, prefix, marker, delimiter, maxKeys))
     atomic.AddInt64(&ko.activeIOCount, 1)
     defer func() {
         atomic.AddInt64(&ko.activeIOCount, -1)
@@ -1512,11 +1521,13 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
         regexpStr  += ".*" + prefixPart     // ".*":  zero or more of any character
     }
     for !bDone && nRemainKeys > 0 {
+        common.KTrace(fmt.Sprintf("startKey= %s, endKey= %s, nRemainKeys= %d.", startKey, endKey, nRemainKeys))
         kineticMutex.Lock()
         kc = GetKineticConnection()
 	    keys, err := kc.CGetKeyRange(startKey, endKey, bStartKeyInclusive, true, uint32(nRemainKeys), false, kopts)
         ReleaseConnection(kc.Idx)
 	    kineticMutex.Unlock()
+        common.KTrace(fmt.Sprintf("#object keys = %d.", len(keys)))
         if len(keys) < nRemainKeys {
             bDone = true
             result.IsTruncated = false
@@ -1526,6 +1537,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 	    }
         var key []byte
 	    for _, key = range keys {
+            common.KTrace(fmt.Sprintf("key = %s.", key))
             if bRegexp {
                 matched, err := regexp.MatchString(regexpStr, string(key))
                 if err != nil || !matched {

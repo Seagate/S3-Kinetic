@@ -29,6 +29,7 @@ import (
 	jsoniter "github.com/json-iterator/go"
 	"github.com/minio/minio/cmd/config"
 	"github.com/minio/minio/pkg/madmin"
+	"github.com/minio/minio/common"
 )
 
 const (
@@ -100,7 +101,10 @@ func delServerConfigHistory(ctx context.Context, objAPI ObjectLayer, uuidKV stri
 }
 
 func readServerConfigHistory(ctx context.Context, objAPI ObjectLayer, uuidKV string) ([]byte, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("miniConfigHistoryPrefix: %s, uuidKV: %s, kvPrefix: %s", minioConfigHistoryPrefix, uuidKV, kvPrefix))
 	historyFile := pathJoin(minioConfigHistoryPrefix, uuidKV+kvPrefix)
+    common.KTrace(fmt.Sprintf("historyfile: %s", historyFile))
 	data, err := readConfig(ctx, objAPI, historyFile)
 	if err != nil {
 		return nil, err
@@ -148,7 +152,10 @@ func saveServerConfig(ctx context.Context, objAPI ObjectLayer, config interface{
 }
 
 func readServerConfig(ctx context.Context, objAPI ObjectLayer) (config.Config, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("miniConfigPrefix: %s, minioConfigFile: %s", minioConfigPrefix, minioConfigFile))
 	configFile := path.Join(minioConfigPrefix, minioConfigFile)
+    common.KTrace(fmt.Sprintf("configfile: %s", configFile))
 	fmt.Println(" READCONFIG")
 	configData, err := readConfig(ctx, objAPI, configFile)
 	if err != nil {
@@ -159,9 +166,11 @@ func readServerConfig(ctx context.Context, objAPI ObjectLayer) (config.Config, e
 		}
 		return nil, err
 	}
+    fmt.Println("configData 1:", string(configData))
 
 	if globalConfigEncrypted {
 		configData, err = madmin.DecryptData(globalActiveCred.String(), bytes.NewReader(configData))
+        fmt.Println("configData 2:", string(configData))
 		if err != nil {
 			if err == madmin.ErrMaliciousData {
 				return nil, config.ErrInvalidCredentialsBackendEncrypted(nil)
@@ -173,6 +182,7 @@ func readServerConfig(ctx context.Context, objAPI ObjectLayer) (config.Config, e
 	var config = config.New()
 	var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	if err = json.Unmarshal(configData, &config); err != nil {
+        fmt.Println("config:", config)
 		return nil, err
 	}
 
@@ -208,6 +218,8 @@ func (sys *ConfigSys) WatchConfigNASDisk(objAPI ObjectLayer) {
 
 // Init - initializes config system from config.json.
 func (sys *ConfigSys) Init(objAPI ObjectLayer) error {
+    defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("objAPI: %+v", objAPI))
 	if objAPI == nil {
 		return errInvalidArgument
 	}
@@ -221,6 +233,7 @@ func NewConfigSys() *ConfigSys {
 
 // Initialize and load config from remote etcd or local config directory
 func initConfig(objAPI ObjectLayer) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	fmt.Printf("initConfig %v\n ", objAPI)
 	if objAPI == nil {
 		return errServerNotInitialized

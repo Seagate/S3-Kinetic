@@ -249,6 +249,7 @@ func fsStatDir(ctx context.Context, statDir string) (os.FileInfo, error) {
 }
 
 func koStat(key string) (KVInfo, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	var oi KVInfo
 	//log.Println(" KO STAT")
         kopts := Opts{

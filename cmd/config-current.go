@@ -39,6 +39,7 @@ import (
 	"github.com/minio/minio/cmd/logger/target/http"
 	"github.com/minio/minio/pkg/env"
 	"github.com/minio/minio/pkg/madmin"
+	"github.com/minio/minio/common"
 )
 
 func initHelp() {
@@ -535,6 +536,7 @@ func getValidConfig(objAPI ObjectLayer) (config.Config, error) {
 // loadConfig - loads a new config from disk, overrides params
 // from env if found and valid
 func loadConfig(objAPI ObjectLayer) error {
+    defer common.KUntrace(common.KTrace("Enter"))
 	srvCfg, err := getValidConfig(objAPI)
 	if err != nil {
 		return err

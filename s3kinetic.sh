@@ -3,9 +3,9 @@
 # s3kinetic ARM LAMARRKV
 # s3kinetic X86 SMR
 # s3kinetic X86 NONSMR
-git clean -xdf -e bin
+#git clean -xdf -e bin
 cd kineticd
-git clean -xdf
+#git clean -xdf
 case "$1" in 
   "X86" )
      source ./x86_envsetup.sh
