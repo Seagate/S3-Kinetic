@@ -587,7 +587,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			var bucketInfo BucketInfo
 			//if string(key[:12]) == "meta.bucket." && (string(key[:13]) != "meta.bucket..") {
 			if string(key[:7]) == "bucket." && (string(key[:8]) != "bucket..") {
-				cvalue, size, err := kc.CGet(string(key), MetaSize, kopts)
+				cvalue, size, err := kc.CGetMeta(string(key), kopts)
 				//log.Println("SIZE " , string(key),  size)
                         	if err != nil {
 		                	debug.FreeOSMemory()
@@ -1157,7 +1157,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
-        cvalue, size, err := kc.CGet(key, MetaSize, kopts)
+        cvalue, size, err := kc.CGetMeta(key, kopts)
 	ReleaseConnection(kc.Idx)
 	if err != nil {
 		err = errFileNotFound
