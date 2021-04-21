@@ -333,6 +333,8 @@ StoreOperationStatus PrimaryStore::Get(
     primary_store_value->tag = internal_value_record.tag();
     primary_store_value->algorithm = internal_value_record.algorithm();
     primary_store_value->meta = internal_value_record.meta();
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META = " << primary_store_value->meta << "." << endl;
+
 
     if (value != NULL) {
         if (myData.type != LevelDBDataType::MEM_INTERNAL) {

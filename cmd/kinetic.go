@@ -490,7 +490,8 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 //	_, err = kc.CPutMeta(bucketKey, gbuf, buf.Len(), kopts)
 //TODO
 	meta := allocateValBuf(0)
-    kc.CPut(bucketKey, meta, 0, gbuf, buf.Len(), kopts)
+    //kc.CPut(bucketKey, meta, 0, gbuf, buf.Len(), kopts)
+    kc.CPut(bucketKey, gbuf, buf.Len(), meta, 0, kopts)
     err = nil
 	ReleaseConnection(kc.Idx)
 	kineticMutex.Unlock()
@@ -589,12 +590,15 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			if string(key[:7]) == "bucket." && (string(key[:8]) != "bucket..") {
 				cvalue, size, err := kc.CGetMeta(string(key), kopts)
 				//log.Println("SIZE " , string(key),  size)
-                        	if err != nil {
-		                	debug.FreeOSMemory()
-                                	return nil, err
-                        	}
+                if err != nil {
+                    debug.FreeOSMemory()
+                    return nil, err
+                }
 				if (cvalue != nil) {
-					value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+					//value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+                    common.KTrace(fmt.Sprintf("size = %d", size))
+					value = (*[4096]byte)(unsafe.Pointer(cvalue))[:size:size]
+					//value = (*[size]byte)(unsafe.Pointer(cvalue))[:size:size]
 					buf := bytes.NewBuffer(value[:size])
 					dec := gob.NewDecoder(buf)
 					dec.Decode(&bucketInfo)

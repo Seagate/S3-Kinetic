@@ -92,6 +92,10 @@ char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreVal
     }
     //char* meta = new char[primaryStoreValue.meta.size()];
     strncpy(bvalue, primaryStoreValue.meta.data(), primaryStoreValue.meta.size());
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META = " << primaryStoreValue.meta << "." << endl;
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META SIZE = " << primaryStoreValue.meta.size() << endl;
+    *size = primaryStoreValue.meta.size();
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "SIZE = " << *size << endl;
     return bvalue; // meta; //primaryStoreValue.meta;
 }
 

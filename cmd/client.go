@@ -551,8 +551,10 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 		bvalue = make([]byte, 5*1048576+4096)
 	}
     if acmd.MetaDataOnly {
+        common.KTrace("Calling C GetMeta")
         cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
     } else {
+        common.KTrace("Calling C Get")
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
     }
 	//log.Println("CVALUE BVALUE", cvalue, &bvalue[0])
