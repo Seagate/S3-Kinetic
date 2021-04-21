@@ -130,6 +130,7 @@ KVObject(struct CKVObject* ckvObj) {
     value_.setTag(ckvObj->tag_);
     value_.setAlgorithm(ckvObj->algorithm_);
     value_.setVersion(ckvObj->version_); 
+    value_.setClientMeta(ckvObj->meta_, ckvObj->metaSize_);
 }
     const string& version() { return value_.version(); }
     const string& tag() { return value_.tag(); }
