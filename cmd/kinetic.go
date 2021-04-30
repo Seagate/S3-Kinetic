@@ -231,7 +231,7 @@ func allocateValBuf(bufSize int) []byte {
 func initKineticMeta(kc *Client) error {
         defer common.KUntrace(common.KTrace("Enter"))
 	value := allocateValBuf(0)
-	meta := allocateValBuf(0)
+	//meta := allocateValBuf(0)
 	bucketKey := "bucket." + minioMetaBucket
 	kopts := Opts{
 		ClusterVersion:  0,
@@ -242,12 +242,12 @@ func initKineticMeta(kc *Client) error {
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
+/*
 	_, err := kc.CPut(bucketKey, meta, 0, value, 0, kopts)
         if err != nil {
                 return  err
         }
-
-/*
+*/
 	var bucketInfo BucketInfo
 	bucketInfo.Name = bucketKey
 	bucketInfo.Created = time.Now()
@@ -256,17 +256,19 @@ func initKineticMeta(kc *Client) error {
 	enc.Encode(bucketInfo)
         gbuf := allocateValBuf(buf.Len())
 	copy(gbuf, buf.Bytes())
-        _, err = kc.CPutMeta(bucketKey, gbuf, buf.Len(), kopts)
+    common.KTrace(fmt.Sprintf("Put key: %s, val: %s, size: %d", bucketKey, string(gbuf), buf.Len()))
+    //    _, err = kc.CPutMeta(bucketKey, gbuf, buf.Len(), kopts)
+    _, err := kc.CPut(bucketKey, gbuf, buf.Len(), value, 0, kopts)
         if err != nil {
                 return  err
         }
-*/
 	bucketKey = "bucket." + minioMetaTmpBucket
+/*
 	_, err = kc.CPut(bucketKey, meta, 0, value, 0, kopts)
         if err != nil {
                 return  err
         }
-/*
+*/
 	bucketInfo.Name = bucketKey
 	bucketInfo.Created = time.Now()
         var buf1 bytes.Buffer
@@ -274,14 +276,17 @@ func initKineticMeta(kc *Client) error {
 	enc.Encode(bucketInfo)
         gbuf1 := allocateValBuf(buf1.Len())
         copy(gbuf1, buf1.Bytes())
-	_, err = kc.CPutMeta(bucketKey, gbuf1, buf1.Len(), kopts)
+	//_, err = kc.CPutMeta(bucketKey, gbuf1, buf1.Len(), kopts)
+    common.KTrace(fmt.Sprintf("Put key: %s, val: %s, size: %d", bucketKey, string(gbuf1), buf1.Len()))
+	_, err = kc.CPut(bucketKey, gbuf1, buf1.Len(), value, 0, kopts)
         if err != nil {
                 return  err
         }
-*/
 	bucketKey = "bucket." + minioMetaMultipartBucket
-	_, err = kc.CPut(bucketKey, meta, 0, value, 0, kopts)
 /*
+	_, err = kc.CPut(bucketKey, meta, 0, value, 0, kopts)
+*/
+
 	bucketInfo.Name = bucketKey
 	bucketInfo.Created = time.Now()
         var buf2 bytes.Buffer
@@ -289,8 +294,9 @@ func initKineticMeta(kc *Client) error {
 	enc.Encode(bucketInfo)
         gbuf2 := allocateValBuf(buf2.Len())
         copy(gbuf2, buf2.Bytes())
-	_, err = kc.CPutMeta(bucketKey, gbuf2, buf2.Len(), kopts)
-*/
+    common.KTrace(fmt.Sprintf("Put key: %s, val: %s, size: %d", bucketKey, string(gbuf2), buf2.Len()))
+	_, err = kc.CPut(bucketKey, gbuf2, buf2.Len(), value, 0, kopts)
+
 	return err
 }
 
@@ -425,6 +431,7 @@ common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(value)))
                 buf := bytes.NewBuffer(value[:size])
                 dec := gob.NewDecoder(buf)
                 dec.Decode(&bi)
+                common.KTrace(fmt.Sprintf("Bucket Info: %+v", bi))
         }
         kineticMutex.Unlock()
         //ReleaseConnection(kc.Idx)
@@ -481,20 +488,25 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 	var bucketInfo BucketInfo
 	bucketInfo.Name = bucketKey
 	bucketInfo.Created = time.Now()
+    common.KTrace(fmt.Sprintf("bucketInfo: %+v", bucketInfo))
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
         gbuf := allocateValBuf(buf.Len())
         copy(gbuf, buf.Bytes())
-        kc = GetKineticConnection()
+        //kc = GetKineticConnection()
 //	_, err = kc.CPutMeta(bucketKey, gbuf, buf.Len(), kopts)
 //TODO
-	meta := allocateValBuf(0)
+	//meta := allocateValBuf(0)
+	value := allocateValBuf(0)
     //kc.CPut(bucketKey, meta, 0, gbuf, buf.Len(), kopts)
-    kc.CPut(bucketKey, gbuf, buf.Len(), meta, 0, kopts)
-    err = nil
+    //kc.CPut(bucketKey, gbuf, buf.Len(), meta, 0, kopts)
+    common.KTrace(fmt.Sprintf("Put key: %s, val: %s, size: %d", bucketKey, string(gbuf), buf.Len()))
+    kc = GetKineticConnection()
+    kc.CPut(bucketKey, gbuf, buf.Len(), value, 0, kopts)
 	ReleaseConnection(kc.Idx)
 	kineticMutex.Unlock()
+    err = nil
         //ReleaseConnection(kc.Idx)
 	return err
 }
@@ -597,11 +609,12 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 				if (cvalue != nil) {
 					//value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
                     common.KTrace(fmt.Sprintf("size = %d", size))
-					value = (*[4096]byte)(unsafe.Pointer(cvalue))[:size:size]
-					//value = (*[size]byte)(unsafe.Pointer(cvalue))[:size:size]
+					//value = (*[4096]byte)(unsafe.Pointer(cvalue))[:size:size]
+					value = (*[1<<16]byte)(unsafe.Pointer(cvalue))[:size:size]
 					buf := bytes.NewBuffer(value[:size])
 					dec := gob.NewDecoder(buf)
 					dec.Decode(&bucketInfo)
+                    common.KTrace(fmt.Sprintf("BucketInfo: %+v", bucketInfo))
 					name := []byte(bucketInfo.Name)
 					bucketInfo.Name = string(name[7:])
 					bucketInfos = append(bucketInfos, bucketInfo)
@@ -1161,7 +1174,8 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
-        cvalue, size, err := kc.CGetMeta(key, kopts)
+        //cvalue, size, err := kc.CGetMeta(key, kopts)
+        cvalue, size, err := kc.CGet(key, MetaSize, kopts)
 	ReleaseConnection(kc.Idx)
 	if err != nil {
 		err = errFileNotFound
@@ -1321,12 +1335,13 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	} else {
 		return ObjectInfo{}, errInvalidArgument
 	}
+    common.KTrace(fmt.Sprintf("blockSizeV1 = %d, bufSize = %d, data Size: %d", blockSizeV1, bufSize, data.Size()))
         fsMeta.Meta["etag"] = r.MD5CurrentHexString()
         fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
         fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
         bytes, _ := json.Marshal(&fsMeta)
 common.KTrace(fmt.Sprintf("Client fsMeta : %+v.", fsMeta))
-common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(bytes)))
+common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s. Size = %d", string(bytes), len(bytes)))
         buf := allocateValBuf(len(bytes))
 	goBuf := allocateValBuf(int(bufSize))
         copy(buf, bytes)
@@ -1340,6 +1355,8 @@ common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(bytes)))
 	// Write to kinetic
 	key = bucket + "/" + object
         kc = GetKineticConnection()
+    common.KTrace(fmt.Sprintf("Put key: %s, meta: %s, size: %d", key, string(buf), len(bytes)))
+    common.KTrace(fmt.Sprintf("Put key: %s, val: %s, size: %d", key, string(goBuf), int(bufSize)))
 	_, err = kc.CPut(key, buf, int(len(bytes)), goBuf, int(bufSize), kopts)
 	if err != nil {
                 ReleaseConnection(kc.Idx)
