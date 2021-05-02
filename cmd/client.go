@@ -692,7 +692,7 @@ func (c *Client) createMetaData(key string) []byte {
 */
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-    print("key: ", key, ", value: " , value, ", size: ", size)
+    print("key: ", key, ", meta:", string(meta), ", metaSize:", metaSize,", value:" , string(value), ", size: ", size)
         /*
 	//start := time.Now()
 	var psv C._CPrimaryStoreValue
@@ -765,10 +765,12 @@ typedef struct CKVObject {
 
 
 func (c *Client) Put(key string, meta []byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
-        defer common.KUntrace(common.KTrace("Enter"))
-        if SkinnyWaistIF {
+    defer common.KUntrace(common.KTrace("Enter"))
+    if SkinnyWaistIF {
+        common.KTrace("SkinnyWaistIF is NOT null") 
 		return c.CPut(key, meta, metaSize, value, size, cmd)
 	}
+    common.KTrace("SkinnyWaistIF is null") 
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
 	err := SetCmdInHeader(c, cmdHeader, kinetic_proto.Command_PUT, cmd)

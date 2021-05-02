@@ -91,11 +91,16 @@ char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreVal
         *st = 0;
     }
     //char* meta = new char[primaryStoreValue.meta.size()];
-    strncpy(bvalue, primaryStoreValue.meta.data(), primaryStoreValue.meta.size());
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META = " << primaryStoreValue.meta << "." << endl;
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META SIZE = " << primaryStoreValue.meta.size() << endl;
+    //strncpy(bvalue, primaryStoreValue.meta.data(), primaryStoreValue.meta.size());
+    memcpy(bvalue, primaryStoreValue.meta.data(), primaryStoreValue.meta.size());
     *size = primaryStoreValue.meta.size();
     cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "SIZE = " << *size << endl;
+    string sbValue(bvalue, *size);
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "bvalue = " << bvalue << "***" << endl;
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "sbValue = " << sbValue << "***" << endl;
+
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META = " << primaryStoreValue.meta << "." << endl;
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META SIZE = " << primaryStoreValue.meta.size() << endl;
     return bvalue; // meta; //primaryStoreValue.meta;
 }
 
@@ -178,6 +183,7 @@ cout << "NPut: Enter" << endl;
 cout << "version = " << string(C_kvObj->version_) << endl;
 cout << "usrId = " << C_reqCtx->userId_ << ", writeThru = " << C_reqCtx->writeThrough_ << endl;
     KVObject kvObj(C_kvObj);
+cout << "Client meta: " << kvObj.clientMeta() << "*****" << endl;
     RequestContext reqContext;
     reqContext.setUserId(C_reqCtx->userId_);
     reqContext.setSsl(C_reqCtx->ssl_ == 1); //false);

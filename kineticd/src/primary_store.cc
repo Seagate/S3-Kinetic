@@ -283,6 +283,8 @@ StoreOperationStatus PrimaryStore::Get(
     switch (key_value_store_.Get(key, packed_value, ignore_value, true, buff)) {
         case StoreOperationStatus_SUCCESS:
             cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "Successful, key = " << key << endl;
+            cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "Successful, packed_value addr: " << (void*)packed_value << ", packed_value = " << packed_value << endl;
+            cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "Successful, buff addr: " << (void*)buff << ", buff = " << buff << endl;
             break;
         case StoreOperationStatus_NOT_FOUND:
             delete[] packed_value;
@@ -348,6 +350,7 @@ StoreOperationStatus PrimaryStore::Get(
         deallocate_getvalue_buffer(value_pointer);
     }
     delete[] packed_value;
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": Exit:" << "Successful, buff addr: " << (void*)buff << ", buff = " << buff << endl;
     return StoreOperationStatus_SUCCESS;
 }
 bool PrimaryStore::HasDiskSpace(BatchSet* batchSet, Command& commandResponse) {

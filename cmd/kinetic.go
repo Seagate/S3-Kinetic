@@ -254,6 +254,7 @@ func initKineticMeta(kc *Client) error {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
+    common.KTrace(fmt.Sprintf("Encoded bucketInfo = %s, buf len = %d", string(buf.Bytes()), buf.Len()))
         gbuf := allocateValBuf(buf.Len())
 	copy(gbuf, buf.Bytes())
     common.KTrace(fmt.Sprintf("Put key: %s, val: %s, size: %d", bucketKey, string(gbuf), buf.Len()))
@@ -488,10 +489,11 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 	var bucketInfo BucketInfo
 	bucketInfo.Name = bucketKey
 	bucketInfo.Created = time.Now()
-    common.KTrace(fmt.Sprintf("bucketInfo: %+v", bucketInfo))
+    common.KTrace(fmt.Sprintf("MyBucketInfo: %+v", bucketInfo))
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
+    common.KTrace(fmt.Sprintf("Encoded bInfo: %s***", string(buf.Bytes()))) 
         gbuf := allocateValBuf(buf.Len())
         copy(gbuf, buf.Bytes())
         //kc = GetKineticConnection()
@@ -610,11 +612,15 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 					//value = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
                     common.KTrace(fmt.Sprintf("size = %d", size))
 					//value = (*[4096]byte)(unsafe.Pointer(cvalue))[:size:size]
-					value = (*[1<<16]byte)(unsafe.Pointer(cvalue))[:size:size]
+					value = (*[1<<30]byte)(unsafe.Pointer(cvalue))[:size:size]
+					//value = C.GoBytes(unsafe.Pointer(cvalue), C.int(size))
+                    //sValue := string(value)
+                    //common.KTrace(fmt.Sprintf("sValue: %s***", sValue))
 					buf := bytes.NewBuffer(value[:size])
 					dec := gob.NewDecoder(buf)
+                    common.KTrace(fmt.Sprintf("Encoded bucketInfo = %s, buf len = %d", string(buf.Bytes()), buf.Len()))
 					dec.Decode(&bucketInfo)
-                    common.KTrace(fmt.Sprintf("BucketInfo: %+v", bucketInfo))
+                    common.KTrace(fmt.Sprintf("MyBucketInfo: %+v", bucketInfo))
 					name := []byte(bucketInfo.Name)
 					bucketInfo.Name = string(name[7:])
 					bucketInfos = append(bucketInfos, bucketInfo)

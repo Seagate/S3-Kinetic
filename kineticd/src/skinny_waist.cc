@@ -147,6 +147,7 @@ StoreOperationStatus SkinnyWaist::Get(
 
     switch (status) {
         case StoreOperationStatus_SUCCESS:
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": Exit:" << "Successful, buff addr: " << (void*)buff << ", buff = " << buff << endl;
             return status;
         case StoreOperationStatus_NOT_FOUND:
             return status;
