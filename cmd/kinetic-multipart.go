@@ -86,6 +86,7 @@ func (fs *KineticObjects) ListMultipartUploads(ctx context.Context, bucket, obje
 
 func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object string, opts ObjectOptions) (string, error) {
 	//log.Println("NewMultipartUpload", bucket, object, opts)
+        defer common.KUntrace(common.KTrace("Enter"))
 
         if err := checkNewMultipartArgs(ctx, bucket, object, fs); err != nil {
                 return "", toObjectErr(err, bucket)
@@ -126,7 +127,7 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
 	    val := allocateValBuf(0)
         kineticMutex.Lock()
         kc := GetKineticConnection()
-        _, err = kc.CPut(key, buf, len(fsMetaBytes), val, 0, kopts)
+        _, err = kc.CPut(key, buf, len(buf), val, 0, kopts)
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
         return uploadID, err
@@ -199,10 +200,11 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
         bytes, _ := json.Marshal(fsMeta)
         buf := allocateValBuf(len(bytes))
         copy(buf, bytes)
-        val := allocateValBuf(0)
+        //val := allocateValBuf(0)
 	kineticMutex.Lock()
 	kc := GetKineticConnection()
-        _, err = kc.CPut(key, goBuf, int(bufSize), val, 0, kopts)
+        //_, err = kc.CPut(key, goBuf, int(bufSize), val, 0, kopts)
+        _, err = kc.CPut(key, buf, int(len(buf)), goBuf, int(bufSize), kopts)
 	if err != nil {
 		ReleaseConnection(kc.Idx)
 	        kineticMutex.Unlock()
@@ -270,6 +272,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         partsMap := make(map[int]string)
 	//TODO: need to eliminate bucket, and object name
 	var Keys [][]byte
+    common.KTrace(fmt.Sprintf("keys: %+v", keys))
     for _, key := range keys {
         k  := key[len(startKey):]
 		Keys = append(Keys, k)
@@ -365,7 +368,8 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 	//log.Println(" GET JSON FILE FOR", key)
         kineticMutex.Lock()
         kc = GetKineticConnection()
-        cvalue, size, err := kc.CGet(key, 0,  kopts)
+        //cvalue, size, err := kc.CGet(key, 0,  kopts)
+        cvalue, size, err := kc.CGetMeta(key, kopts)
         ReleaseConnection(kc.Idx)
         if err != nil {
     common.KTrace(fmt.Sprintf("err = %+v", err))
@@ -436,6 +440,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         return oi, toObjectErr(err, bucket)
     }
     var Keys [][]byte
+    common.KTrace(fmt.Sprintf("keys: %+v", keys))
     for _, key := range keys {
         // key has format meta.bucket/object.ver.partId.etag-1.fsize (where etag = md5?)
         // k has format partId.etag-1.fsize
@@ -447,6 +452,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     // Save consolidated actual size.
     var objectActualSize int64
     // Validate all parts and then commit to disk.
+    common.KTrace(fmt.Sprintf("parts: %+v", parts))
     for i, part := range parts {
         partFile := getPartKO(Keys, part.PartNumber, part.ETag)
         if partFile == "" {

@@ -692,7 +692,7 @@ func (c *Client) createMetaData(key string) []byte {
 */
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-    print("key: ", key, ", meta:", string(meta), ", metaSize:", metaSize,", value:" , string(value), ", size: ", size)
+    print("key: ", key, ", meta:", string(meta), ", metaSize:", metaSize)
         /*
 	//start := time.Now()
 	var psv C._CPrimaryStoreValue
