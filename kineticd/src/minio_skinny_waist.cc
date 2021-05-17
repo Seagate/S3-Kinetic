@@ -74,6 +74,7 @@ int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStore
 }
 
 char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     kineticd_idle = false;
 
     PrimaryStoreValue primaryStoreValue;
@@ -82,29 +83,56 @@ char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreVal
     primaryStoreValue.value = "";
     primaryStoreValue.algorithm = psvalue->algorithm;
     primaryStoreValue.meta = "";
-    NullableOutgoingValue *ovalue = NULL; //new NullableOutgoingValue();
+    NullableOutgoingValue *ovalue = NULL;
     RequestContext requestContext;
     requestContext.is_ssl = false;
     StoreOperationStatus status = ::pskinny_waist__->Get(user_id, string(key), &primaryStoreValue, requestContext,  ovalue, bvalue);
-    *st = int(-1);
-    if (status == StoreOperationStatus::StoreOperationStatus_SUCCESS) {
-        *st = 0;
+    *st = int(status); //int(-1);
+    *size = 0; //primaryStoreValue.meta.size();
+/*
+    if (*size > 0 && status == StoreOperationStatus::StoreOperationStatus_SUCCESS) {
+        memcpy(bvalue, primaryStoreValue.meta.data(), primaryStoreValue.meta.size() + 1);
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Meta = " << bvalue << "***, Meta string len = " << *size << endl;
+    } else {
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": No meta" << endl;
     }
-    //char* meta = new char[primaryStoreValue.meta.size()];
-    //strncpy(bvalue, primaryStoreValue.meta.data(), primaryStoreValue.meta.size());
-    memcpy(bvalue, primaryStoreValue.meta.data(), primaryStoreValue.meta.size());
-    *size = primaryStoreValue.meta.size();
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "SIZE = " << *size << endl;
-    string sbValue(bvalue, *size);
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "bvalue = " << bvalue << "***" << endl;
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "sbValue = " << sbValue << "***" << endl;
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
+    return bvalue;
+*/
+//    char* metaBuf = NULL; 
+    if (status == StoreOperationStatus::StoreOperationStatus_SUCCESS) {
+        *size = primaryStoreValue.meta.size();
+        memcpy(bvalue, primaryStoreValue.meta.data(), *size);
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Meta size = " << *size << ", status = " << *st << endl;
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Meta = " << bvalue << "***, Meta string len = " << *size << endl;
+/*
+        if (*size > 0) {
+            //int s = posix_memalign((void**)&metaBuf, 4096, ROUNDUP(1048576, 4096)); //(size_t)(*size),4096));
+            metaBuf = (char*)calloc(*size + 1, sizeof(char));
 
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META = " << primaryStoreValue.meta << "." << endl;
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META SIZE = " << primaryStoreValue.meta.size() << endl;
-    return bvalue; // meta; //primaryStoreValue.meta;
+            //if (s == 0) { //metaBuf) {
+            if (metaBuf) {
+                memcpy(metaBuf, primaryStoreValue.meta.data(), primaryStoreValue.meta.size()+1);
+                cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Meta size = " << *size << ", status = " << *st << endl;
+                cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Meta = " << metaBuf << "***, Meta string len = " << *size << endl;
+            } else {
+                *st = StoreOperationStatus::StoreOperationStatus_INTERNAL_ERROR;
+                *size = 0;
+                cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Failed to allocate mem, size = " << *size << endl;
+            }
+        } else {
+            cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": No meta" << endl;
+        }
+*/
+    } else {
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Failed to Get, status = " << status << endl;
+    }
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit, status = " << *st << ", metaBuf addr = " << (void*)bvalue << endl;
+    return bvalue; //metaBuf; //bvalue;
 }
 
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
     kineticd_idle = false;
 
     PrimaryStoreValue primaryStoreValue;
@@ -116,15 +144,17 @@ char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* 
     NullableOutgoingValue *ovalue = new NullableOutgoingValue();
     RequestContext requestContext;
     requestContext.is_ssl = false;
+    *size = 0;
     StoreOperationStatus status = ::pskinny_waist__->Get(user_id, string(key), &primaryStoreValue, requestContext,  ovalue, bvalue);
     s = NULL;
-    *st = int(-1);
+    *st = int(status); //int(-1);
     switch (status) {
         case StoreOperationStatus::StoreOperationStatus_SUCCESS:
-            *size = ovalue->size();
-            *st = 0;
+            cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": success" << endl;
+            *size = int(ovalue->size());
             s = ovalue->get_value_buff();
             delete ovalue;
+            cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit success" << endl;
             return s;
         case StoreOperationStatus::StoreOperationStatus_NOT_FOUND:
             delete ovalue;

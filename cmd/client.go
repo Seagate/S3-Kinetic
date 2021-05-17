@@ -80,6 +80,8 @@ func (c *Client) Read(value []byte) (int, error) {
         if (cvalue != nil) {
 		fsMetaBytes := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
+        common.KTrace("Free meta")
+        //C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	//log.Println(" READ SIZE", fsMeta.KoInfo.Size)
@@ -90,8 +92,10 @@ func (c *Client) Read(value []byte) (int, error) {
                         return 0, err
                 }
 		if cvalue  != nil {
+            common.KTrace(fmt.Sprintf("size = %d", size))
 			value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 			copy(value, value1)
+            common.KTrace("copied value1 to value")
                         c.ReleaseConn(c.Idx)
                         return int(size), err
                 }
@@ -102,7 +106,8 @@ func (c *Client) Read(value []byte) (int, error) {
 	for i, part := range  fsMeta.Parts {
 		if i == *(c.NextPartNumber) {
 			key := partKeyPrefix + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
-			cvalue, size, err := c.CGet(key, 0, c.Opts)
+            common.KTrace(fmt.Sprintf("part size: %d", int(part.Size)))
+			cvalue, size, err := c.CGet(key, int(part.Size), c.Opts) //c.CGet(key, 0, c.Opts)
 			if err != nil {
 				c.ReleaseConn(c.Idx)
 				return 0, err
@@ -544,15 +549,21 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 	var status int
 	var cvalue *C.char
 	var bvalue []byte
+    bvalue = make([]byte, 5*1048576+4096)
+/*
 	if size > 0 {
-		bvalue = make([]byte, size+4096)
+		bvalue = make([]byte, 5*1048576+4096)
+		//bvalue = make([]byte, size+4096)
 	} else {
 		log.Println("ALLOC 5MB", key)
 		bvalue = make([]byte, 5*1048576+4096)
 	}
+*/
+    common.KTrace(fmt.Sprintf("bvalue len = %d", len(bvalue)))
     if acmd.MetaDataOnly {
         common.KTrace("Calling C GetMeta")
         cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
+        common.KTrace("Return from C GetMeta")
     } else {
         common.KTrace("Calling C Get")
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
@@ -560,7 +571,13 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 	//log.Println("CVALUE BVALUE", cvalue, &bvalue[0])
 	var err error = nil
 	if status != 0 || cvalue == nil { //(!acmd.MetaDataOnly && cvalue == nil {
-        common.KTrace("Not Found")
+        common.KTrace(fmt.Sprintf("Not Found, status = %d", status))
+        if (cvalue == nil) {
+            common.KTrace("cvalue is nil")
+        } else {
+            common.KTrace("cvalue is not nil")
+        }
+
 		err =  errKineticNotFound //errors.New("NOT FOUND")
 	}
         //log.Println(" CGET DONE ", err, cvalue)
@@ -884,6 +901,7 @@ func (c *Client) GetNext(key string, value []byte, cmd Opts) (uint32, error) {
 // TODO: Use this to interface to Skinny Waist
 func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive bool, endKeyInclusive bool, maxReturned uint32, reverse bool, cmd Opts) ([][]byte, error) {
         defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("startKey: %s, endKey: %s", startKey, endKey))
 	cStartKey := C.CString(startKey)
 	cEndKey := C.CString(endKey)
 	Keys  := make([]byte, 1024*1024)
@@ -892,7 +910,9 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 	cSize := (*C.int)(unsafe.Pointer(&size))
 	C.GetKeyRange(1, cStartKey, cEndKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), C.uint32_t(maxReturned), false, cKeys, cSize)
         Keys = (*[1 << 30 ]byte)(unsafe.Pointer(cKeys))[:size:size]
+    //common.KTrace(fmt.Sprintf("Keys: %+v", Keys))
 	keyStrings := strings.Split(string(Keys[:size]), ":")
+    common.KTrace(fmt.Sprintf("Keys: %+v", keyStrings))
 	var keys [][]byte
 	for i := range  keyStrings {
 		//log.Println("KEY ", keyStrings[i])
