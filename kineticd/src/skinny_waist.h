@@ -43,10 +43,6 @@ class SkinnyWaist : public SkinnyWaistInterface {
     ~SkinnyWaist();
 
     virtual StoreOperationStatus NPut(KVObject* obj, RequestContext& reqContext);
-    virtual StoreOperationStatus NDel(Key* key, RequestContext& reqContext) {
-        return StoreOperationStatus_UNSUPPORTABLE;
-    }
-
     UserDataStatus InitUserDataStore(bool create_if_missing = false);
 
     bool CloseDB();

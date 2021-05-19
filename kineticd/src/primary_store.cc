@@ -269,7 +269,6 @@ StoreOperationStatus PrimaryStore::Get(
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStoreGet, &e);
     char* packed_value;
-    //cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "sizeof packed_value pointer = " << sizeof(packed_value) << endl;
     packed_value =  new char[sizeof(packed_value)];
     
 
@@ -281,11 +280,8 @@ StoreOperationStatus PrimaryStore::Get(
     if (value == NULL) {
         ignore_value = true;
     }
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "IGNORE VALUE = " << ignore_value << endl;
     switch (key_value_store_.Get(key, packed_value, ignore_value, true, buff)) {
         case StoreOperationStatus_SUCCESS:
-            cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "Successful, key = " << key << endl;
-            cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "Successful, packed_value addr: " << (void*)packed_value << ", packed_value = " << packed_value << endl;
             break;
         case StoreOperationStatus_NOT_FOUND:
             delete[] packed_value;
@@ -304,7 +300,6 @@ StoreOperationStatus PrimaryStore::Get(
 
     char* value_pointer;
     memcpy((char*)&value_pointer, packed_value, sizeof(void*));
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << " value_pointer: " << value_pointer << endl;
 
     LevelDBData myData;
     if (!myData.deserialize(value_pointer)) {
@@ -337,7 +332,6 @@ StoreOperationStatus PrimaryStore::Get(
     primary_store_value->tag = internal_value_record.tag();
     primary_store_value->algorithm = internal_value_record.algorithm();
     primary_store_value->meta = internal_value_record.meta();
-    //cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "META = " << primary_store_value->meta << "." << endl;
 
     if (value != NULL) {
         if (myData.type != LevelDBDataType::MEM_INTERNAL) {
@@ -351,7 +345,6 @@ StoreOperationStatus PrimaryStore::Get(
         deallocate_getvalue_buffer(value_pointer);
     }
     delete[] packed_value;
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": Exit:" << "Successful" << endl;
     return StoreOperationStatus_SUCCESS;
 }
 bool PrimaryStore::HasDiskSpace(BatchSet* batchSet, Command& commandResponse) {

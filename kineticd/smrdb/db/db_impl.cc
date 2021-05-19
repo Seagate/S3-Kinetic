@@ -1859,7 +1859,6 @@ int64_t DBImpl::TEST_MaxNextLevelOverlappingBytes() {
 namespace {
 char* allocate_getvalue_buffer(bool byGetInternal) {
   char *buff = NULL;
-  cout << "++++ byGetInternal = " << (byGetInternal? "True" : "False") << endl;
   if (!byGetInternal) {
   	buff = (char*) KernelMemMgr::pInstance_->AllocMem();
   } else {

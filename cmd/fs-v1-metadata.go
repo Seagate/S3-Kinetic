@@ -172,7 +172,6 @@ func (m fsMetaV1) KVInfoToObjectInfo(bucket, object string, fi *KVInfo) ObjectIn
 	objInfo.ModTime = timeSentinel
 	if fi != nil {
 		objInfo.ModTime = fi.ModTime()
-		//objInfo.Size = fi.Size()   //Thai
 		objInfo.Size, _ = strconv.ParseInt(m.Meta["size"], 10, 64)
         objInfo.Hidden = fi.hidden
 		if fi.IsDir() {

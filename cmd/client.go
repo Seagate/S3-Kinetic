@@ -43,9 +43,7 @@ type Opts struct {
 	Tag             []byte
 	Algorithm       kinetic_proto.Command_Algorithm
 	Synchronization kinetic_proto.Command_Synchronization
-
     MetaDataOnly    bool
-    //Hidden          bool
 }
 
 
@@ -86,7 +84,6 @@ func (c *Client) Read(value []byte) (int, error) {
         //C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
-	//log.Println(" READ SIZE", fsMeta.KoInfo.Size)
 	if len(fsMeta.Parts) == 0 {
 		cvalue, size, err := c.CGet(string(c.Key), int(fsMeta.KoInfo.Size), c.Opts)
                 if err != nil {
@@ -94,10 +91,8 @@ func (c *Client) Read(value []byte) (int, error) {
                         return 0, err
                 }
 		if cvalue  != nil {
-            common.KTrace(fmt.Sprintf("size = %d", size))
 			value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 			copy(value, value1)
-            common.KTrace("copied value1 to value")
                         c.ReleaseConn(c.Idx)
                         return int(size), err
                 }
@@ -108,8 +103,7 @@ func (c *Client) Read(value []byte) (int, error) {
 	for i, part := range  fsMeta.Parts {
 		if i == *(c.NextPartNumber) {
 			key := partKeyPrefix + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
-            common.KTrace(fmt.Sprintf("part size: %d", int(part.Size)))
-			cvalue, size, err := c.CGet(key, int(part.Size), c.Opts) //c.CGet(key, 0, c.Opts)
+			cvalue, size, err := c.CGet(key, int(part.Size), c.Opts)
 			if err != nil {
 				c.ReleaseConn(c.Idx)
 				return 0, err
@@ -529,10 +523,8 @@ func (c *Client) AbortBatch(cmd Opts) error {
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-	//metaKey := "meta." + key
 	metaSize := MetaSize
     acmd.MetaDataOnly = true
-	//return nil, uint32(MetaSize), nil //c.CGet(metaKey, metaSize, acmd)
 	return c.CGet(key, metaSize, acmd)
 }
 
@@ -540,8 +532,6 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("key:%s, size:%d", key, size))
-        //log.Println(" CALL CGET ", key, size)
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
         psv.tag = C.CString(string(acmd.Tag))
@@ -551,38 +541,18 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 	var status int
 	var cvalue *C.char
 	var bvalue []byte
+    // Always allocate the maximum chunk of memory because meta data and
+    // value are now in the same record
     bvalue = make([]byte, 5*1048576+4096)
-/*
-	if size > 0 {
-		bvalue = make([]byte, 5*1048576+4096)
-		//bvalue = make([]byte, size+4096)
-	} else {
-		log.Println("ALLOC 5MB", key)
-		bvalue = make([]byte, 5*1048576+4096)
-	}
-*/
-    common.KTrace(fmt.Sprintf("bvalue len = %d", len(bvalue)))
     if acmd.MetaDataOnly {
-        common.KTrace("Calling C GetMeta")
         cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
-        common.KTrace("Return from C GetMeta")
     } else {
-        common.KTrace("Calling C Get")
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
     }
-	//log.Println("CVALUE BVALUE", cvalue, &bvalue[0])
 	var err error = nil
-	if status != 0 || cvalue == nil { //(!acmd.MetaDataOnly && cvalue == nil {
-        common.KTrace(fmt.Sprintf("Not Found, status = %d", status))
-        if (cvalue == nil) {
-            common.KTrace("cvalue is nil")
-        } else {
-            common.KTrace("cvalue is not nil")
-        }
-
-		err =  errKineticNotFound //errors.New("NOT FOUND")
+	if status != 0 || cvalue == nil {
+		err =  errKineticNotFound
 	}
-        //log.Println(" CGET DONE ", err, cvalue)
         return cvalue, uint32(size1), err
 }
 
@@ -642,7 +612,6 @@ func (c *Client) cDelete(key string, cmd Opts)  error {
 
 func (c *Client) Delete(key string, cmd Opts) error {
         defer common.KUntrace(common.KTrace("Enter"))
-        common.KTrace(fmt.Sprint("key: %s", key))
         if SkinnyWaistIF {
                 return c.cDelete(key, cmd)
         }
@@ -686,7 +655,6 @@ func (c *Client) Delete(key string, cmd Opts) error {
 
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    print("key: ", key, ", meta:", string(meta), ", metaSize:", metaSize)
     var kvObj C.CKVObject
     kvObj.key_ = C.CString(key)
     kvObj.keySize_ = C.int(len(key))
@@ -703,18 +671,10 @@ func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size i
         metaSize = 0
     }
     kvObj.metaSize_ = C.int(metaSize)
-/*
-    if (cmd.Hidden) {
-        kvObj.hidden_ = C.int(1)
-    } else {
-        kvObj.hidden_ = C.int(0)
-    }
-*/
 	kvObj.valueSize_= C.int(size)
-    kvObj.version_ = C.CString(string("1")) //cmd.NewVersion))
+    kvObj.version_ = C.CString(string("1"))
     kvObj.tag_ = C.CString(string(cmd.Tag))
     kvObj.algorithm_ = C.int(cmd.Algorithm)
-    //userId := C.long(1)
     var reqCtx C.CRequestContext
     reqCtx.userId_ = C.long(1)
     reqCtx.seq_ = C.long(1)
@@ -722,8 +682,8 @@ func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size i
     reqCtx.is_ssl = C.int(0)
     reqCtx.writeThrough_ = C.int(0)
     reqCtx.ignoreVersion_ = C.int(1)
-    common.KTrace(fmt.Sprintf("kvObject: %+v", kvObj)) 
-    status := C.NPut(&kvObj, &reqCtx) //userId)
+    common.KTrace(fmt.Sprintf("kvObject: %+v", kvObj))
+    status := C.NPut(&kvObj, &reqCtx)
     return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
@@ -731,10 +691,8 @@ func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size i
 func (c *Client) Put(key string, meta []byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
     if SkinnyWaistIF {
-        common.KTrace("SkinnyWaistIF is NOT null") 
 		return c.CPut(key, meta, metaSize, value, size, cmd)
 	}
-    common.KTrace("SkinnyWaistIF is null") 
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
 	err := SetCmdInHeader(c, cmdHeader, kinetic_proto.Command_PUT, cmd)
@@ -848,7 +806,6 @@ func (c *Client) GetNext(key string, value []byte, cmd Opts) (uint32, error) {
 // TODO: Use this to interface to Skinny Waist
 func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive bool, endKeyInclusive bool, maxReturned uint32, reverse bool, cmd Opts) ([][]byte, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("startKey: %s, endKey: %s", startKey, endKey))
 	cStartKey := C.CString(startKey)
 	cEndKey := C.CString(endKey)
 	Keys  := make([]byte, 1024*1024)
@@ -857,9 +814,7 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 	cSize := (*C.int)(unsafe.Pointer(&size))
 	C.GetKeyRange(1, cStartKey, cEndKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), C.uint32_t(maxReturned), false, cKeys, cSize)
         Keys = (*[1 << 30 ]byte)(unsafe.Pointer(cKeys))[:size:size]
-    //common.KTrace(fmt.Sprintf("Keys: %+v", Keys))
 	keyStrings := strings.Split(string(Keys[:size]), ":")
-    common.KTrace(fmt.Sprintf("Keys: %+v", keyStrings))
 	var keys [][]byte
 	for i := range  keyStrings {
 		//log.Println("KEY ", keyStrings[i])

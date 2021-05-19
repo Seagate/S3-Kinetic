@@ -187,7 +187,6 @@ StoreOperationStatus KeyValueStore::Get(const std::string& key, char* value, boo
     }
     StoreOperationStatus status = TranslateStatus(db_->Get(leveldb::ReadOptions(), key,
         value, ignore_value, using_bloom_filter, buff));
-    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "Successful, packed_value addr: " << (void*)value << ", packed_value = " << value << endl;
     return status;
 }
 StoreOperationStatus KeyValueStore::Write(const WriteOptions& options, WriteBatch* updates, KineticMemory* memory) {

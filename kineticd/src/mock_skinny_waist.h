@@ -91,7 +91,6 @@ class MockSkinnyWaist : public SkinnyWaistInterface {
     MOCK_METHOD1(Flush, leveldb::Status(bool toSST));
 
     MOCK_METHOD2(NPut, StoreOperationStatus(KVObject* obj, RequestContext& reqContext));
-    MOCK_METHOD2(NDel, StoreOperationStatus(Key* key, RequestContext& reqContext));
 };
 
 } // namespace kinetic

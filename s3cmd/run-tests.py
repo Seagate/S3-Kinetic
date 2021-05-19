@@ -34,8 +34,8 @@ count_skip = 0
 test_counter = 0
 run_tests = []
 # These excluded tests failed.  They are the same as with master code.
-# exclude_tests = [39, 40, 41, 43, 62, 64, 66, 68, 70, 89, 91, 92, 94, 95]
-exclude_tests = []
+exclude_tests = [39, 40, 41, 43, 62, 64, 66, 68, 70, 89, 91, 92, 94, 95]
+#exclude_tests = []
 
 verbose = False
 

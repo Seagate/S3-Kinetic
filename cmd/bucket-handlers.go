@@ -176,14 +176,12 @@ func (api objectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *
 
 	getBucketInfo := objectAPI.GetBucketInfo
 
-	//if _, err := getBucketInfo(ctx, bucket); err != nil {
-	buckInfo, err := getBucketInfo(ctx, bucket)
+	_, err := getBucketInfo(ctx, bucket)
 	if err != nil {
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}
 
-    fmt.Println("bucket: ", buckInfo)
 	// Generate response.
 	encodedSuccessResponse := encodeResponse(LocationResponse{})
 	// Get current region.
@@ -573,7 +571,6 @@ func (api objectAPIHandlers) PutBucketHandler(w http.ResponseWriter, r *http.Req
 	// Proceed to creating a bucket.
 	err := objectAPI.MakeBucketWithLocation(ctx, bucket, location)
 	if err != nil {
-    //    common.KTrace(fmt.Sprintf("Make bucket error: %+v", err))
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}

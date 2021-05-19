@@ -9,7 +9,6 @@
 #include "outgoing_value.h"
 #include "kinetic.pb.h"
 #include "request_context.h"
-//#include "KVObject.h"
 
 using namespace com::seagate::kinetic::proto; //NOLINT
 

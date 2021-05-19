@@ -22,16 +22,6 @@ extern "C" {
 #endif
 
 typedef struct CRequestContext {
-/*
-    CRequestContext() {
-        userId_ = 1;
-	    is_ssl = false;
-	    writeThrough_ = false;
-	    ignoreVersion_ = true;
-        seq_ = 1;
-        connId_ = 1;
-    }
-*/
     int is_ssl;
     int64_t userId_;
     int writeThrough_;
@@ -48,8 +38,6 @@ typedef struct CKVObject {
     char* meta_;
     int metaSize_;
 
-//    int hidden_;
-
 	// Meta data
 	int keySize_;
 	int valueSize_;
@@ -63,9 +51,6 @@ typedef struct _CPrimaryStoreValue {
     char* tag;
     char* value;
     int32_t algorithm;
-
-    // Meta string from marshalling the fsMetaV1 from Minio.
-    //char* meta;
 } _CPrimaryStoreValue;
 
 //void* CInitMain(char* store_partition);
@@ -88,7 +73,6 @@ void deallocate_gvalue_buffer(char* buff);
 
 
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
-//char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, uint32_t* size, uint32_t* status);
 char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
 
 int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size,

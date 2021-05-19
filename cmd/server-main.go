@@ -221,7 +221,6 @@ func initSafeMode(buckets []BucketInfo) (err error) {
 		select {
 		case n := <-retryTimerCh:
 			if err = initAllSubsystems(buckets, newObject); err != nil {
-                common.KTrace(fmt.Sprintf("Error %+v", err))
 				if errors.Is(err, errDiskNotFound) ||
 					errors.As(err, &rquorum) ||
 					errors.As(err, &wquorum) {

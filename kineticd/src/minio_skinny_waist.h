@@ -46,8 +46,6 @@ typedef struct CKVObject {
     char* meta_;
     int metaSize_;
 
-//    int hidden_;
-
 	// Meta data
 	int keySize_;
 	int valueSize_;
@@ -80,7 +78,7 @@ int Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64
 void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32_t maxReturned,
                  bool reverse, char* results, int* size);
 
-int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx); //int64_t userId);
+int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx);
 
 #ifdef _cplusplus
 }

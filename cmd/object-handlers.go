@@ -359,7 +359,6 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-    common.KTrace(fmt.Sprintf("Call getObjectNInfo, bucket: %s, object: %s", bucket, object))
 	gr, err := getObjectNInfo(ctx, bucket, object, rs, r.Header, readLock, opts)
 	if err != nil {
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
@@ -849,7 +848,6 @@ func (api objectAPIHandlers) CopyObjectHandler(w http.ResponseWriter, r *http.Re
 
 	// maximum Upload size for object in a single CopyObject operation.
 	if isMaxObjectSize(srcInfo.Size) {
-        common.KTrace(fmt.Sprintf("Object size = %d", srcInfo.Size))
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrEntityTooLarge), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -1220,7 +1218,6 @@ func (api objectAPIHandlers) PutObjectHandler(w http.ResponseWriter, r *http.Req
 
 	/// maximum Upload size for objects in a single operation
 	if isMaxObjectSize(size) {
-        common.KTrace(fmt.Sprintf("Object size = %d", size))
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrEntityTooLarge), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -1742,7 +1739,6 @@ func (api objectAPIHandlers) CopyObjectPartHandler(w http.ResponseWriter, r *htt
 
 	/// maximum copy size for multipart objects in a single operation
 	if isMaxAllowedPartSize(length) {
-        common.KTrace(fmt.Sprintf("Part size = %d", length))
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrEntityTooLarge), r.URL, guessIsBrowserReq(r))
 		return
 	}
@@ -1951,13 +1947,11 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 
 	/// if Content-Length is unknown/missing, throw away
 	size := r.ContentLength
-    common.KTrace(fmt.Sprintf("size: %+v", size))
 
 	rAuthType := getRequestAuthType(r)
 	// For auth type streaming signature, we need to gather a different content length.
 	if rAuthType == authTypeStreamingSigned {
 		if sizeStr, ok := r.Header[xhttp.AmzDecodedContentLength]; ok {
-            common.KTrace(fmt.Sprintf("sizeStr: %s", sizeStr))
 			if sizeStr[0] == "" {
                 err = fmt.Errorf("Error")
 				writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrMissingContentLength), r.URL, guessIsBrowserReq(r))
@@ -1976,10 +1970,8 @@ func (api objectAPIHandlers) PutObjectPartHandler(w http.ResponseWriter, r *http
 		return
 	}
 
-    common.KTrace(fmt.Sprintf("Final Part size = %d", size))
 	/// maximum Upload size for multipart objects in a single operation
 	if isMaxAllowedPartSize(size) {
-        common.KTrace(fmt.Sprintf("Part size = %d", size))
         err = fmt.Errorf("Error")
 		writeErrorResponse(ctx, w, errorCodes.ToAPIErr(ErrEntityTooLarge), r.URL, guessIsBrowserReq(r))
 		return

@@ -1308,7 +1308,7 @@ ConnectionStatusCode ConnectionHandler::SendUnsolicitedStatus(
 //                (pin op checking flow vs hmac flow if statements)
 ConnectionStatusCode ConnectionHandler::ExecuteOperation(std::shared_ptr<Connection> connection,
                                                          ConnectionRequestResponse *connection_request_response) {
-    RequestContext request_context; // = {connection->use_ssl()};
+    RequestContext request_context;
     request_context.setSsl(connection->use_ssl());
     Command* cmd = connection_request_response->command();
     #ifdef QOS_ENABLED

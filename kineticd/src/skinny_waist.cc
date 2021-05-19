@@ -136,7 +136,6 @@ StoreOperationStatus SkinnyWaist::Get(
         RequestContext& request_context,
         NullableOutgoingValue *value, char* buff) {
         PthreadsMutexGuard guard(&mutex_);
-        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
 
     if (!authorizer_.AuthorizeKey(user_id, Domain::kRead, key, request_context)) {
         return StoreOperationStatus_AUTHORIZATION_FAILURE;
@@ -148,7 +147,6 @@ StoreOperationStatus SkinnyWaist::Get(
 
     switch (status) {
         case StoreOperationStatus_SUCCESS:
-            cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit success" << endl;
             return status;
         case StoreOperationStatus_NOT_FOUND:
             return status;
@@ -459,23 +457,6 @@ StoreOperationStatus SkinnyWaist::matchVersion(const std::string& key,
 		}
 	}
 	return status;
-/*
-
-	if (get_existing_result == StoreOperationStatus_STORE_CORRUPT) {
-		return StoreOperationStatus_STORE_CORRUPT;
-	}
-
-	if (get_existing_result != StoreOperationStatus_SUCCESS &&
-		get_existing_result != StoreOperationStatus_NOT_FOUND) {
-		return StoreOperationStatus_INTERNAL_ERROR;
-	}
-	bool key_exists = get_existing_result == StoreOperationStatus_SUCCESS;
-
-	if ((key_exists && existing_primary_store_value.version != current_version) ||
-		(!key_exists && current_version.length())) {
-		return StoreOperationStatus_VERSION_MISMATCH;
-	}
-*/
 }
 StoreOperationStatus SkinnyWaist::processByStatus(StoreOperationStatus status) {
     switch (status) {
@@ -909,7 +890,6 @@ bool SkinnyWaist::Crc64Integrity(std::string value_str, std::string tag_str) {
 
 
 StoreOperationStatus SkinnyWaist::NPut(KVObject* obj, RequestContext& reqContext) {
-std::cout << "SkinnyWaist::NPut: Enter" << std::endl;
 	if (obj == NULL || strcmp(obj->key().data(), "") == 0) {
 		return StoreOperationStatus_INVALID_REQUEST;
 	}
@@ -923,10 +903,8 @@ std::cout << "SkinnyWaist::NPut: Enter" << std::endl;
 			return status;
 		}
 	}
-std::cout << "SkinnyWaist::NPut: Calling primary stor.NPut()" << std::endl;
     status = primary_store_.NPut(obj, reqContext);
     status = processByStatus(status);
-std::cout << "SkinnyWaist::NPut: Exit" << std::endl;
     return status;
 }
 

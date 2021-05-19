@@ -1,8 +1,6 @@
 #ifndef _KV_OBJECT_H_
 #define _KV_OBJECT_H_
 
-//#include "minio_skinny_waist.h"
-
 typedef struct CKVObject {
         char* key_;
         char* value_;
@@ -10,8 +8,6 @@ typedef struct CKVObject {
         // Meta string from marshalling the fsMetaV1 from Minio.
         char* meta_;
         int metaSize_;
-
-//        int hidden_;
 
         // Meta data
         int keySize_;
@@ -24,9 +20,9 @@ typedef struct CKVObject {
 typedef struct CRequestContext {
     CRequestContext() {
         userId_ = 1;
-	    ssl_ = 0; //false;
-	    writeThrough_ = 0; //false;
-	    ignoreVersion_ = 1; //true;
+	    ssl_ = 0;
+	    writeThrough_ = 0;
+	    ignoreVersion_ = 1;
         seq_ = 1;
         connId_ = 1;
     }
@@ -60,16 +56,14 @@ public:
 	}
 private:
 	char* data_;
-        int size_;
+    int size_;
 };
 
 class MetaData {
 public:
     MetaData() {
         size_ = -1;
-        //version_ = "";
-	//tag_ = NULL;
-	algorithm_ = -1;
+	    algorithm_ = -1;
     }
 
     void setSize(int size) { size_ = size; }
@@ -121,20 +115,16 @@ private:
 	MetaData metaData_;
 };
 
-
-
 class KVObject {
 public:
-//    KVObject(struct CKVObject* ckvObj) {
-KVObject(struct CKVObject* ckvObj) {
-    key_ = Key(ckvObj->key_, ckvObj->keySize_);
-    value_ = Value(ckvObj->value_, ckvObj->valueSize_);
-    value_.setTag(ckvObj->tag_);
-    value_.setAlgorithm(ckvObj->algorithm_);
-    value_.setVersion(ckvObj->version_); 
-    value_.setClientMeta(ckvObj->meta_, ckvObj->metaSize_);
-    //hidden_ = ckvObj->hidden_;
-}
+    KVObject(struct CKVObject* ckvObj) {
+        key_ = Key(ckvObj->key_, ckvObj->keySize_);
+        value_ = Value(ckvObj->value_, ckvObj->valueSize_);
+        value_.setTag(ckvObj->tag_);
+        value_.setAlgorithm(ckvObj->algorithm_);
+        value_.setVersion(ckvObj->version_); 
+        value_.setClientMeta(ckvObj->meta_, ckvObj->metaSize_);
+    }
     const string& version() { return value_.version(); }
     const string& tag() { return value_.tag(); }
     int32_t algorithm() { return value_.algorithm(); }
@@ -142,12 +132,10 @@ KVObject(struct CKVObject* ckvObj) {
     const Value& value() { return value_; }
     const Key& key() { return key_; }
     const string& clientMeta() { return value_.metaData().clientMeta(); }
-//    bool isHidden() const { return (hidden_ != 0); }
 
 private:
 	Key key_;
 	Value value_;
-//    int hidden_;
 };
 
 }
