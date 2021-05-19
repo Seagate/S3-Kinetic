@@ -104,7 +104,7 @@ char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreVal
         *size = primaryStoreValue.meta.size();
         memcpy(bvalue, primaryStoreValue.meta.data(), *size);
         cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Meta size = " << *size << ", status = " << *st << endl;
-        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Meta = " << bvalue << "***, Meta string len = " << *size << endl;
+//        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Meta = " << bvalue << "***, Meta string len = " << *size << endl;
 /*
         if (*size > 0) {
             //int s = posix_memalign((void**)&metaBuf, 4096, ROUNDUP(1048576, 4096)); //(size_t)(*size),4096));

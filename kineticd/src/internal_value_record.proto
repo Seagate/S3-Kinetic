@@ -8,6 +8,5 @@ message InternalValueRecord {
     required bytes tag = 3;
     optional int32 algorithm = 4;
     optional bool badData = 5;
-    //optional bool hidden = 6;
     optional bytes meta = 6;
 }

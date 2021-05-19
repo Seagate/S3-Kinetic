@@ -11,6 +11,8 @@ typedef struct CKVObject {
         char* meta_;
         int metaSize_;
 
+//        int hidden_;
+
         // Meta data
         int keySize_;
         int valueSize_;
@@ -131,6 +133,7 @@ KVObject(struct CKVObject* ckvObj) {
     value_.setAlgorithm(ckvObj->algorithm_);
     value_.setVersion(ckvObj->version_); 
     value_.setClientMeta(ckvObj->meta_, ckvObj->metaSize_);
+    //hidden_ = ckvObj->hidden_;
 }
     const string& version() { return value_.version(); }
     const string& tag() { return value_.tag(); }
@@ -139,10 +142,12 @@ KVObject(struct CKVObject* ckvObj) {
     const Value& value() { return value_; }
     const Key& key() { return key_; }
     const string& clientMeta() { return value_.metaData().clientMeta(); }
+//    bool isHidden() const { return (hidden_ != 0); }
 
 private:
 	Key key_;
 	Value value_;
+//    int hidden_;
 };
 
 }

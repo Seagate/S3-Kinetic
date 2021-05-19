@@ -46,6 +46,8 @@ typedef struct CKVObject {
     char* meta_;
     int metaSize_;
 
+//    int hidden_;
+
 	// Meta data
 	int keySize_;
 	int valueSize_;

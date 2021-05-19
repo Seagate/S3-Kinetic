@@ -185,8 +185,10 @@ StoreOperationStatus KeyValueStore::Get(const std::string& key, char* value, boo
     if (db_corrupt_) {
         return StoreOperationStatus_STORE_CORRUPT;
     }
-    return TranslateStatus(db_->Get(leveldb::ReadOptions(), key, value, ignore_value,
-                                     using_bloom_filter, buff));
+    StoreOperationStatus status = TranslateStatus(db_->Get(leveldb::ReadOptions(), key,
+        value, ignore_value, using_bloom_filter, buff));
+    cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << ": " << "Successful, packed_value addr: " << (void*)value << ", packed_value = " << value << endl;
+    return status;
 }
 StoreOperationStatus KeyValueStore::Write(const WriteOptions& options, WriteBatch* updates, KineticMemory* memory) {
     return TranslateStatus(db_->Write(options, updates, memory));
