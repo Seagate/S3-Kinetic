@@ -167,6 +167,7 @@ type ObjectInfo struct {
 	PutObjReader *PutObjReader  `json:"-"`
 
 	metadataOnly bool
+    Hidden bool
 
 	// Date and time when the object was last accessed.
 	AccTime time.Time

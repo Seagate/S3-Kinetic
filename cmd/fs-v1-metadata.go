@@ -174,6 +174,7 @@ func (m fsMetaV1) KVInfoToObjectInfo(bucket, object string, fi *KVInfo) ObjectIn
 		objInfo.ModTime = fi.ModTime()
 		//objInfo.Size = fi.Size()   //Thai
 		objInfo.Size, _ = strconv.ParseInt(m.Meta["size"], 10, 64)
+        objInfo.Hidden = fi.hidden
 		if fi.IsDir() {
 			// Directory is always 0 bytes in S3 API, treat it as such.
 			objInfo.Size = 0
@@ -231,6 +232,7 @@ func (m fsMetaV1) ToObjectKVInfo(bucket, object string, ko KVInfo) ObjectInfo {
                 Name:   object,
                 Size:   ko.Size(),
         }
+        objInfo.Hidden = ko.hidden
         objInfo.ETag = extractETag(m.Meta)
         objInfo.ContentType = m.Meta["content-type"]
         objInfo.ContentEncoding = m.Meta["content-encoding"]

@@ -159,6 +159,7 @@ type KVInfo struct {
 	mode    FileMode  `json:"Mode"`  // file mode bits
 	createdTime time.Time `json:"CreatedTime"`
 	modTime time.Time `json:"ModTime"`  // modification time
+    hidden bool
 }
 
 func ReleaseConnection(ix int) {
@@ -432,6 +433,8 @@ common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(value)))
                 buf := bytes.NewBuffer(value[:size])
                 dec := gob.NewDecoder(buf)
                 dec.Decode(&bi)
+                common.KTrace("Free meta")
+                //C.free(unsafe.Pointer(cvalue))
                 common.KTrace(fmt.Sprintf("Bucket Info: %+v", bi))
         }
         kineticMutex.Unlock()
@@ -555,6 +558,8 @@ common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(value)))
 		buf := bytes.NewBuffer(value[:size])
 		dec := gob.NewDecoder(buf)
 		dec.Decode(&bi)
+        common.KTrace("Free meta")
+        //C.free(unsafe.Pointer(cvalue))
 	} else {
         common.KTrace("cvalue is nil")
     }
@@ -620,6 +625,8 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 					dec := gob.NewDecoder(buf)
                     common.KTrace(fmt.Sprintf("Encoded bucketInfo = %s, buf len = %d", string(buf.Bytes()), buf.Len()))
 					dec.Decode(&bucketInfo)
+                    common.KTrace("Free meta")
+                    //C.free(unsafe.Pointer(cvalue))
                     common.KTrace(fmt.Sprintf("MyBucketInfo: %+v", bucketInfo))
 					name := []byte(bucketInfo.Name)
 					bucketInfo.Name = string(name[7:])
@@ -805,6 +812,8 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 			value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 			fsMeta.Meta = make(map[string]string)
 			err = json.Unmarshal(value[:size], &fsMeta)
+            common.KTrace("Free meta")
+            //C.free(unsafe.Pointer(cvalue))
 			if err != nil {
 	                        // For any error to read fsMeta, set default ETag and proceed.
 	                        fsMeta = ko.defaultFsJSON(srcObject)
@@ -921,6 +930,7 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	}
 	// Read the object, doesn't exist returns an s3 compatible error.
 	size := length
+    common.KTrace(fmt.Sprintf("Size = %d, offset = %d", size, off))
 	// Check if range is valid
 	if off > size || off+length > size {
 		err = InvalidRange{off, length, size}
@@ -932,13 +942,14 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	}
 	kc := GetKineticConnection()
 	kc.Key = []byte(bucket + "/" + object)
+    common.KTrace(fmt.Sprintf("kc.Key: %+v", kc.Key))
 	var reader1 io.Reader = kc
 	reader := io.LimitReader(reader1, length)
 	//log.Println("END: GetObjectNInfo", bucket, object)
     closeFn := func() {
         kc.ReleaseConn(kc.Idx)
     }
-
+    common.KTrace(fmt.Sprintf("objReaderFn: %v", objReaderFn))
 	return objReaderFn(reader, h, opts.CheckCopyPrecondFn, closeFn)
 }
 
@@ -1055,19 +1066,25 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		fsMeta.Meta = make(map[string]string)
 		err = json.Unmarshal(value[:size], &fsMeta)
-common.KTrace(fmt.Sprintf("Client fsMeta : %+v.", fsMeta))
+        common.KTrace("Free meta")
+        //C.free(unsafe.Pointer(cvalue))
+//common.KTrace(fmt.Sprintf("Client fsMeta : %+v.", fsMeta))
 common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s.", string(value)))
 		if err != nil {
 			kineticMutex.Unlock()
 			return oi, err
 		}
 	}
-	fi := &KVInfo{
+	    fi := &KVInfo{
 		name:    fsMeta.KoInfo.Name,
 		size:    fsMeta.KoInfo.Size,
                 modTime: fsMeta.KoInfo.CreatedTime,
-
-	}
+        }
+common.KTrace(fmt.Sprintf("+++++++++ fi Before change: %+v", fi))
+common.KTrace(fmt.Sprintf("+++++++++ fsMeta.Meta[hidden] = %+v", fsMeta.Meta["hidden"]))
+        
+        fi.hidden = (fsMeta.Meta["hidden"] != "" && fsMeta.Meta["hidden"] != "0")
+common.KTrace(fmt.Sprintf("+++++++++ fi After change: %+v", fi))
     kineticMutex.Unlock()
 	return fsMeta.KVInfoToObjectInfo(bucket, object, fi), err
 }
@@ -1362,7 +1379,7 @@ common.KTrace(fmt.Sprintf("Client fsMeta in bytes: %s. Size = %d", string(bytes)
 	key = bucket + "/" + object
         kc = GetKineticConnection()
     common.KTrace(fmt.Sprintf("Put key: %s, meta: %s, size: %d", key, string(buf), len(bytes)))
-    common.KTrace(fmt.Sprintf("Put key: %s, val: %s, size: %d", key, string(goBuf), int(bufSize)))
+    //common.KTrace(fmt.Sprintf("Put key: %s, val: %s, size: %d", key, string(goBuf), int(bufSize)))
 	_, err = kc.CPut(key, buf, int(len(bytes)), goBuf, int(bufSize), kopts)
 	if err != nil {
                 ReleaseConnection(kc.Idx)
@@ -1444,6 +1461,8 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
     if (cvalue != nil) {
         fsMetaBytes = (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
+        common.KTrace("Free meta")
+        //C.free(unsafe.Pointer(cvalue))
     }
     if len(fsMeta.Parts) == 0 {
         key := bucket + SlashSeparator + object
@@ -1577,6 +1596,10 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 			if err != nil {
 			    return loi, err
 			}
+            common.KTrace(fmt.Sprintf("objInfo: %+v", objInfo))
+            if  objInfo.Hidden {
+                nRemainKeys -= 1
+            } else {
 		    if recursive {
                 result.Objects = append(result.Objects, objInfo)
                 nRemainKeys -= 1
@@ -1605,6 +1628,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
                     result.Objects = append(result.Objects, objInfo)
                     nRemainKeys -= 1
                 }
+            }
             }
 	    } // End of FOR _, key := range keys
         if len(keys) > 0 {
@@ -1791,6 +1815,7 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 		                    debug.FreeOSMemory()
 				    return err
 			    }
+                if !objInfo.Hidden {
 	            if delimiter == SlashSeparator && prefix != "" {
                     if  !HasSuffix(string(prefix), SlashSeparator) {
 					    objInfo.IsDir = true
@@ -1813,6 +1838,7 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 				    }
 			    }
                 resChannel <- objInfo
+                }
 		    }
 	    }
         if len(keys) < int(maxKeyRange) {
@@ -1987,6 +2013,8 @@ func (ko *KineticObjects) version(key string) (string, error) {
         value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))
         meta := fsMetaV1{}
         err = json.Unmarshal(value[:size], &meta)
+        common.KTrace("Free meta")
+        //C.free(unsafe.Pointer(cvalue))
         common.KTrace(fmt.Sprintf("err = %+v, Meta: %+v", err, meta))
         if err == nil {
             version = meta.Version

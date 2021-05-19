@@ -183,6 +183,7 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
                 Synchronization: kinetic_proto.Command_WRITEBACK,
                 Timeout:         60000, //60 sec
                 Priority:        kinetic_proto.Command_NORMAL,
+                //Hidden:           true,
         }
 
         etag := r.MD5CurrentHexString()
@@ -197,6 +198,8 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
 	fsMeta.Meta = meta
         fsMeta.Meta["etag"] = r.MD5CurrentHexString()
         fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
+        fsMeta.Meta["hidden"] = "1"
+
         fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
 	// metadata file
         bytes, _ := json.Marshal(fsMeta)

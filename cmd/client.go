@@ -42,8 +42,10 @@ type Opts struct {
 	DbVersion       []byte
 	Tag             []byte
 	Algorithm       kinetic_proto.Command_Algorithm
-	MetaDataOnly    bool
 	Synchronization kinetic_proto.Command_Synchronization
+
+    MetaDataOnly    bool
+    //Hidden          bool
 }
 
 
@@ -682,68 +684,9 @@ func (c *Client) Delete(key string, cmd Opts) error {
 	return err
 }
 
-/*
-func (c *Client) CPutMeta(key string, value []byte, size int, cmd Opts) (uint32, error) {
-        defer common.KUntrace(common.KTrace("Enter"))
-//	metaKey := "meta." + key
-	//return uint32(size), nil //c.CPut(metaKey, value, size, cmd)
-	return c.CPut(key, value, size, cmd)
-
-}
-
-type MetaData struct {
-	Created time.Time
-}
-
-func (c *Client) createMetaData(key string) []byte {
-	var bucketInfo BucketInfo
-	bucketInfo.Name = key
-	bucketInfo.Created = time.Now()
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	enc.Encode(bucketInfo)
-    gbuf := allocateValBuf(buf.Len())
-	copy(gbuf, buf.Bytes())    
-	return gbuf
-}
-*/
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
-        defer common.KUntrace(common.KTrace("Enter"))
+    defer common.KUntrace(common.KTrace("Enter"))
     print("key: ", key, ", meta:", string(meta), ", metaSize:", metaSize)
-        /*
-	//start := time.Now()
-	var psv C._CPrimaryStoreValue
-	psv.version = C.CString(string(cmd.NewVersion))
-	psv.tag = C.CString(string(cmd.Tag))
-	psv.algorithm = C.int(cmd.Algorithm)
-        currentVersion := "1"
-	cKey := C.CString(key)
-	var cValue *C.char
-	if  size  > 0 {
-		cValue = (*C.char)(unsafe.Pointer(&value[0]))
-	} else {
-		cValue  = (*C.char)(nil)
-	}
-	var status C.int 
-	status = C.Put(1, cKey, C.CString(currentVersion), &psv, cValue, C.size_t(size), false, 1, 1)
-        //log.Println("MINIO CPUT DONE ", toKineticError(KineticError(int(status))), time.Since(start))
-        return uint32(size),  toKineticError(KineticError(int(status)))
-typedef struct CKVObject {
-	char* key_;
-	char* value_;
-
-	// Meta data
-	int keySize_;
-	int valueSize_;
-	char* version_;
-	char* tag_;
-	int32_t algorithm_;
-} CKVObject;
-        currentVersion := "1"
-
-*/
-    //var kvObj C.CKVObject
-    //kvObj := C.struct_CKVObject
     var kvObj C.CKVObject
     kvObj.key_ = C.CString(key)
     kvObj.keySize_ = C.int(len(key))
@@ -760,13 +703,18 @@ typedef struct CKVObject {
         metaSize = 0
     }
     kvObj.metaSize_ = C.int(metaSize)
-    common.KTrace("1")
+/*
+    if (cmd.Hidden) {
+        kvObj.hidden_ = C.int(1)
+    } else {
+        kvObj.hidden_ = C.int(0)
+    }
+*/
 	kvObj.valueSize_= C.int(size)
     kvObj.version_ = C.CString(string("1")) //cmd.NewVersion))
     kvObj.tag_ = C.CString(string(cmd.Tag))
     kvObj.algorithm_ = C.int(cmd.Algorithm)
     //userId := C.long(1)
-    common.KTrace("2") 
     var reqCtx C.CRequestContext
     reqCtx.userId_ = C.long(1)
     reqCtx.seq_ = C.long(1)
@@ -776,7 +724,6 @@ typedef struct CKVObject {
     reqCtx.ignoreVersion_ = C.int(1)
     common.KTrace(fmt.Sprintf("kvObject: %+v", kvObj)) 
     status := C.NPut(&kvObj, &reqCtx) //userId)
-    common.KTrace("3") 
     return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
