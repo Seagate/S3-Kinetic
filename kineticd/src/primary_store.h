@@ -108,8 +108,6 @@ class PrimaryStore : public PrimaryStoreInterface {
         connectionHandler_ = connHandler;
     }
 
-    virtual StoreOperationStatus NPut(KVObject* obj, RequestContext& reqContext);
-
  private:
     enum BooleanOrError {
         kTrue,

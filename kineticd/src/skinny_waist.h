@@ -42,7 +42,6 @@ class SkinnyWaist : public SkinnyWaistInterface {
         LaunchMonitorInterface& launch_monitor);
     ~SkinnyWaist();
 
-    virtual StoreOperationStatus NPut(KVObject* obj, RequestContext& reqContext);
     UserDataStatus InitUserDataStore(bool create_if_missing = false);
 
     bool CloseDB();

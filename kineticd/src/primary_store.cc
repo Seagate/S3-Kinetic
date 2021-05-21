@@ -418,7 +418,7 @@ StoreOperationStatus PrimaryStore::checkDiskSpace() {
     }
     return diskSpaceStatus;
 }
-
+/*
 StoreOperationStatus PrimaryStore::NPut(KVObject* obj, RequestContext& reqCtx) {
     cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     Event e;
@@ -473,7 +473,7 @@ StoreOperationStatus PrimaryStore::NPut(KVObject* obj, RequestContext& reqCtx) {
         cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
     return status;
 }
-
+*/
 StoreOperationStatus PrimaryStore::handlePutResponse(StoreOperationStatus status,
     LevelDBData* value) {
     switch (status) {
@@ -507,6 +507,7 @@ StoreOperationStatus PrimaryStore::Put(
         IncomingValueInterface* value,
         bool guarantee_durable,
         const std::tuple<int64_t, int64_t> token) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStorePut, &e);
 
@@ -525,6 +526,7 @@ StoreOperationStatus PrimaryStore::Put(
     internal_value_record.set_version(primary_store_value.version);
     internal_value_record.set_tag(primary_store_value.tag);
     internal_value_record.set_algorithm(primary_store_value.algorithm);
+    internal_value_record.set_meta(primary_store_value.meta);
     std::string packed_value;
 
     if (!internal_value_record.SerializeToString(&packed_value)) {

@@ -655,6 +655,7 @@ func (c *Client) Delete(key string, cmd Opts) error {
 
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+/*
     var kvObj C.CKVObject
     kvObj.key_ = C.CString(key)
     kvObj.keySize_ = C.int(len(key))
@@ -684,6 +685,27 @@ func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size i
     reqCtx.ignoreVersion_ = C.int(1)
     common.KTrace(fmt.Sprintf("kvObject: %+v", kvObj))
     status := C.NPut(&kvObj, &reqCtx)
+    return uint32(size),  toKineticError(KineticError(int(status)))
+*/
+
+	var psv C._CPrimaryStoreValue
+	psv.version = C.CString(string(cmd.NewVersion))
+	psv.tag = C.CString(string(cmd.Tag))
+	psv.algorithm = C.int(cmd.Algorithm)
+    psv.meta = (*C.char)(unsafe.Pointer(&meta[0]))
+    psv.metaSize = C.int(len(meta))
+    common.KTrace(fmt.Sprintf("meta len = %d, psv metaSize = %d", len(meta), psv.metaSize))
+    currentVersion := "1"
+	cKey := C.CString(key)
+	var cValue *C.char
+	if  size  > 0 {
+		cValue = (*C.char)(unsafe.Pointer(&value[0]))
+	} else {
+		cValue  = (*C.char)(nil)
+        size = 0
+	}
+	var status C.int
+	status = C.Put(1, cKey, C.CString(currentVersion), &psv, cValue, C.size_t(size), false, 1, 1)
     return uint32(size),  toKineticError(KineticError(int(status)))
 }
 

@@ -23,9 +23,10 @@ extern "C" {
 SkinnyWaist *pskinny_waist__ = NULL;
 
 typedef struct _CPrimaryStoreValue {
+    int metaSize;
+    int32_t algorithm;
     char* version;
     char* tag;
-    int32_t algorithm;
     char* meta;
 } _CPrimaryStoreValue;
 
@@ -42,8 +43,9 @@ void deallocate_gvalue_buffer(char* buff) {
     KernelMemMgr::pInstance_->FreeMem((void*)buff);
 }
 
-int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value,
+int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* psvalue, char* value,
         size_t size, _Bool sync, uint64_t sequence, int64_t connID) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     kineticd_idle = false;
     std::tuple<uint64_t, int64_t> token {sequence, connID}; // NOLINT
     PrimaryStoreValue primaryStoreValue;
@@ -51,12 +53,17 @@ int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStore
     primaryStoreValue.tag = string(psvalue->tag);
     primaryStoreValue.value = "";
     primaryStoreValue.algorithm = psvalue->algorithm;
-    primaryStoreValue.meta = psvalue->meta;
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": algorithm = " << psvalue->algorithm << endl;
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": metaSize = " << psvalue->metaSize  << endl;
+    primaryStoreValue.meta = string(psvalue->meta, psvalue->metaSize);
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": meta: "
+         << primaryStoreValue.meta << ", size = " << psvalue->metaSize << endl;
     IncomingBuffValue ivalue(value, size);
     RequestContext requestContext;
     requestContext.is_ssl = false;
     StoreOperationStatus status = ::pskinny_waist__->Put(user_id, string(key), string(current_version), primaryStoreValue,
                                                          &ivalue, true, sync, requestContext, token);
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
     return status;
 }
 
@@ -152,7 +159,7 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
 //==========
 // Operations with new signatures
 //==========
-
+/*
 int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx) {
     KVObject kvObj(C_kvObj);
     RequestContext reqContext;
@@ -165,5 +172,6 @@ int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx) {
     StoreOperationStatus status = ::pskinny_waist__->NPut(&kvObj, reqContext);
     return status;
 }
+*/
  
 }

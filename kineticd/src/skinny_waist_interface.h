@@ -32,8 +32,6 @@ class SkinnyWaistInterface {
     public:
     virtual ~SkinnyWaistInterface() {}
 
-    virtual StoreOperationStatus NPut(KVObject* kvObj, RequestContext& reqContext) = 0;
-
     virtual StoreOperationStatus Get(
         int64_t user_id,
         const std::string& key,

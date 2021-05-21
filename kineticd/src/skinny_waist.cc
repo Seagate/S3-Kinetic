@@ -888,7 +888,7 @@ bool SkinnyWaist::Crc64Integrity(std::string value_str, std::string tag_str) {
     return true;
 }
 
-
+/*
 StoreOperationStatus SkinnyWaist::NPut(KVObject* obj, RequestContext& reqContext) {
 	if (obj == NULL || strcmp(obj->key().data(), "") == 0) {
 		return StoreOperationStatus_INVALID_REQUEST;
@@ -907,4 +907,5 @@ StoreOperationStatus SkinnyWaist::NPut(KVObject* obj, RequestContext& reqContext
     status = processByStatus(status);
     return status;
 }
+*/
 

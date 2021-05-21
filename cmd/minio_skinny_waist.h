@@ -47,10 +47,11 @@ typedef struct CKVObject {
 } CKVObject;
 
 typedef struct _CPrimaryStoreValue {
+    int metaSize;
+    int32_t algorithm;
     char* version;
     char* tag;
-    char* value;
-    int32_t algorithm;
+    char* meta;
 } _CPrimaryStoreValue;
 
 //void* CInitMain(char* store_partition);
@@ -75,7 +76,7 @@ void deallocate_gvalue_buffer(char* buff);
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
 char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
 
-int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size,
+int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* psvalue, char* value, size_t size,
           _Bool sync, int64_t sequence, int64_t connID);
 
 int Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64_t sequence, int64_t connID);
@@ -83,7 +84,7 @@ int Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64
 void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32_t maxReturned,
                  bool reverse, char* results, int* size);
 
-int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx);
+//int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx);
 
 #ifdef _cplusplus
 }
