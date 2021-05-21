@@ -80,7 +80,7 @@ func (c *Client) Read(value []byte) (int, error) {
         if (cvalue != nil) {
 		fsMetaBytes := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-        common.KTrace("Free meta")
+        //common.KTrace("Free meta")
         //C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)

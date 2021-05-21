@@ -420,7 +420,6 @@ func New() Config {
     defer common.KUntrace(common.KTrace("Enter"))
 	srvCfg := make(Config)
 	for _, k := range SubSystems.ToSlice() {
-        common.KTrace(fmt.Sprintf("Key k = %s", k))
 		srvCfg[k] = map[string]KVS{}
 		srvCfg[k][Default] = DefaultKVS[k]
 	}
