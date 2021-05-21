@@ -125,13 +125,6 @@ func (c *Client) Read(value []byte) (int, error) {
 	return 0, err
 }
 
-/*
-func (c *Client) Write(p []byte, size int) (int, error) {
-        defer common.KUntrace(common.KTrace("Enter"))
-	n, err := c.Put(string(c.Key), p, size, c.Opts)
-	return int(n), err
-}
-*/
 //Close: close socket
 func (c *Client) Close() {
         defer common.KUntrace(common.KTrace("Enter"))
@@ -655,38 +648,6 @@ func (c *Client) Delete(key string, cmd Opts) error {
 
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-/*
-    var kvObj C.CKVObject
-    kvObj.key_ = C.CString(key)
-    kvObj.keySize_ = C.int(len(key))
-	if  size  > 0 {
-		kvObj.value_ = (*C.char)(unsafe.Pointer(&value[0]))
-	} else {
-		kvObj.value_  = (*C.char)(nil)
-		size = 0
-	}
-    if metaSize > 0 {
-        kvObj.meta_ = (*C.char)(unsafe.Pointer(&meta[0]))
-    } else {
-        kvObj.meta_ = (*C.char)(nil)
-        metaSize = 0
-    }
-    kvObj.metaSize_ = C.int(metaSize)
-	kvObj.valueSize_= C.int(size)
-    kvObj.version_ = C.CString(string("1"))
-    kvObj.tag_ = C.CString(string(cmd.Tag))
-    kvObj.algorithm_ = C.int(cmd.Algorithm)
-    var reqCtx C.CRequestContext
-    reqCtx.userId_ = C.long(1)
-    reqCtx.seq_ = C.long(1)
-    reqCtx.connId_ = C.long(1)
-    reqCtx.is_ssl = C.int(0)
-    reqCtx.writeThrough_ = C.int(0)
-    reqCtx.ignoreVersion_ = C.int(1)
-    common.KTrace(fmt.Sprintf("kvObject: %+v", kvObj))
-    status := C.NPut(&kvObj, &reqCtx)
-    return uint32(size),  toKineticError(KineticError(int(status)))
-*/
 
 	var psv C._CPrimaryStoreValue
 	psv.version = C.CString(string(cmd.NewVersion))

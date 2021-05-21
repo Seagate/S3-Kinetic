@@ -22,7 +22,6 @@
 #include "server.h"
 #include "smrdisk/ValueFileCache.h"
 #include "smrdisk/Disk.h"
-#include "KVObject.h"
 
 using namespace com::seagate::kinetic::cmd; //NOLINT
 namespace com {
@@ -270,7 +269,6 @@ StoreOperationStatus PrimaryStore::Get(
     profiler_.BeginAutoScoped(kPrimaryStoreGet, &e);
     char* packed_value;
     packed_value =  new char[sizeof(packed_value)];
-    
 
     if (corrupt_) {
         delete[] packed_value;
@@ -404,103 +402,6 @@ bool PrimaryStore::Write(BatchSet* batchSet, Command& commandResponse, const std
     return (commandResponse.status().code() == Command_Status_StatusCode_SUCCESS);
 }
 
-StoreOperationStatus PrimaryStore::checkDiskSpace() {
-    StoreOperationStatus diskSpaceStatus = StoreOperationStatus_SUCCESS;
-    uint64_t total_bytes, used_bytes;
-    if (!device_information_.GetCapacity(&total_bytes, &used_bytes)) {
-        LOG(ERROR) << "IE Store Status";
-        diskSpaceStatus = StoreOperationStatus_INTERNAL_ERROR;
-    }
-    if (diskSpaceStatus == StoreOperationStatus_SUCCESS &&
-        total_bytes - used_bytes < kMinFreeSpace) {
-        smr::Disk::noSpace(smr::Disk::DiskStatus::NO_SPACE);
-        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": >>>>>>>>>> Disk space is at no space threshold" << endl;
-    }
-    return diskSpaceStatus;
-}
-/*
-StoreOperationStatus PrimaryStore::NPut(KVObject* obj, RequestContext& reqCtx) {
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
-    Event e;
-    profiler_.BeginAutoScoped(kPrimaryStorePut, &e);
-
-    if (corrupt_) {
-        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Corrupt Exit" << endl;
-        return StoreOperationStatus_STORE_CORRUPT;
-    }
-    StoreOperationStatus diskSpaceStatus = checkDiskSpace();
-    if (diskSpaceStatus != StoreOperationStatus_SUCCESS) {
-        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": No diskspae Exit" << endl;
-    	return diskSpaceStatus;
-    }
-    InternalValueRecord internal_value_record;
-
-    //Always has empty value;
-    std::string value_str = "";
-    internal_value_record.set_value(value_str);
-    internal_value_record.set_version(obj->version());
-    internal_value_record.set_tag(obj->tag());
-    internal_value_record.set_algorithm(obj->algorithm());
-    //internal_value_record.set_hidden(obj->isHidden());
-    internal_value_record.set_meta(obj->clientMeta());
-    //internal_value_record.set_createdTime(obj->createdTime());
-
-    std::string packed_value;
-
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Call serialize" << endl;
-    if (!internal_value_record.SerializeToString(&packed_value)) {
-        LOG(ERROR) << "Failed to serialize internal value record ";
-        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Fail to serialize Exit" << endl;
-        return StoreOperationStatus_INTERNAL_ERROR;
-    };
-
-        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
-    LevelDBData* myValue = new LevelDBData();
-    myValue->type = LevelDBDataType::MEM_INTERNAL;
-    myValue->headerSize = packed_value.size();
-    myValue->header = new char[myValue->headerSize];
-
-    memcpy(myValue->header, packed_value.data(), packed_value.size());
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << endl;
-    myValue->dataSize = obj->size();
-    myValue->data = obj->value().data(); //value->GetUserValue();
-    myValue->memType = MEMORYType::MEM_FOR_CLIENT;
-    std::tuple<uint64_t, int64_t> token {reqCtx.seq(), reqCtx.connId()}; // NOLINT
-    // TODO: avoid key copy
-    string sKey(obj->key().data(), obj->key().size());
-    StoreOperationStatus status = key_value_store_.Put(sKey, (char*) myValue, reqCtx.writeThrough(), token);
-    status = handlePutResponse(status, myValue);
-        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
-    return status;
-}
-*/
-StoreOperationStatus PrimaryStore::handlePutResponse(StoreOperationStatus status,
-    LevelDBData* value) {
-    switch (status) {
-        case StoreOperationStatus_SUCCESS:
-            return StoreOperationStatus_SUCCESS;
-        case StoreOperationStatus_NO_SPACE:
-            delete [] value->header;
-            delete value;
-            LOG(ERROR) << "Failed to persist key/value in dbase. No space available.";//NO_SPELL
-            return StoreOperationStatus_NO_SPACE;
-        case StoreOperationStatus_FROZEN:
-            delete [] value->header;
-            delete value;
-            LOG(ERROR) << "Failed to persist key/value in dbase. No space available.";//NO_SPELL
-            return StoreOperationStatus_FROZEN;
-        case StoreOperationStatus_SUPERBLOCK_IO:
-            delete [] value->header;
-            delete value;
-            return StoreOperationStatus_SUPERBLOCK_IO;
-        default:
-            delete [] value->header;
-            delete value;
-            LOG(ERROR) << "Failed to persist key/value in dbase ";//NO_SPELL
-            return StoreOperationStatus_INTERNAL_ERROR;
-    }
-}
-
 StoreOperationStatus PrimaryStore::Put(
         const std::string& key,
         const PrimaryStoreValue& primary_store_value,
@@ -514,9 +415,16 @@ StoreOperationStatus PrimaryStore::Put(
     if (corrupt_) {
         return StoreOperationStatus_STORE_CORRUPT;
     }
-    StoreOperationStatus diskSpaceStatus = checkDiskSpace();
-    if (diskSpaceStatus != StoreOperationStatus_SUCCESS) {
-    	return diskSpaceStatus;
+    static StoreOperationStatus diskSpaceStatus = StoreOperationStatus_SUCCESS;
+    uint64_t total_bytes, used_bytes;
+    if (!device_information_.GetCapacity(&total_bytes, &used_bytes)) {
+        LOG(ERROR) << "IE Store Status";
+        return StoreOperationStatus_INTERNAL_ERROR;
+    }
+    if (diskSpaceStatus == StoreOperationStatus_SUCCESS &&
+        total_bytes - used_bytes < kMinFreeSpace) {
+        smr::Disk::noSpace(smr::Disk::DiskStatus::NO_SPACE);
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": >>>>>>>>>> Disk space is at no space threshold" << endl;
     }
     InternalValueRecord internal_value_record;
 

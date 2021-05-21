@@ -15,7 +15,6 @@
 #include "user_store_interface.h"
 #include "launch_monitor.h"
 #include "leveldb/status.h"
-#include "KVObject.h"
 
 using namespace leveldb; //NOLINT
 
@@ -128,8 +127,6 @@ class SkinnyWaist : public SkinnyWaistInterface {
     }
 
     private:
-    StoreOperationStatus matchVersion(const std::string& key, const std::string& current_version);
-    StoreOperationStatus processByStatus(StoreOperationStatus status);
     /// Functions For MediaScan Integrity Checks
     bool Sha1Integrity(std::string value_str, std::string tag_str);
     bool Sha2Integrity(std::string value_str, std::string tag_str);

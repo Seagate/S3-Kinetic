@@ -114,9 +114,6 @@ class PrimaryStore : public PrimaryStoreInterface {
         kFalse,
         kError
     };
-    StoreOperationStatus checkDiskSpace();
-    StoreOperationStatus handlePutResponse(StoreOperationStatus status, LevelDBData* value);
-
     BooleanOrError FileExists(const std::string &key, std::string* packed_value = NULL);
     bool HasDiskSpace(BatchSet* batchSet, Command& commandResponse);
     // Atrributes

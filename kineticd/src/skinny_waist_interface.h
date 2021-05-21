@@ -25,13 +25,9 @@ using com::seagate::kinetic::cmd::BatchSet;
 /**
 * Implementations must be threadsafe
 */
-class KVObject;
-class Key;
-
 class SkinnyWaistInterface {
     public:
     virtual ~SkinnyWaistInterface() {}
-
     virtual StoreOperationStatus Get(
         int64_t user_id,
         const std::string& key,

@@ -21,31 +21,6 @@
 extern "C" {
 #endif
 
-typedef struct CRequestContext {
-    int is_ssl;
-    int64_t userId_;
-    int writeThrough_;
-    int ignoreVersion_;
-    int64_t seq_;
-    int64_t connId_;
-} CRequestContext;
-
-typedef struct CKVObject {
-	char* key_;
-	char* value_;
-
-    // Meta string from marshalling the fsMetaV1 from Minio.
-    char* meta_;
-    int metaSize_;
-
-	// Meta data
-	int keySize_;
-	int valueSize_;
-	char* version_;
-	char* tag_;
-	int32_t algorithm_;
-} CKVObject;
-
 typedef struct _CPrimaryStoreValue {
     int metaSize;
     int32_t algorithm;
@@ -83,8 +58,6 @@ int Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64
 
 void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32_t maxReturned,
                  bool reverse, char* results, int* size);
-
-//int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx);
 
 #ifdef _cplusplus
 }

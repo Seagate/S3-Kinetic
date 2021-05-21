@@ -56,8 +56,6 @@ class PrimaryStoreIteratorInterface {
     virtual bool Algorithm(int32_t *algorithm) = 0;
 };
 
-class KVObject;
-
 class PrimaryStoreInterface {
     public:
     virtual ~PrimaryStoreInterface() {}

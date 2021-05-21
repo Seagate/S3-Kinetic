@@ -53,11 +53,7 @@ int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* 
     primaryStoreValue.tag = string(psvalue->tag);
     primaryStoreValue.value = "";
     primaryStoreValue.algorithm = psvalue->algorithm;
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": algorithm = " << psvalue->algorithm << endl;
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": metaSize = " << psvalue->metaSize  << endl;
     primaryStoreValue.meta = string(psvalue->meta, psvalue->metaSize);
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": meta: "
-         << primaryStoreValue.meta << ", size = " << psvalue->metaSize << endl;
     IncomingBuffValue ivalue(value, size);
     RequestContext requestContext;
     requestContext.is_ssl = false;
@@ -155,23 +151,4 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
     }
     *size = totalSize;
 }
-
-//==========
-// Operations with new signatures
-//==========
-/*
-int NPut(CKVObject* C_kvObj, CRequestContext* C_reqCtx) {
-    KVObject kvObj(C_kvObj);
-    RequestContext reqContext;
-    reqContext.setUserId(C_reqCtx->userId_);
-    reqContext.setSsl(C_reqCtx->ssl_ == 1);
-    reqContext.setWriteThrough(C_reqCtx->writeThrough_ == 1);
-    reqContext.setIgnoreVersion(C_reqCtx->ignoreVersion_ == 1);
-    reqContext.setSeq(C_reqCtx->seq_);
-    reqContext.setConnId(C_reqCtx->connId_);
-    StoreOperationStatus status = ::pskinny_waist__->NPut(&kvObj, reqContext);
-    return status;
-}
-*/
- 
 }
