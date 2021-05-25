@@ -1858,31 +1858,38 @@ int64_t DBImpl::TEST_MaxNextLevelOverlappingBytes() {
 
 namespace {
 char* allocate_getvalue_buffer(bool byGetInternal) {
+  cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
   char *buff = NULL;
   if (!byGetInternal) {
+  cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": !byInternal" << endl;
   	buff = (char*) KernelMemMgr::pInstance_->AllocMem();
   } else {
+  cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": byInternal" << endl;
         int s = posix_memalign((void**)&buff, 4096, ROUNDUP((size_t)5*1048576,4096));
 	if (s != 0) {
 	  cout << "FAILED TO ALLOC" << endl;
 	  buff = NULL;
 	}
   }
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit, buff = " << (void*)buff << endl;
   return buff;
 }
 
 void deallocate_getvalue_buffer(bool byGetInternal, char* buff) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
   if (!byGetInternal) {
     KernelMemMgr::pInstance_->FreeMem((void*) buff);
   } else {
     free(buff);
   }
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit, buff = " << (void*)buff << endl;
 }
 }
 
 Status DBImpl::Get(const ReadOptions& options,
                    const Slice& key, char* value,
                    bool ignore_value, bool using_bloom_filter, char* buff) {
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
   Status s;
   bool fromMem = false;
   MutexLock l(&mutex_);
@@ -1920,10 +1927,14 @@ Status DBImpl::Get(const ReadOptions& options,
     }
 
     if (s.ok() ) {
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": buff = " << (void*) buff << endl;
      if (buff == NULL) {
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": buff = NULL" << endl;
         buff = allocate_getvalue_buffer(false);
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": return form allocate mem, buff = " << (void*)buff << endl;
         if (buff == NULL) {
         //mutex_.Lock(); // prevent double-unlock by MutexLock
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": buff = NULL again" << endl;
           mem->Unref();
           if (imm != NULL) imm->Unref();
           current->Unref();
@@ -1933,7 +1944,9 @@ Status DBImpl::Get(const ReadOptions& options,
       char* value_pointer = NULL;
       memcpy((char*) &value_pointer, value, sizeof(void*));
       if (fromMem) {
-        ((LevelDBData*) value_pointer)->serialize(buff);
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": fromMem" << endl;
+        ((LevelDBData*) value_pointer)->serialize(buff, NULL, ignore_value);
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": return fromMem" << endl;
       } else {
         LevelDBData myData;
         myData.deserialize(value_pointer);
@@ -1947,6 +1960,7 @@ Status DBImpl::Get(const ReadOptions& options,
                     Slice not_needed;
                     myData.type = LevelDBDataType::MEM_INTERNAL;
                     myData.dataSize = external.size;
+                    cout << __FILE__ << ":" << __LINE__ << "." << endl;
                     char* data = myData.serialize(buff, NULL, true);
                     if (!ignore_value) {
                       s = file->Read(external.offset, external.size, &not_needed, data);
@@ -1960,21 +1974,26 @@ Status DBImpl::Get(const ReadOptions& options,
                 }
             }
         } else {
+            cout << __FILE__ << ":" << __LINE__ << ":NOT MEM EXTERNAL." << endl;
             myData.serialize(buff);
         }
       }
+      cout << __FILE__ << ":" << __LINE__ << "." << endl;
       memcpy(value, (char*) &buff, sizeof(void*));
     }
  //   mutex_.Lock();  // In pair with previous Unlock
   }
 
+  cout << __FILE__ << ":" << __LINE__ << "." << endl;
   mem->Unref();
   if (imm != NULL) imm->Unref();
   current->Unref();
-
+  cout << __FILE__ << ":" << __LINE__ << "." << endl;
+    
   if ((have_stat_update && current->UpdateStats(stats))) {
       MaybeScheduleCompaction();
   }
+  cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
   return s;
 }
 

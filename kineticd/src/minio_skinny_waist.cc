@@ -64,6 +64,7 @@ int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* 
 }
 
 char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     kineticd_idle = false;
     PrimaryStoreValue primaryStoreValue;
     primaryStoreValue.version = string(psvalue->version);
@@ -77,14 +78,29 @@ char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreVal
     StoreOperationStatus status = ::pskinny_waist__->Get(user_id, string(key), &primaryStoreValue, requestContext,  ovalue, bvalue);
     *st = int(status);
     *size = 0;
+    char* metaBuf = NULL;
     if (status == StoreOperationStatus::StoreOperationStatus_SUCCESS) {
         *size = primaryStoreValue.meta.size();
-        memcpy(bvalue, primaryStoreValue.meta.data(), *size);
+        if (*size > 0) {
+             cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": meta = "
+                  << primaryStoreValue.meta << ", size = " << *size << endl;
+            metaBuf = (char*)calloc(*size, sizeof(char));
+            if (metaBuf) {
+                memcpy(metaBuf, primaryStoreValue.meta.data(), *size);
+            } else {
+                *st = StoreOperationStatus::StoreOperationStatus_INTERNAL_ERROR;
+                cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Failed to allocate mem, size = " << *size << endl;
+                *size = 0;
+
+            }
+        }
     }
-    return bvalue;
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
+    return metaBuf;
 }
 
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     kineticd_idle = false;
 
     PrimaryStoreValue primaryStoreValue;
@@ -100,26 +116,13 @@ char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* 
     StoreOperationStatus status = ::pskinny_waist__->Get(user_id, string(key), &primaryStoreValue, requestContext,  ovalue, bvalue);
     s = NULL;
     *st = int(status);
-    switch (status) {
-        case StoreOperationStatus::StoreOperationStatus_SUCCESS:
-            *size = int(ovalue->size());
-            s = ovalue->get_value_buff();
-            delete ovalue;
-            return s;
-        case StoreOperationStatus::StoreOperationStatus_NOT_FOUND:
-            delete ovalue;
-            return NULL;
-        case StoreOperationStatus::StoreOperationStatus_STORE_CORRUPT:
-            delete ovalue;
-            return NULL;
-        case StoreOperationStatus::StoreOperationStatus_DATA_CORRUPT:
-            delete ovalue;
-            return NULL;
-        default:
-            LOG(ERROR) << "IE store status";
-            delete ovalue;
-            return NULL;
-    };
+    if (status == StoreOperationStatus::StoreOperationStatus_SUCCESS) {
+        *size = int(ovalue->size());
+        s = ovalue->get_value_buff();
+    }
+    delete ovalue;
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
+    return s;
 }
 
 

@@ -250,6 +250,7 @@ func fsStatDir(ctx context.Context, statDir string) (os.FileInfo, error) {
 
 func koStat(key string) (KVInfo, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("key = %s", key))
 	var oi KVInfo
         kopts := Opts{
                 ClusterVersion:  0,
@@ -276,8 +277,8 @@ func koStat(key string) (KVInfo, error) {
         }
     common.KTrace(fmt.Sprintf("cvalue meta: %s, size = %d", string(value), size))
     err = json.Unmarshal(value[:size], &fsMeta)
-    //common.KTrace("Free meta")
-    //C.free(unsafe.Pointer(cvalue))
+    common.KTrace("Free meta")
+    C.free(unsafe.Pointer(cvalue))
     if err != nil {
         return oi, err
 	}

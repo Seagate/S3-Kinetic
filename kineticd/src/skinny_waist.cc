@@ -133,6 +133,7 @@ StoreOperationStatus SkinnyWaist::Get(
         RequestContext& request_context,
         NullableOutgoingValue *value, char* buff) {
         PthreadsMutexGuard guard(&mutex_);
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
 
     if (!authorizer_.AuthorizeKey(user_id, Domain::kRead, key, request_context)) {
         return StoreOperationStatus_AUTHORIZATION_FAILURE;
@@ -144,17 +145,15 @@ StoreOperationStatus SkinnyWaist::Get(
 
     switch (status) {
         case StoreOperationStatus_SUCCESS:
-            return status;
         case StoreOperationStatus_NOT_FOUND:
-            return status;
         case StoreOperationStatus_STORE_CORRUPT:
-            return status;
         case StoreOperationStatus_DATA_CORRUPT:
-            return status;
+            break;
         default:
-            LOG(ERROR) << "IE store status";
-            return StoreOperationStatus_INTERNAL_ERROR;
+            status = StoreOperationStatus_INTERNAL_ERROR;
     }
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
+    return status;
 }
 
 StoreOperationStatus SkinnyWaist::GetVersion(

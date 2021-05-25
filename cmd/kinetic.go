@@ -407,8 +407,8 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
                 buf := bytes.NewBuffer(value[:size])
                 dec := gob.NewDecoder(buf)
                 dec.Decode(&bi)
-                //common.KTrace("Free meta")
-                //C.free(unsafe.Pointer(cvalue))
+                common.KTrace("Free meta")
+                C.free(unsafe.Pointer(cvalue))
         }
         kineticMutex.Unlock()
 
@@ -516,8 +516,8 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 		buf := bytes.NewBuffer(value[:size])
 		dec := gob.NewDecoder(buf)
 		dec.Decode(&bi)
-        //common.KTrace("Free meta")
-        //C.free(unsafe.Pointer(cvalue))
+        common.KTrace("Free meta")
+        C.free(unsafe.Pointer(cvalue))
 	} else {
         common.KTrace("cvalue is nil")
     }
@@ -571,8 +571,8 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 					buf := bytes.NewBuffer(value[:size])
 					dec := gob.NewDecoder(buf)
 					dec.Decode(&bucketInfo)
-                    //common.KTrace("Free meta")
-                    //C.free(unsafe.Pointer(cvalue))
+                    common.KTrace("Free meta")
+                    C.free(unsafe.Pointer(cvalue))
                     common.KTrace(fmt.Sprintf("MyBucketInfo: %+v", bucketInfo))
 					name := []byte(bucketInfo.Name)
 					bucketInfo.Name = string(name[7:])
@@ -758,8 +758,8 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 			value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 			fsMeta.Meta = make(map[string]string)
 			err = json.Unmarshal(value[:size], &fsMeta)
-            //common.KTrace("Free meta")
-            //C.free(unsafe.Pointer(cvalue))
+            common.KTrace("Free meta")
+            C.free(unsafe.Pointer(cvalue))
 			if err != nil {
 	                        // For any error to read fsMeta, set default ETag and proceed.
 	                        fsMeta = ko.defaultFsJSON(srcObject)
@@ -998,8 +998,8 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 		value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		fsMeta.Meta = make(map[string]string)
 		err = json.Unmarshal(value[:size], &fsMeta)
-        //common.KTrace("Free meta")
-        //C.free(unsafe.Pointer(cvalue))
+        common.KTrace("Free meta")
+        C.free(unsafe.Pointer(cvalue))
 		if err != nil {
 			kineticMutex.Unlock()
 			return oi, err
@@ -1373,8 +1373,8 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
     if (cvalue != nil) {
         fsMetaBytes = (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-        //common.KTrace("Free meta")
-        //C.free(unsafe.Pointer(cvalue))
+        common.KTrace("Free meta")
+        C.free(unsafe.Pointer(cvalue))
     }
     if len(fsMeta.Parts) == 0 {
         key := bucket + SlashSeparator + object
@@ -1913,8 +1913,8 @@ func (ko *KineticObjects) version(key string) (string, error) {
         value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))
         meta := fsMetaV1{}
         err = json.Unmarshal(value[:size], &meta)
-        //common.KTrace("Free meta")
-        //C.free(unsafe.Pointer(cvalue))
+        common.KTrace("Free meta")
+        C.free(unsafe.Pointer(cvalue))
         common.KTrace(fmt.Sprintf("err = %+v, Meta: %+v", err, meta))
         if err == nil {
             version = meta.Version

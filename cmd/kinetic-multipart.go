@@ -373,8 +373,8 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 		fsMetaBytes = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	        err = json.Unmarshal(fsMetaBytes, &fsMeta);
-            //common.KTrace("Free meta")
-            //C.free(unsafe.Pointer(cvalue))
+            common.KTrace("Free meta")
+            C.free(unsafe.Pointer(cvalue))
 		if err != nil {
 	                kineticMutex.Unlock()
 			return result, err

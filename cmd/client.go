@@ -80,8 +80,8 @@ func (c *Client) Read(value []byte) (int, error) {
         if (cvalue != nil) {
 		fsMetaBytes := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-        //common.KTrace("Free meta")
-        //C.free(unsafe.Pointer(cvalue))
+        common.KTrace("Free meta")
+        C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
@@ -536,14 +536,18 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 	var bvalue []byte
     // Always allocate the maximum chunk of memory because meta data and
     // value are now in the same record
-    bvalue = make([]byte, 5*1048576+4096)
+    //bvalue = make([]byte, 5*1048576+4096)
     if acmd.MetaDataOnly {
-        cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
+        bvalue = nil
+        //cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(&bvalue)), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
+        cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(nil)), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
     } else {
+        bvalue = make([]byte, 5*1048576+4096)
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
     }
 	var err error = nil
 	if status != 0 || cvalue == nil {
+        common.KTrace(fmt.Sprintf("failed, status = %d", status))
 		err =  errKineticNotFound
 	}
         return cvalue, uint32(size1), err

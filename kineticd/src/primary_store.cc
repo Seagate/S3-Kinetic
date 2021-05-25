@@ -37,13 +37,17 @@ const uint64_t PrimaryStore::kMinFreeSpace = smr::Disk::NO_SPACE_THRESHOLD;
 
 namespace {
 char* allocate_getvalue_buffer() {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     char* buff = NULL;
     buff = (char*) KernelMemMgr::pInstance_->AllocMem();
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit, buff = " << (void*)buff << endl;
     return buff;
 }
 
 void deallocate_getvalue_buffer(char* buff) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     KernelMemMgr::pInstance_->FreeMem((void*) buff);
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit, buff = " << (void*)buff << endl;
 }
 } // namespace
 
@@ -265,6 +269,7 @@ StoreOperationStatus PrimaryStore::Get(
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
         NullableOutgoingValue *value, char* buff) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStoreGet, &e);
     char* packed_value;
@@ -278,20 +283,22 @@ StoreOperationStatus PrimaryStore::Get(
     if (value == NULL) {
         ignore_value = true;
     }
-    switch (key_value_store_.Get(key, packed_value, ignore_value, true, buff)) {
+    StoreOperationStatus status = key_value_store_.Get(key, packed_value, ignore_value, true, buff);
+    switch (status) {
         case StoreOperationStatus_SUCCESS:
-            break;
         case StoreOperationStatus_NOT_FOUND:
-            delete[] packed_value;
-            return StoreOperationStatus_NOT_FOUND;
+            break;
         case StoreOperationStatus_STORE_CORRUPT:
-            delete[] packed_value;
             corrupt_ = true;
-            return StoreOperationStatus_STORE_CORRUPT;
+            break;
         default:
-            delete[] packed_value;
             LOG(ERROR) << "IE Store Status";
-            return StoreOperationStatus_INTERNAL_ERROR;
+            status = StoreOperationStatus_INTERNAL_ERROR;
+    }
+    if (status != StoreOperationStatus_SUCCESS) {
+        delete[] packed_value;
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit with failure" << endl;
+        return status;
     }
     //Sequence:count:kType:key:Options[Version, Tag, Algo]:Value
     CHECK(primary_store_value);
@@ -399,6 +406,7 @@ bool PrimaryStore::Write(BatchSet* batchSet, Command& commandResponse, const std
         Flush(false, true);
     }
     batchSet->complete();
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
     return (commandResponse.status().code() == Command_Status_StatusCode_SUCCESS);
 }
 
