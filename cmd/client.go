@@ -21,13 +21,13 @@ import (
 	"github.com/minio/minio/pkg/kinetic_proto"
 	"log" //"github.com/sirupsen/logrus"
 	"net"
+    "strconv"
 	//"sync"
 	"github.com/minio/minio/common"
 )
 
 //var mutexCmd = &sync.Mutex{}
 var SkinnyWaistIF bool = false
-var MetaSize int = 8*1024
 
 type Opts struct {
 	//Command         kinetic_proto.Command_MessageType
@@ -85,7 +85,8 @@ func (c *Client) Read(value []byte) (int, error) {
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
-		cvalue, size, err := c.CGet(string(c.Key), int(fsMeta.KoInfo.Size), c.Opts)
+        objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
+		cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts)
                 if err != nil {
                         c.ReleaseConn(c.Idx)
                         return 0, err
@@ -516,15 +517,15 @@ func (c *Client) AbortBatch(cmd Opts) error {
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-	metaSize := MetaSize
     acmd.MetaDataOnly = true
-	return c.CGet(key, metaSize, acmd)
+	return c.CGet(key, -1, acmd)  // -1 to indicate it doesn't know the size
 }
 
 
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("key = %s, size = %d", key, size))
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
         psv.tag = C.CString(string(acmd.Tag))
@@ -534,15 +535,16 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 	var status int
 	var cvalue *C.char
 	var bvalue []byte
-    // Always allocate the maximum chunk of memory because meta data and
-    // value are now in the same record
-    //bvalue = make([]byte, 5*1048576+4096)
     if acmd.MetaDataOnly {
+        // Let kineticd allocate memory for metadata because it knows size of the metadata
         bvalue = nil
-        //cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(&bvalue)), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
         cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(nil)), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
     } else {
-        bvalue = make([]byte, 5*1048576+4096)
+        if (size > 0) {
+            bvalue = make([]byte, size + 1024)  // Add 1024 for meta data
+        } else {
+            bvalue = make([]byte, 2*4096)
+        }
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
     }
 	var err error = nil
