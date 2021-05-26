@@ -45,7 +45,6 @@ void deallocate_gvalue_buffer(char* buff) {
 
 int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* psvalue, char* value,
         size_t size, _Bool sync, uint64_t sequence, int64_t connID) {
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     kineticd_idle = false;
     std::tuple<uint64_t, int64_t> token {sequence, connID}; // NOLINT
     PrimaryStoreValue primaryStoreValue;
@@ -59,12 +58,10 @@ int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* 
     requestContext.is_ssl = false;
     StoreOperationStatus status = ::pskinny_waist__->Put(user_id, string(key), string(current_version), primaryStoreValue,
                                                          &ivalue, true, sync, requestContext, token);
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
     return status;
 }
 
 char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     kineticd_idle = false;
     PrimaryStoreValue primaryStoreValue;
     primaryStoreValue.version = string(psvalue->version);
@@ -82,25 +79,20 @@ char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreVal
     if (status == StoreOperationStatus::StoreOperationStatus_SUCCESS) {
         *size = primaryStoreValue.meta.size();
         if (*size > 0) {
-             cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": meta = "
-                  << primaryStoreValue.meta << ", size = " << *size << endl;
             metaBuf = (char*)calloc(*size, sizeof(char));
             if (metaBuf) {
                 memcpy(metaBuf, primaryStoreValue.meta.data(), *size);
             } else {
                 *st = StoreOperationStatus::StoreOperationStatus_INTERNAL_ERROR;
-                cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Failed to allocate mem, size = " << *size << endl;
                 *size = 0;
 
             }
         }
     }
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
     return metaBuf;
 }
 
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     kineticd_idle = false;
 
     PrimaryStoreValue primaryStoreValue;
@@ -121,7 +113,6 @@ char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* 
         s = ovalue->get_value_buff();
     }
     delete ovalue;
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     return s;
 }
 

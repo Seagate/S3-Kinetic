@@ -37,17 +37,13 @@ const uint64_t PrimaryStore::kMinFreeSpace = smr::Disk::NO_SPACE_THRESHOLD;
 
 namespace {
 char* allocate_getvalue_buffer() {
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     char* buff = NULL;
     buff = (char*) KernelMemMgr::pInstance_->AllocMem();
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit, buff = " << (void*)buff << endl;
     return buff;
 }
 
 void deallocate_getvalue_buffer(char* buff) {
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     KernelMemMgr::pInstance_->FreeMem((void*) buff);
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit, buff = " << (void*)buff << endl;
 }
 } // namespace
 
@@ -269,7 +265,6 @@ StoreOperationStatus PrimaryStore::Get(
         const std::string& key,
         PrimaryStoreValue* primary_store_value,
         NullableOutgoingValue *value, char* buff) {
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStoreGet, &e);
     char* packed_value;

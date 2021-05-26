@@ -133,8 +133,6 @@ StoreOperationStatus SkinnyWaist::Get(
         RequestContext& request_context,
         NullableOutgoingValue *value, char* buff) {
         PthreadsMutexGuard guard(&mutex_);
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
-
     if (!authorizer_.AuthorizeKey(user_id, Domain::kRead, key, request_context)) {
         return StoreOperationStatus_AUTHORIZATION_FAILURE;
     }
@@ -152,7 +150,6 @@ StoreOperationStatus SkinnyWaist::Get(
         default:
             status = StoreOperationStatus_INTERNAL_ERROR;
     }
-    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
     return status;
 }
 
