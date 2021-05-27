@@ -32,7 +32,7 @@ typedef struct _CPrimaryStoreValue {
 void CInitMain(char* store_partition);
 
 char* Get(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, char*** buff, uint32_t* size, uint32_t* status);
-char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
+char* GetMeta(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
 
 int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* psvalue, char* value, size_t size,
          _Bool sync, int64_t sequence, int64_t connID);

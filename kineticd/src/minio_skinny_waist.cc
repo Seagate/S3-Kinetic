@@ -61,7 +61,7 @@ int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* 
     return status;
 }
 
-char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
+char* GetMeta(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
     kineticd_idle = false;
     PrimaryStoreValue primaryStoreValue;
     primaryStoreValue.version = string(psvalue->version);
@@ -72,7 +72,7 @@ char* GetMeta(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreVal
     NullableOutgoingValue *ovalue = NULL;
     RequestContext requestContext;
     requestContext.is_ssl = false;
-    StoreOperationStatus status = ::pskinny_waist__->Get(user_id, string(key), &primaryStoreValue, requestContext,  ovalue, bvalue);
+    StoreOperationStatus status = ::pskinny_waist__->Get(user_id, string(key), &primaryStoreValue, requestContext,  ovalue, NULL);
     *st = int(status);
     *size = 0;
     char* metaBuf = NULL;

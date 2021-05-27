@@ -536,9 +536,7 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
 	var cvalue *C.char
 	var bvalue []byte
     if acmd.MetaDataOnly {
-        // Let kineticd allocate memory for metadata because it knows size of the metadata
-        bvalue = nil
-        cvalue = C.GetMeta(1, cKey, (*C.char)(unsafe.Pointer(nil)), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
+        cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
     } else {
         if (size > 0) {
             bvalue = make([]byte, size + 1024)  // Add 1024 for meta data
