@@ -278,20 +278,22 @@ StoreOperationStatus PrimaryStore::Get(
     if (value == NULL) {
         ignore_value = true;
     }
-    switch (key_value_store_.Get(key, packed_value, ignore_value, true, buff)) {
+    StoreOperationStatus status = key_value_store_.Get(key, packed_value, ignore_value, true, buff);
+    switch (status) {
         case StoreOperationStatus_SUCCESS:
-            break;
         case StoreOperationStatus_NOT_FOUND:
-            delete[] packed_value;
-            return StoreOperationStatus_NOT_FOUND;
+            break;
         case StoreOperationStatus_STORE_CORRUPT:
-            delete[] packed_value;
             corrupt_ = true;
-            return StoreOperationStatus_STORE_CORRUPT;
+            break;
         default:
-            delete[] packed_value;
             LOG(ERROR) << "IE Store Status";
-            return StoreOperationStatus_INTERNAL_ERROR;
+            status = StoreOperationStatus_INTERNAL_ERROR;
+    }
+    if (status != StoreOperationStatus_SUCCESS) {
+        delete[] packed_value;
+        cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit with failure" << endl;
+        return status;
     }
     //Sequence:count:kType:key:Options[Version, Tag, Algo]:Value
     CHECK(primary_store_value);
@@ -329,6 +331,7 @@ StoreOperationStatus PrimaryStore::Get(
     primary_store_value->version = internal_value_record.version();
     primary_store_value->tag = internal_value_record.tag();
     primary_store_value->algorithm = internal_value_record.algorithm();
+    primary_store_value->meta = internal_value_record.meta();
 
     if (value != NULL) {
         if (myData.type != LevelDBDataType::MEM_INTERNAL) {
@@ -398,6 +401,7 @@ bool PrimaryStore::Write(BatchSet* batchSet, Command& commandResponse, const std
         Flush(false, true);
     }
     batchSet->complete();
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Exit" << endl;
     return (commandResponse.status().code() == Command_Status_StatusCode_SUCCESS);
 }
 
@@ -407,6 +411,7 @@ StoreOperationStatus PrimaryStore::Put(
         IncomingValueInterface* value,
         bool guarantee_durable,
         const std::tuple<int64_t, int64_t> token) {
+    cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": Enter" << endl;
     Event e;
     profiler_.BeginAutoScoped(kPrimaryStorePut, &e);
 
@@ -432,6 +437,7 @@ StoreOperationStatus PrimaryStore::Put(
     internal_value_record.set_version(primary_store_value.version);
     internal_value_record.set_tag(primary_store_value.tag);
     internal_value_record.set_algorithm(primary_store_value.algorithm);
+    internal_value_record.set_meta(primary_store_value.meta);
     std::string packed_value;
 
     if (!internal_value_record.SerializeToString(&packed_value)) {

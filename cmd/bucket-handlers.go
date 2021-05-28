@@ -176,7 +176,8 @@ func (api objectAPIHandlers) GetBucketLocationHandler(w http.ResponseWriter, r *
 
 	getBucketInfo := objectAPI.GetBucketInfo
 
-	if _, err := getBucketInfo(ctx, bucket); err != nil {
+	_, err := getBucketInfo(ctx, bucket)
+	if err != nil {
 		writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
 		return
 	}

@@ -24,25 +24,23 @@ extern "C" {
 typedef struct _CPrimaryStoreValue {
     char* version;
     char* tag;
-    //char* value;
+    char* meta;
+    int metaSize;
     int32_t algorithm;
 } _CPrimaryStoreValue;
 
-//char* allocate_pvalue_buffer(int size);
-
-//void CInitMain();
 void CInitMain(char* store_partition);
 
 char* Get(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, char*** buff, uint32_t* size, uint32_t* status);
+char* GetMeta(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
 
-void Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value, size_t size,
+int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* psvalue, char* value, size_t size,
          _Bool sync, int64_t sequence, int64_t connID);
 
-void Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64_t sequence, int64_t connID);
+int Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, int64_t sequence, int64_t connID);
 
-void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32 maxReturned,
+void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32_t maxReturned,
                  bool reverse, char* results, int* size);
-
 
 #ifdef _cplusplus
 }

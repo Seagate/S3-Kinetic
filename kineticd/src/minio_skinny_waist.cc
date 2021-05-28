@@ -23,10 +23,11 @@ extern "C" {
 SkinnyWaist *pskinny_waist__ = NULL;
 
 typedef struct _CPrimaryStoreValue {
+    int metaSize;
+    int32_t algorithm;
     char* version;
     char* tag;
-    //char* value;
-    int32_t algorithm;
+    char* meta;
 } _CPrimaryStoreValue;
 
 char* s;
@@ -42,7 +43,7 @@ void deallocate_gvalue_buffer(char* buff) {
     KernelMemMgr::pInstance_->FreeMem((void*)buff);
 }
 
-int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStoreValue* psvalue, char* value,
+int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* psvalue, char* value,
         size_t size, _Bool sync, uint64_t sequence, int64_t connID) {
     kineticd_idle = false;
     std::tuple<uint64_t, int64_t> token {sequence, connID}; // NOLINT
@@ -51,12 +52,44 @@ int Put(int64_t user_id, char* key, char* current_version, struct _CPrimaryStore
     primaryStoreValue.tag = string(psvalue->tag);
     primaryStoreValue.value = "";
     primaryStoreValue.algorithm = psvalue->algorithm;
+    primaryStoreValue.meta = string(psvalue->meta, psvalue->metaSize);
     IncomingBuffValue ivalue(value, size);
     RequestContext requestContext;
     requestContext.is_ssl = false;
     StoreOperationStatus status = ::pskinny_waist__->Put(user_id, string(key), string(current_version), primaryStoreValue,
                                                          &ivalue, true, sync, requestContext, token);
     return status;
+}
+
+char* GetMeta(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
+    kineticd_idle = false;
+    PrimaryStoreValue primaryStoreValue;
+    primaryStoreValue.version = string(psvalue->version);
+    primaryStoreValue.tag = string(psvalue->tag);
+    primaryStoreValue.value = "";
+    primaryStoreValue.algorithm = psvalue->algorithm;
+    primaryStoreValue.meta = "";
+    NullableOutgoingValue *ovalue = NULL;
+    RequestContext requestContext;
+    requestContext.is_ssl = false;
+    StoreOperationStatus status = ::pskinny_waist__->Get(user_id, string(key), &primaryStoreValue, requestContext,  ovalue, NULL);
+    *st = int(status);
+    *size = 0;
+    char* metaBuf = NULL;
+    if (status == StoreOperationStatus::StoreOperationStatus_SUCCESS) {
+        *size = primaryStoreValue.meta.size();
+        if (*size > 0) {
+            metaBuf = (char*)calloc(*size, sizeof(char));
+            if (metaBuf) {
+                memcpy(metaBuf, primaryStoreValue.meta.data(), *size);
+            } else {
+                *st = StoreOperationStatus::StoreOperationStatus_INTERNAL_ERROR;
+                *size = 0;
+
+            }
+        }
+    }
+    return metaBuf;
 }
 
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* st) {
@@ -67,33 +100,20 @@ char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* 
     primaryStoreValue.tag = string(psvalue->tag);
     primaryStoreValue.value = "";
     primaryStoreValue.algorithm = psvalue->algorithm;
+    primaryStoreValue.meta = "";
     NullableOutgoingValue *ovalue = new NullableOutgoingValue();
     RequestContext requestContext;
     requestContext.is_ssl = false;
+    *size = 0;
     StoreOperationStatus status = ::pskinny_waist__->Get(user_id, string(key), &primaryStoreValue, requestContext,  ovalue, bvalue);
     s = NULL;
-    *st = int(-1);
-    switch (status) {
-        case StoreOperationStatus::StoreOperationStatus_SUCCESS:
-            *size = ovalue->size();
-            *st = 0;
-            s = ovalue->get_value_buff();
-            delete ovalue;
-            return s;
-        case StoreOperationStatus::StoreOperationStatus_NOT_FOUND:
-            delete ovalue;
-            return NULL;
-        case StoreOperationStatus::StoreOperationStatus_STORE_CORRUPT:
-            delete ovalue;
-            return NULL;
-        case StoreOperationStatus::StoreOperationStatus_DATA_CORRUPT:
-            delete ovalue;
-            return NULL;
-        default:
-            LOG(ERROR) << "IE store status";
-            delete ovalue;
-            return NULL;
-    };
+    *st = int(status);
+    if (status == StoreOperationStatus::StoreOperationStatus_SUCCESS) {
+        *size = int(ovalue->size());
+        s = ovalue->get_value_buff();
+    }
+    delete ovalue;
+    return s;
 }
 
 
@@ -114,8 +134,7 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
     std::vector<std::string> keys;
     ::pskinny_waist__->GetKeyRange(user_id, startKey, startKeyInclusive, endKey, endKeyInclusive, maxReturned, reverse, &keys, requestContext);
     vector<string>::iterator it;  // declare an iterator to a vector of strings
-    char* temp = results; //(char*)malloc(4096 * sizeof(char));
-    //cout << " ADDRESS " << (void*)results << " " << (void*)temp << endl;
+    char* temp = results;
     int totalSize = 0;
     for ( it = keys.begin(); it != keys.end(); it++ ) {
         string key = *it;
@@ -124,7 +143,6 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
         *temp++ = ':';
         totalSize += key.size() + 1;
     }
-    //cout << " RESULTS " << string(results) << endl;
     *size = totalSize;
 }
 }

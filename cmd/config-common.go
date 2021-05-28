@@ -23,11 +23,14 @@ import (
 	"fmt"
 	"github.com/minio/minio/cmd/logger"
 	"github.com/minio/minio/pkg/hash"
+	"github.com/minio/minio/common"
 )
 
 var errConfigNotFound = errors.New("config file not found")
 
 func readConfig(ctx context.Context, objAPI ObjectLayer, configFile string) ([]byte, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("minioMetaBucker = %s, configFile = %s", minioMetaBucket, configFile))
 	var buffer bytes.Buffer
 	// Read entire content by setting size to -1
 	if err := objAPI.GetObject(ctx, minioMetaBucket, configFile, 0, -1, &buffer, "", ObjectOptions{}); err != nil {

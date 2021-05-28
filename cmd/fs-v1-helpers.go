@@ -249,8 +249,9 @@ func fsStatDir(ctx context.Context, statDir string) (os.FileInfo, error) {
 }
 
 func koStat(key string) (KVInfo, error) {
+    defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("key = %s", key))
 	var oi KVInfo
-	//log.Println(" KO STAT")
         kopts := Opts{
                 ClusterVersion:  0,
                 Force:           true,
@@ -267,17 +268,19 @@ func koStat(key string) (KVInfo, error) {
         cvalue, size, err := kc.CGetMeta(key, kopts)
         ReleaseConnection(kc.Idx)
         if err != nil {
-                err = errFileNotFound 
+                err = errFileNotFound
                 return oi, err
 	}
         var value []byte
         if (cvalue != nil) {
             value = (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         }
-        //kineticMutex.Unlock()
-        err = json.Unmarshal(value[:size], &fsMeta)
-        if err != nil {
-        	return oi, err
+    common.KTrace(fmt.Sprintf("cvalue meta: %s, size = %d", string(value), size))
+    err = json.Unmarshal(value[:size], &fsMeta)
+    common.KTrace("Free meta")
+    C.free(unsafe.Pointer(cvalue))
+    if err != nil {
+        return oi, err
 	}
 
         fi := KVInfo{
@@ -285,7 +288,6 @@ func koStat(key string) (KVInfo, error) {
                 size:    fsMeta.KoInfo.Size,
                 modTime: fsMeta.KoInfo.CreatedTime,
         }
-        //log.Println(" END: KO STAT")
         return fi, err
 }
 

@@ -31,6 +31,7 @@ struct PrimaryStoreValue {
     std::string version;
     std::string tag;
     std::string value;
+    std::string meta;
     int32_t algorithm;
 };
 

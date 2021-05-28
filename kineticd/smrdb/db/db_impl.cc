@@ -1864,7 +1864,7 @@ char* allocate_getvalue_buffer(bool byGetInternal) {
   } else {
         int s = posix_memalign((void**)&buff, 4096, ROUNDUP((size_t)5*1048576,4096));
 	if (s != 0) {
-	  cout << "FAILED TO ALLOC" << endl;
+      cout << __FILE__ << ":" << __LINE__ << ":" << __func__ << ": ERROR: Failed to allocate memory." << endl;
 	  buff = NULL;
 	}
   }
@@ -1923,7 +1923,6 @@ Status DBImpl::Get(const ReadOptions& options,
      if (buff == NULL) {
         buff = allocate_getvalue_buffer(false);
         if (buff == NULL) {
-        //mutex_.Lock(); // prevent double-unlock by MutexLock
           mem->Unref();
           if (imm != NULL) imm->Unref();
           current->Unref();
@@ -1933,7 +1932,7 @@ Status DBImpl::Get(const ReadOptions& options,
       char* value_pointer = NULL;
       memcpy((char*) &value_pointer, value, sizeof(void*));
       if (fromMem) {
-        ((LevelDBData*) value_pointer)->serialize(buff);
+        ((LevelDBData*) value_pointer)->serialize(buff, NULL, ignore_value);
       } else {
         LevelDBData myData;
         myData.deserialize(value_pointer);
@@ -1947,6 +1946,7 @@ Status DBImpl::Get(const ReadOptions& options,
                     Slice not_needed;
                     myData.type = LevelDBDataType::MEM_INTERNAL;
                     myData.dataSize = external.size;
+                    cout << __FILE__ << ":" << __LINE__ << "." << endl;
                     char* data = myData.serialize(buff, NULL, true);
                     if (!ignore_value) {
                       s = file->Read(external.offset, external.size, &not_needed, data);
@@ -1971,7 +1971,7 @@ Status DBImpl::Get(const ReadOptions& options,
   mem->Unref();
   if (imm != NULL) imm->Unref();
   current->Unref();
-
+    
   if ((have_stat_update && current->UpdateStats(stats))) {
       MaybeScheduleCompaction();
   }
