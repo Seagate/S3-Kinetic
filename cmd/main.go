@@ -25,7 +25,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-        "github.com/minio/minio/common"
+    "github.com/minio/minio/common"
+    //"github.com/minio/minio/kinetic"
 )
 
 // GlobalFlags - global flags for minio.

@@ -18,8 +18,9 @@ package cmd
 
 import (
 // #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
-// #cgo LDFLAGS: -L../lib -lkinetic -lseapubcmds -l:kernel_mem_mgr.a -lssl -lcrypto -lgmock -lgtest -lsmrenv -lleveldb -lmemenv -lkinetic_client -l:zac_kin.a -lprotobuf -lgflags -lpthread -ldl -lrt -lglog
-// #include "minio_skinny_waist.h"
+// #cgo LDFLAGS: -L../lib -l:zac_kin.a -lkinetic -lseapubcmds -l:kernel_mem_mgr.a -lssl -lcrypto -lgmock -lgtest -lsmrenv -lleveldb -lmemenv -lkinetic_client -lprotobuf -lgflags -lpthread -ldl -lrt -lglog
+// #include "C_Kineticd.h"
+// #include "C_Operations.h"
 	"C"
 	"unsafe"
 	"bytes"
@@ -97,6 +98,19 @@ func PrintMemUsage() {
 
 func InitKineticd(argv []string) {
     defer common.KUntrace(common.KTrace("Enter"))
+    argc := C.int(len(argv))
+	CArgv := (*[0xfff]*C.char)(C.allocArgv(argc))
+	defer C.free(unsafe.Pointer(CArgv))
+	for i, arg := range argv {
+        CArgv[i] = C.CString(arg)
+        defer C.free(unsafe.Pointer(CArgv[i]))
+    }
+	go C.initKinetic(argc, (**C.char)(unsafe.Pointer(CArgv)))
+    time.Sleep(5 * time.Second)  // TODO:  sleep does not always work
+}
+/*
+func InitKineticd(argv []string) {
+    defer common.KUntrace(common.KTrace("Enter"))
 
 	log.Println("LEN OF ARGS ", len(argv))
         argc := C.int(len(argv))
@@ -109,7 +123,7 @@ func InitKineticd(argv []string) {
 	go C.CInitMain(argc, (**C.char)(unsafe.Pointer(c_argv)))
         time.Sleep(5 * time.Second)
 }
-
+*/
 func InitKineticConnection(IP string, tls bool, kc *Client) error {
         defer common.KUntrace(common.KTrace("Enter"))
         var err error = nil

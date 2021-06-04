@@ -2,10 +2,11 @@ package cmd
 
 import (
 // #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
-// #cgo LDFLAGS: -L../lib -lkinetic -lseapubcmds -l:kernel_mem_mgr.a -lssl -lcrypto -lgmock -lgtest -lsmrenv -lleveldb -lmemenv -lkinetic_client -l:zac_kin.a -lprotobuf -lgflags -lpthread -ldl -lrt -lglog
-
-// #include "minio_skinny_waist.h"
-       "C"
+// #cgo LDFLAGS: -L../lib -l:zac_kin.a -lkinetic -lksapi -lpbkdf -ltransports -lapi -lseapubcmds -l:kernel_mem_mgr.a -lssl -lcrypto -lgmock -lgtest -lsmrenv -lleveldb -lmemenv -lkinetic_client -lprotobuf -lgflags -lpthread -lm -ldl -lrt -lglog -lstdc++
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include "C_Operations.h"
+    "C"
 	"unsafe"
 	"crypto/hmac"
 	"crypto/sha1"

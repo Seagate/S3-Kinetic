@@ -4,23 +4,23 @@
 # s3kinetic X86 SMR
 # s3kinetic X86 NONSMR
 #git clean -xdf -e bin
-cd kineticd
+#cd kineticd
 #git clean -xdf
 case "$1" in 
   "X86" )
      source ./x86_envsetup.sh
      case "$2" in
        "NONSMR" )
-          cmake -DPRODUCT=X86NONSMR
+          #cmake -DPRODUCT=X86NONSMR
        ;;
  
        "SMR" )
-          cmake -DPRODUCT=X86SMR
+          #cmake -DPRODUCT=X86SMR
        ;;
      esac
-     make
-     ./cplibx86.sh ../lib
-     cd ../
+     #make
+     #./cplibx86.sh ../lib
+     #cd ../
      make -f Makefile.x86
      ;;
 

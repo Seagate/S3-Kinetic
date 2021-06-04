@@ -19,7 +19,7 @@ package cmd
 import (
 // #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
 // #cgo LDFLAGS: -L../lib -lkinetic -l:kernel_mem_mgr.a -lssl -lcrypto -lglog -lgmock -lgtest -lsmrenv -lleveldb -lmemenv -lkinetic_client -l:zac_kin.a -l:lldp_kin.a -lprotobuf -lgflags  -lgflags_nothreads -lprotoc -lksapi -lpbkdf -lapi -ltransports  -lseapubcmds -lapi -lpthread -ldl -lrt 
-// #include "minio_skinny_waist.h"
+// #include "C_Operations.h"
         "C"
         "unsafe"
 	"context"

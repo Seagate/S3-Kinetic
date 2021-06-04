@@ -18,9 +18,9 @@ package cmd
 
 import (
 // #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
-// #cgo LDFLAGS -L../lib -lkinetic -lseapubcmds -l:kernel_mem_mgr.a -lssl -lcrypto -lgmock -lgtest -lsmrenv -lleveldb -lmemenv -lkinetic_client -l:zac_kin.a -lprotobuf -lgflags -lpthread -ldl -lrt -lglog
+// #cgo LDFLAGS -L../lib -l:zac_kin.a -lkinetic -lseapubcmds -l:kernel_mem_mgr.a -lssl -lcrypto -lgmock -lgtest -lsmrenv -lleveldb -lmemenv -lkinetic_client -lprotobuf -lgflags -lpthread -ldl -lrt -lglog
 
-// #include "minio_skinny_waist.h"
+// #include "C_Operations.h"
         "C"
         "unsafe"
 	"context"
@@ -42,6 +42,7 @@ import (
         //"log"
 	jsoniter "github.com/json-iterator/go"
 	//mioutil "github.com/minio/minio/pkg/ioutil"
+    //"github.com/minio/minio/cmd"
 )
 
 var hiddenMultiParts = true
