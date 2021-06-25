@@ -105,7 +105,7 @@ func InitKineticd(argv []string) {
         CArgv[i] = C.CString(arg)
         defer C.free(unsafe.Pointer(CArgv[i]))
     }
-	go C.initKinetic(argc, (**C.char)(unsafe.Pointer(CArgv)))
+	go C.initKineticd(argc, (**C.char)(unsafe.Pointer(CArgv)))
     time.Sleep(5 * time.Second)  // TODO:  sleep does not always work
 }
 /*
