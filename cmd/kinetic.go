@@ -18,7 +18,7 @@ package cmd
 
 import (
 // #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
-// #cgo LDFLAGS: -L../lib -l:zac_kin.a -lkinetic -lseapubcmds -l:kernel_mem_mgr.a -lssl -lcrypto -lgmock -lgtest -lsmrenv -lleveldb -lmemenv -lkinetic_client -lprotobuf -lgflags -lpthread -ldl -lrt -lglog
+// #cgo LDFLAGS: -L../lib -lkinetic 
 // #include "C_Kineticd.h"
 // #include "C_Operations.h"
 	"C"

@@ -2,7 +2,7 @@ package cmd
 
 import (
 // #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
-// #cgo LDFLAGS: -L../lib -l:zac_kin.a -lkinetic -lksapi -lpbkdf -ltransports -lapi -lseapubcmds -l:kernel_mem_mgr.a -lssl -lcrypto -lgmock -lgtest -lsmrenv -lleveldb -lmemenv -lkinetic_client -lprotobuf -lgflags -lpthread -lm -ldl -lrt -lglog -lstdc++
+// #cgo LDFLAGS: -L../lib -lkinetic 
 // #include <stdio.h>
 // #include <stdlib.h>
 // #include "C_Operations.h"
@@ -542,7 +542,7 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
         if (size > 0) {
             bvalue = make([]byte, size + 1024)  // Add 1024 for meta data
         } else {
-            bvalue = make([]byte, 2*4096)
+            bvalue = make([]byte, 5*1024*1024 + 2*4096)
         }
         cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
     }
