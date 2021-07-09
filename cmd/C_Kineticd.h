@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 void* allocArgv(int argc);
-int initKineticd(int argc, char* argv[]);
+int startKineticd(int argc, char* argv[]);
 
 #ifdef __cplusplus
 }

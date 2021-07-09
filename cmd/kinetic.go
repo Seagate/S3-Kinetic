@@ -105,25 +105,9 @@ func InitKineticd(argv []string) {
         CArgv[i] = C.CString(arg)
         defer C.free(unsafe.Pointer(CArgv[i]))
     }
-	go C.initKineticd(argc, (**C.char)(unsafe.Pointer(CArgv)))
+    go C.startKineticd(argc, (**C.char)(unsafe.Pointer(CArgv)))
     time.Sleep(5 * time.Second)  // TODO:  sleep does not always work
 }
-/*
-func InitKineticd(argv []string) {
-    defer common.KUntrace(common.KTrace("Enter"))
-
-	log.Println("LEN OF ARGS ", len(argv))
-        argc := C.int(len(argv))
-	c_argv := (*[0xfff]*C.char)(C.allocArgv(argc))
-	defer C.free(unsafe.Pointer(c_argv))
-	for i, arg := range argv {
-            c_argv[i] = C.CString(arg)
-            defer C.free(unsafe.Pointer(c_argv[i]))
-        }
-	go C.CInitMain(argc, (**C.char)(unsafe.Pointer(c_argv)))
-        time.Sleep(5 * time.Second)
-}
-*/
 func InitKineticConnection(IP string, tls bool, kc *Client) error {
         defer common.KUntrace(common.KTrace("Enter"))
         var err error = nil
