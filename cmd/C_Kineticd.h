@@ -1,5 +1,5 @@
-#ifndef C_KINETICD_H_ 
-#define C_KINETICD_H_ 
+#ifndef KINETIC_C_KINETICD_H_
+#define KINETIC_C_KINETICD_H_
 
 #include <stdint.h>
 
@@ -14,7 +14,7 @@ int initKineticd(int argc, char* argv[]);
 }
 #endif
 
-#endif
+#endif  // KINETIC_C_KINETICD_H_
 
 
 

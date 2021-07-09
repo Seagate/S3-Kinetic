@@ -1,5 +1,5 @@
-#ifndef C_OPERATIONS_H_
-#define C_OPERATIONS_H_
+#ifndef KINETIC_C_OPERATIONS_H_
+#define KINETIC_C_OPERATIONS_H_
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -47,5 +47,5 @@ void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInc
 #ifdef __cplusplus
 }
 #endif
-#endif  // C_OPERATIONS_H_
+#endif  // KINETIC_C_OPERATIONS_H_
 
