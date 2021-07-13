@@ -32,3 +32,5 @@ lib
 bin
 
 *.pyc
+s3cmd/testsuite
+s3cmd/testsuite-out
