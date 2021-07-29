@@ -142,6 +142,7 @@ class S3Request(object):
         self.s3 = s3
         self.headers = SortedDict(headers or {}, ignore_case = True)
         if len(self.s3.config.access_token)>0:
+            #fmt.Sprintf("S3Request: __init__: accessToken = %s, len(access_token) > 0", self.s3.config.access_token)
             self.s3.config.role_refresh()
             self.headers['x-amz-security-token']=self.s3.config.access_token
         self.resource = resource
@@ -149,6 +150,7 @@ class S3Request(object):
         self.params = params or {}
         self.body = body
         self.requester_pays()
+        #fmt.Sprintf("S3Request: __init__:self: %+v", self)
 
     def requester_pays(self):
         if self.s3.config.requester_pays and self.method_string in ("GET", "POST", "PUT", "HEAD"):
@@ -751,8 +753,19 @@ class S3(object):
             raise ValueError("Expected URI type 's3', got '%s'" % uri.type)
         request = self.create_request("OBJECT_GET", uri = uri)
         labels = { 'source' : uri.uri(), 'destination' : dest_name, 'extra' : extra_label }
+        #headers = SortedDict(ignore_case = True)
+        debug(u'S3.object_get(): extra_headers: %s' % self.config.extra_headers)
+        if self.config.extra_headers:
+            request.headers.update(self.config.extra_headers)
+        '''
+        ## Set server side encryption
+        if self.config.server_side_encryption:
+            headers["x-amz-server-side-encryption"] = "AES256"
+        request.headers["range"] = "bytes:100-200"
+        '''
         response = self.recv_file(request, stream, labels, start_position)
         return response
+    
 
     def object_batch_delete(self, remote_list):
         """ Batch delete given a remote_list """
@@ -1747,6 +1760,10 @@ class S3(object):
 
         conn = None
         try:
+            debug("Direct Request:")
+            debug(dir(request))
+            debug("***Request:\n" + pprint.pformat(request.headers))
+            debug("Headers:\n" + pprint.pformat(headers))
             conn = ConnMan.get(self.get_hostname(resource['bucket']))
             conn.c.putrequest(method_string, self.format_uri(resource, conn.path))
             for header in headers.keys():
@@ -1763,7 +1780,7 @@ class S3(object):
             if "x-amz-meta-s3cmd-attrs" in response["headers"]:
                 attrs = parse_attrs_header(response["headers"]["x-amz-meta-s3cmd-attrs"])
                 response["s3cmd-attrs"] = attrs
-            debug("Response:\n" + pprint.pformat(response))
+            debug("***Response:\n" + pprint.pformat(response))
         except ParameterError as e:
             raise
         except (IOError, Exception) as e:

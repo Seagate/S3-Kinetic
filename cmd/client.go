@@ -67,6 +67,8 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
+        common.KTrace(fmt.Sprintf("size of value = %d", len(value)))
+        //reqSize := len(value)
         //log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
 	//runtime.GC()
 	debug.FreeOSMemory()
@@ -94,9 +96,10 @@ func (c *Client) Read(value []byte) (int, error) {
                 }
 		if cvalue  != nil {
 			value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-			copy(value, value1)
+			copy(value, value1[0:len(value)])
                         c.ReleaseConn(c.Idx)
-                        return int(size), err
+                        //return int(size), err
+                        return int(len(value)), err
                 }
                 c.ReleaseConn(c.Idx)
 		return 0, err
@@ -112,14 +115,15 @@ func (c *Client) Read(value []byte) (int, error) {
 			}
 			if cvalue != nil {
 				value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-				copy(value, value1)
+				copy(value, value1[0:len(value)])
 				if i ==  len(fsMeta.Parts) -1 {
 					*(c.NextPartNumber) = 0
 				 c.ReleaseConn(c.Idx)
 				} else {
 				        *(c.NextPartNumber)++
 				}
-				return int(size), err
+				//return int(size), err
+				return int(len(value)), err
 			}
 		}
 	}

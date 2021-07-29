@@ -27,6 +27,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+        "fmt"
 
 	xhttp "github.com/minio/minio/cmd/http"
 	xjwt "github.com/minio/minio/cmd/jwt"
@@ -35,6 +36,7 @@ import (
 	"github.com/minio/minio/pkg/bucket/policy"
 	"github.com/minio/minio/pkg/hash"
 	iampolicy "github.com/minio/minio/pkg/iam/policy"
+	"github.com/minio/minio/common"
 )
 
 // Verify if request has JWT.
@@ -96,6 +98,8 @@ const (
 
 // Get request authentication type.
 func getRequestAuthType(r *http.Request) authType {
+    defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("Request: %+v", *r))
 	if isRequestSignatureV2(r) {
 		return authTypeSignedV2
 	} else if isRequestPresignedSignatureV2(r) {
@@ -257,6 +261,7 @@ func checkClaimsFromToken(r *http.Request, cred auth.Credentials) (map[string]in
 //   for authenticated requests validates IAM policies.
 // returns APIErrorCode if any to be replied to the client.
 func checkRequestAuthType(ctx context.Context, r *http.Request, action policy.Action, bucketName, objectName string) (s3Err APIErrorCode) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	_, _, s3Err = checkRequestAuthTypeToAccessKey(ctx, r, action, bucketName, objectName)
 	return s3Err
 }
@@ -268,6 +273,7 @@ func checkRequestAuthType(ctx context.Context, r *http.Request, action policy.Ac
 // returns APIErrorCode if any to be replied to the client.
 // Additionally returns the accessKey used in the request, and if this request is by an admin.
 func checkRequestAuthTypeToAccessKey(ctx context.Context, r *http.Request, action policy.Action, bucketName, objectName string) (accessKey string, owner bool, s3Err APIErrorCode) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	var cred auth.Credentials
 	switch getRequestAuthType(r) {
 	case authTypeUnknown, authTypeStreamingSigned:
@@ -301,6 +307,7 @@ func checkRequestAuthTypeToAccessKey(ctx context.Context, r *http.Request, actio
 	// LocationConstraint is valid only for CreateBucketAction.
 	var locationConstraint string
 	if action == policy.CreateBucketAction {
+    defer common.KUntrace(common.KTrace("Action == create bucket"))
 		// To extract region from XML in request body, get copy of request body.
 		payload, err := ioutil.ReadAll(io.LimitReader(r.Body, maxLocationConstraintSize))
 		if err != nil {
@@ -322,6 +329,7 @@ func checkRequestAuthTypeToAccessKey(ctx context.Context, r *http.Request, actio
 	}
 
 	if cred.AccessKey == "" {
+    defer common.KUntrace(common.KTrace("AccessKey empty"))
 		if globalPolicySys.IsAllowed(policy.Args{
 			AccountName:     cred.AccessKey,
 			Action:          action,
@@ -443,6 +451,7 @@ func isSupportedS3AuthType(aType authType) bool {
 
 // handler for validating incoming authorization headers.
 func (a authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    defer common.KUntrace(common.KTrace("Enter"))
 	aType := getRequestAuthType(r)
 	if isSupportedS3AuthType(aType) {
 		// Let top level caller validate for anonymous and known signed requests.
@@ -460,6 +469,8 @@ func (a authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.handler.ServeHTTP(w, r)
 		return
 	}
+        fmt.Printf("Request: %+v", r)
+        fmt.Printf("aType = %+v, supportedS3AuthTypes: %+v.\n", aType, supportedS3AuthTypes)
 	writeErrorResponse(context.Background(), w, errorCodes.ToAPIErr(ErrSignatureVersionNotSupported), r.URL, guessIsBrowserReq(r))
 }
 

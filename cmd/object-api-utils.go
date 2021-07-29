@@ -47,6 +47,7 @@ import (
 	"github.com/minio/minio/pkg/ioutil"
 	"github.com/minio/minio/pkg/wildcard"
 	"github.com/skyrings/skyring-common/tools/uuid"
+	"github.com/minio/minio/common"
 )
 
 const (
@@ -538,6 +539,8 @@ type ObjReaderFn func(inputReader io.Reader, h http.Header, pcfn CheckCopyPrecon
 // not all run!).
 func NewGetObjectReader(rs *HTTPRangeSpec, oi ObjectInfo, pcfn CheckCopyPreconditionFn, cleanUpFns ...func()) (
 	fn ObjReaderFn, off, length int64, err error) {
+        defer common.KUntrace(common.KTrace("Enter"))
+        common.KTrace(fmt.Sprintf("rs: %+v", rs))
 
 	// Call the clean-up functions immediately in case of exit
 	// with error
@@ -559,6 +562,7 @@ func NewGetObjectReader(rs *HTTPRangeSpec, oi ObjectInfo, pcfn CheckCopyPrecondi
 	// e.g. encrypted/compressed objects)
 	switch {
 	case isEncrypted:
+                common.KTrace("Encrypted")
 		var seqNumber uint32
 		var partStart int
 		off, length, skipLen, seqNumber, partStart, err = oi.GetDecryptedRange(rs)
@@ -622,6 +626,7 @@ func NewGetObjectReader(rs *HTTPRangeSpec, oi ObjectInfo, pcfn CheckCopyPrecondi
 			return r, nil
 		}
 	case isCompressed:
+                common.KTrace("Compressed")
 		// Read the decompressed size from the meta.json.
 		actualSize := oi.GetActualSize()
 		if actualSize < 0 {
@@ -691,6 +696,7 @@ func NewGetObjectReader(rs *HTTPRangeSpec, oi ObjectInfo, pcfn CheckCopyPrecondi
 		}
 
 	default:
+                common.KTrace(fmt.Sprintf("default, rs = %+v", rs))
 		off, length, err = rs.GetOffsetLength(oi.Size)
 		if err != nil {
 			return nil, 0, 0, err

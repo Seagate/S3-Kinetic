@@ -19,7 +19,7 @@ all: build
 	then \
 		[ ! -d "./bin" ] && mkdir ./bin; \
 		cp minio ./bin/s3kinetic.X86; \
-		mv minio ./bin/; \
+		mv minio ~/bin/; \
 		echo === New executable minio was created in ./bin directory ===; \
 	fi
 	@echo on
