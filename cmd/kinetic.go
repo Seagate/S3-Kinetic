@@ -878,8 +878,11 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	}
 	kc := GetKineticConnection()
 	kc.Key = []byte(bucket + "/" + object)
+        kc.DataOffset = int(off)
+        common.KTrace(fmt.Sprintf("off = %v, DataOffset = %v", off, kc.DataOffset))
 	var reader1 io.Reader = kc
 	reader := io.LimitReader(reader1, length)
+        //kc.DataOffset = 0
     closeFn := func() {
         kc.ReleaseConn(kc.Idx)
     }

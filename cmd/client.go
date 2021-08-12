@@ -63,11 +63,13 @@ type Client struct {
 	ReleaseConn  func(int)
 	NextPartNumber *int
 	LastPartNumber int
+        DataOffset int
 }
 
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        common.KTrace(fmt.Sprintf("size of value = %d", len(value)))
+        common.KTrace(fmt.Sprintf("size of value = %d, data offset = %d", len(value), c.DataOffset))
+        sizeToRead := len(value)
         //reqSize := len(value)
         //log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
 	//runtime.GC()
@@ -89,7 +91,9 @@ func (c *Client) Read(value []byte) (int, error) {
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
         objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
-		cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts)
+        if (c.DataOffset + sizeToRead <= objSize) {
+            //objSize = sizeToRead
+		cvalue, size, err := c.CGet(string(c.Key), sizeToRead, c.Opts) //objSize, c.Opts)
                 if err != nil {
                         c.ReleaseConn(c.Idx)
                         return 0, err
@@ -103,12 +107,18 @@ func (c *Client) Read(value []byte) (int, error) {
                 }
                 c.ReleaseConn(c.Idx)
 		return 0, err
-	}
+	} else {
+            c.ReleaseConn(c.Idx)
+            // TODO:  set error
+            return 0, err
+        }
+        }
     partKeyPrefix := string(c.Key) + "." + fsMeta.Version
 	for i, part := range  fsMeta.Parts {
 		if i == *(c.NextPartNumber) {
 			key := partKeyPrefix + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
-			cvalue, size, err := c.CGet(key, int(part.Size), c.Opts)
+                        if (c.DataOffset + sizeToRead <= int(part.Size)) {
+			cvalue, size, err := c.CGet(key, sizeToRead, c.Opts) //int(part.Size), c.Opts)
 			if err != nil {
 				c.ReleaseConn(c.Idx)
 				return 0, err
@@ -125,6 +135,11 @@ func (c *Client) Read(value []byte) (int, error) {
 				//return int(size), err
 				return int(len(value)), err
 			}
+                        } else {
+			    c.ReleaseConn(c.Idx)
+                            // TODO: set err
+                            return 0, err
+                        }
 		}
 	}
         c.ReleaseConn(c.Idx)
@@ -530,7 +545,7 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("key = %s, size = %d", key, size))
+    common.KTrace(fmt.Sprintf("key = %s, dataOffset = %v, size = %d", key, c.DataOffset, size))
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
         psv.tag = C.CString(string(acmd.Tag))
@@ -548,7 +563,13 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
         } else {
             bvalue = make([]byte, 5*1024*1024 + 2*4096)
         }
-        cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
+        if (c.DataOffset == 0) {
+           cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,(*C.int)(unsafe.Pointer(&size1)),(*C.int)(unsafe.Pointer(&status)))
+        } else {
+           cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])),
+                      &psv,(*C.int)(unsafe.Pointer(&size1)),(*C.int)(unsafe.Pointer(&status)),
+                      (C.int)(c.DataOffset), (C.int)(c.DataOffset + size))
+        }
     }
 	var err error = nil
 	if status != 0 || cvalue == nil {
