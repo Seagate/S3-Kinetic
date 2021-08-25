@@ -33,7 +33,7 @@ count_skip = 0
 
 test_counter = 0
 run_tests = []
-exclude_tests = []
+exclude_tests = [51]
 
 verbose = False
 
@@ -370,7 +370,7 @@ test_s3cmd("Create multiple buckets", ['mb', pbucket(2), pbucket(3)],
 ## ====== Invalid bucket name
 test_s3cmd("Invalid bucket name", ["mb", "--bucket-location=EU", pbucket('EU')],
     retcode = EX_USAGE,
-    must_find = "ERROR: Parameter problem: Bucket name '%s' contains disallowed character" % bucket('EU'),
+    must_find_re = "ERROR:(.*):Parameter problem: Bucket name '%s' contains disallowed character" % bucket('EU'),
     must_not_find_re = "Bucket.*created")
 
 
@@ -384,9 +384,9 @@ test_flushdir("Create cache dir", "testsuite/cachetest")
 ## ====== Sync to S3
 # Modified for Minio (exclude crappy dir)
 test_s3cmd("Sync to S3", ['sync', 'testsuite/', pbucket(1) + '/xyz/', '--exclude', 'demo/*', '--exclude', '*.png', '--no-encrypt', '--exclude-from', 'testsuite/exclude.encodings', '--exclude', 'crappy-file-name/*', '--exclude', 'testsuite/cachetest/.s3cmdcache', '--cache-file', 'testsuite/cachetest/.s3cmdcache'],
-           must_find = ["ERROR: Upload of 'testsuite/permission-tests/permission-denied.txt' is not possible (Reason: Permission denied)",
+           must_find_re = ["ERROR:(.*):Upload of 'testsuite/permission-tests/permission-denied.txt' is not possible \(Reason: Permission denied\)",
            ],
-           must_not_find_re = ["demo/", "^(?!WARNING: Skipping).*\.png$", "permission-denied-dir"],
+           must_not_find_re = ["demo/", "^(?!WARNING:(.*):Skipping).*\.png$", "permission-denied-dir"],
            retcode = EX_PARTIAL)
 
 ## ====== Create new file and sync with caching enabled
@@ -697,8 +697,8 @@ test_s3cmd("Sync remote2remote", ['sync', '%s/xyz/' % pbucket(1), '%s/copy/' % p
 ## ====== Don't Put symbolic link
 test_s3cmd("Don't put symbolic links", ['put', 'testsuite/etc/linked1.png', 's3://%s/xyz/' % bucket(1),  '--exclude', 'crappy-file-name/*'],
            retcode = EX_USAGE,
-           must_find = ["WARNING: Skipping over symbolic link: testsuite/etc/linked1.png"],
-           must_not_find_re = ["^(?!WARNING: Skipping).*linked1.png"])
+           must_find_re = ["WARNING:(.*):Skipping over symbolic link: testsuite/etc/linked1.png"],
+           must_not_find_re = ["^(?!WARNING:(.*):Skipping).*linked1.png"])
 
 ## ====== Put symbolic link
 test_s3cmd("Put symbolic links", ['put', 'testsuite/etc/linked1.png', 's3://%s/xyz/' % bucket(1),'--follow-symlinks' ,  '--exclude', 'crappy-file-name/*'],
