@@ -358,6 +358,7 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 			logger.LogIf(ctx, err, logger.Application)
 		}
 	}
+        common.KTrace(fmt.Sprintf("rs = %+v", rs))
 
 	gr, err := getObjectNInfo(ctx, bucket, object, rs, r.Header, readLock, opts)
 	if err != nil {

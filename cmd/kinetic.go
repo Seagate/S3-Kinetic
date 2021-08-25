@@ -1127,7 +1127,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
-    cvalue, size, err := kc.CGet(key, -1, kopts)  // -1 to indicate it doesn't know the size
+    cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1)  // -1 to indicate it doesn't know the size
 	ReleaseConnection(kc.Idx)
 	if err != nil {
 		err = errFileNotFound

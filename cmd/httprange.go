@@ -104,7 +104,7 @@ func (h *HTTPRangeSpec) GetOffsetLength(resourceSize int64) (start, length int64
 
 // Parse a HTTP range header value into a HTTPRangeSpec
 func parseRequestRangeSpec(rangeString string) (hrange *HTTPRangeSpec, err error) {
-        common.KUntrace(common.KTrace(fmt.Sprintf("Enter")))
+        defer common.KUntrace(common.KTrace(fmt.Sprintf("Enter")))
         common.KTrace(fmt.Sprintf("rangeString = %s", rangeString))
 	// Return error if given range string doesn't start with byte range prefix.
 	if !strings.HasPrefix(rangeString, byteRangePrefix) {
@@ -137,6 +137,7 @@ func parseRequestRangeSpec(rangeString string) (hrange *HTTPRangeSpec, err error
 	offsetEndString := byteRangeString[sepIndex+1:]
 	offsetEnd := int64(-1)
         common.KTrace(fmt.Sprintf("offsetBegin = %s, offsetEnd = %s", offsetBeginString, offsetEndString))
+        common.KTrace(fmt.Sprintf("offsetBegin len= %d, offsetEnd len = %d", len(offsetBeginString), len(offsetEndString)))
 	// Convert offsetEndString only if its not empty.
 	if len(offsetEndString) > 0 {
 		if offsetEndString[0] == '+' {
@@ -148,6 +149,7 @@ func parseRequestRangeSpec(rangeString string) (hrange *HTTPRangeSpec, err error
 		}
 	}
 
+        common.KTrace(fmt.Sprintf("in number, offsetBegin = %d, offsetEnd = %d", offsetBegin, offsetEnd))
 	switch {
 	case offsetBegin > -1 && offsetEnd > -1:
 		if offsetBegin > offsetEnd {

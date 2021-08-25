@@ -69,9 +69,7 @@ type Client struct {
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
         common.KTrace(fmt.Sprintf("size of value = %d, data offset = %d", len(value), c.DataOffset))
-        sizeToRead := len(value)
-        //reqSize := len(value)
-        //log.Println(" ****READ****", string(c.Key), c.LastPartNumber)
+        requestSize := len(value)
 	//runtime.GC()
 	debug.FreeOSMemory()
 	//PrintMemUsage()
@@ -90,35 +88,30 @@ func (c *Client) Read(value []byte) (int, error) {
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
-        objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
-        if (c.DataOffset + sizeToRead <= objSize) {
-            //objSize = sizeToRead
-		cvalue, size, err := c.CGet(string(c.Key), sizeToRead, c.Opts) //objSize, c.Opts)
-                if err != nil {
-                        c.ReleaseConn(c.Idx)
-                        return 0, err
-                }
-		if cvalue  != nil {
-			value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-			copy(value, value1[0:len(value)])
-                        c.ReleaseConn(c.Idx)
-                        //return int(size), err
-                        return int(len(value)), err
-                }
+            objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
+            common.KTrace(fmt.Sprintf("c.Key = %s, size = %d", c.Key, objSize))
+            cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
+            if err != nil {
                 c.ReleaseConn(c.Idx)
-		return 0, err
-	} else {
+                return 0, err
+            }
+	    if cvalue  != nil {
+	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+	        copy(value, value1[0:len(value)])
+                c.ReleaseConn(c.Idx)
+                return int(size), err
+                //return int(len(value)), err
+            }
             c.ReleaseConn(c.Idx)
-            // TODO:  set error
-            return 0, err
+	    return 0, err
         }
-        }
-    partKeyPrefix := string(c.Key) + "." + fsMeta.Version
+
+        partKeyPrefix := string(c.Key) + "." + fsMeta.Version
+
 	for i, part := range  fsMeta.Parts {
 		if i == *(c.NextPartNumber) {
 			key := partKeyPrefix + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
-                        if (c.DataOffset + sizeToRead <= int(part.Size)) {
-			cvalue, size, err := c.CGet(key, sizeToRead, c.Opts) //int(part.Size), c.Opts)
+			cvalue, size, err := c.CGet(key, int(part.Size), c.Opts, c.DataOffset, requestSize)
 			if err != nil {
 				c.ReleaseConn(c.Idx)
 				return 0, err
@@ -132,14 +125,10 @@ func (c *Client) Read(value []byte) (int, error) {
 				} else {
 				        *(c.NextPartNumber)++
 				}
-				//return int(size), err
-				return int(len(value)), err
+                                c.ReleaseConn(c.Idx)
+				return int(size), err
+				//return int(len(value)), err
 			}
-                        } else {
-			    c.ReleaseConn(c.Idx)
-                            // TODO: set err
-                            return 0, err
-                        }
 		}
 	}
         c.ReleaseConn(c.Idx)
@@ -538,37 +527,45 @@ func (c *Client) AbortBatch(cmd Opts) error {
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
     acmd.MetaDataOnly = true
-	return c.CGet(key, -1, acmd)  // -1 to indicate it doesn't know the size
+	return c.CGet(key, -1, acmd, 0, -1)  // -1 to indicate it doesn't know the size
 }
 
 
 //CGet: Use this for Skinny Waist interface
-func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) {
+func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("key = %s, dataOffset = %v, size = %d", key, c.DataOffset, size))
+    common.KTrace(fmt.Sprintf("key = %s, dataOffset = %v, objSize = %d, reqSize = %d", key, c.DataOffset, objSize, requestSize))
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
         psv.tag = C.CString(string(acmd.Tag))
         psv.algorithm = C.int(acmd.Algorithm)
         cKey := C.CString(key)
-	var size1 int
+	var dataSize int
 	var status int
 	var cvalue *C.char
 	var bvalue []byte
     if acmd.MetaDataOnly {
-        cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&size1)), (*C.int)(unsafe.Pointer(&status)))
+        common.KTrace("MetaOnly")
+        cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&dataSize)), (*C.int)(unsafe.Pointer(&status)))
     } else {
-        if (size > 0) {
-            bvalue = make([]byte, size + 1024)  // Add 1024 for meta data
-        } else {
+        common.KTrace("Get Data")
+        if (objSize > 0) {
+            bvalue = make([]byte, objSize + 1024)  // Add 1024 for meta data
+        } else { // Don't know the size, allocate largest size
             bvalue = make([]byte, 5*1024*1024 + 2*4096)
         }
-        if (c.DataOffset == 0) {
-           cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,(*C.int)(unsafe.Pointer(&size1)),(*C.int)(unsafe.Pointer(&status)))
+        if (requestSize == -1) {
+            requestSize = objSize
+        }
+        if (offset == 0 && requestSize == objSize) {
+            cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
+                      (*C.int)(unsafe.Pointer(&dataSize)),
+                      (*C.int)(unsafe.Pointer(&status)))
         } else {
-           cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])),
-                      &psv,(*C.int)(unsafe.Pointer(&size1)),(*C.int)(unsafe.Pointer(&status)),
-                      (C.int)(c.DataOffset), (C.int)(c.DataOffset + size))
+            cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
+                      (C.int)(offset), (C.int)(requestSize),
+                      (*C.int)(unsafe.Pointer(&dataSize)),
+                      (*C.int)(unsafe.Pointer(&status)))
         }
     }
 	var err error = nil
@@ -576,7 +573,7 @@ func (c *Client) CGet(key string, size int, acmd Opts) (*C.char, uint32, error) 
         common.KTrace(fmt.Sprintf("failed, status = %d", status))
 		err =  errKineticNotFound
 	}
-        return cvalue, uint32(size1), err
+        return cvalue, uint32(dataSize), err
 }
 
 
