@@ -68,7 +68,6 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        common.KTrace(fmt.Sprintf("size of value = %d, data offset = %d", len(value), c.DataOffset))
         requestSize := len(value)
 	//runtime.GC()
 	debug.FreeOSMemory()
@@ -89,7 +88,6 @@ func (c *Client) Read(value []byte) (int, error) {
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
-            common.KTrace(fmt.Sprintf("c.Key = %s, size = %d", c.Key, objSize))
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
             if err != nil {
                 c.ReleaseConn(c.Idx)
@@ -127,7 +125,6 @@ func (c *Client) Read(value []byte) (int, error) {
 				}
                                 c.ReleaseConn(c.Idx)
 				return int(size), err
-				//return int(len(value)), err
 			}
 		}
 	}
@@ -534,7 +531,6 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("key = %s, dataOffset = %v, objSize = %d, reqSize = %d", key, c.DataOffset, objSize, requestSize))
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
         psv.tag = C.CString(string(acmd.Tag))
@@ -545,10 +541,8 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
 	var cvalue *C.char
 	var bvalue []byte
     if acmd.MetaDataOnly {
-        common.KTrace("MetaOnly")
         cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&dataSize)), (*C.int)(unsafe.Pointer(&status)))
     } else {
-        common.KTrace("Get Data")
         if (objSize > 0) {
             bvalue = make([]byte, objSize + 1024)  // Add 1024 for meta data
         } else { // Don't know the size, allocate largest size

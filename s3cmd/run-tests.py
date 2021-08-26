@@ -210,8 +210,6 @@ def test(label, cmd_args = [], retcode = 0, must_find = [], must_not_find = [], 
     if type(must_not_find_re) not in [ list, tuple ]: must_not_find_re = [must_not_find_re]
 
     find_list = []
-    #print("\n=== MUST FIND:\n")
-    #print("".join(must_find))
     find_list.extend(compile_list(must_find))
     find_list.extend(compile_list(must_find_re, regexps = True))
     find_list_patterns = []
@@ -224,16 +222,12 @@ def test(label, cmd_args = [], retcode = 0, must_find = [], must_not_find = [], 
     not_find_list_patterns = []
     not_find_list_patterns.extend(must_not_find)
     not_find_list_patterns.extend(must_not_find_re)
-    #print("******** find list *******\n")
     for index in range(len(find_list)):
-        #print("=== stdout: " + stdout + "\n===\n")
         stdout = unicodise(stdout)
         match = find_list[index].search(stdout)
         if not match:
             return failure("pattern not found: %s" % find_list_patterns[index])
-    #print("******** not find list *******\n")
     for index in range(len(not_find_list)):
-        #print("=== stdout: " + stdout + "\n===\n")
         match = not_find_list[index].search(stdout)
         if match:
             return failure("pattern found: %s (match: %s)" % (not_find_list_patterns[index], match.group(0)))

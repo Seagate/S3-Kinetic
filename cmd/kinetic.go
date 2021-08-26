@@ -799,9 +799,6 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 //THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        common.KTrace(fmt.Sprintf("rs: %+v\nheaders: %+v\nopts: %+v", rs, h, opts))
-//	log.Println(" GET OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
-        //log.Println("***GetObjectNInfo***", object)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
 	}
@@ -864,7 +861,6 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	if rErr != nil {
 		return nil, rErr
 	}
-        common.KTrace(fmt.Sprintf("objReaderFn: %+v, off: %d, length: %d", objReaderFn, off, length))
 	// Read the object, doesn't exist returns an s3 compatible error.
 	size := objInfo.Size
 	// Check if range is valid
@@ -879,14 +875,11 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	kc := GetKineticConnection()
 	kc.Key = []byte(bucket + "/" + object)
         kc.DataOffset = int(off)
-        common.KTrace(fmt.Sprintf("off = %v, DataOffset = %v", off, kc.DataOffset))
 	var reader1 io.Reader = kc
 	reader := io.LimitReader(reader1, length)
-        //kc.DataOffset = 0
     closeFn := func() {
         kc.ReleaseConn(kc.Idx)
     }
-    common.KTrace("Calling objReaderFn")
 	return objReaderFn(reader, h, opts.CheckCopyPrecondFn, closeFn)
 }
 
@@ -1069,7 +1062,6 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 //THAI:
 func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
         defer common.KUntrace(common.KTrace("Enter"))
-	log.Println(" GET OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}

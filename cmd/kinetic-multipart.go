@@ -42,7 +42,6 @@ import (
         //"log"
 	jsoniter "github.com/json-iterator/go"
 	//mioutil "github.com/minio/minio/pkg/ioutil"
-    //"github.com/minio/minio/cmd"
 )
 
 var hiddenMultiParts = true

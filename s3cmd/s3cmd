@@ -472,7 +472,6 @@ def cmd_object_put(args):
     return ret
 
 def cmd_object_get(args):
-    debug("Enter cmd_object_get")
     cfg = Config()
     s3 = S3(cfg)
 
@@ -604,9 +603,7 @@ def cmd_object_get(args):
                 continue
         try:
             try:
-                debug("=== Before Get")
                 response = s3.object_get(uri, dst_stream, destination, start_position = start_position, extra_label = seq_label)
-                debug("=== After Get")
             finally:
                 dst_stream.close()
         except S3DownloadError as e:
@@ -2784,7 +2781,7 @@ def main():
 
     optparser.add_option(      "--disable-multipart", dest="enable_multipart", action="store_false", help="Disable multipart upload on files bigger than --multipart-chunk-size-mb")
     optparser.add_option(      "--multipart-chunk-size-mb", dest="multipart_chunk_size_mb", type="int", action="store", metavar="SIZE", help="Size of each chunk of a multipart upload. Files bigger than SIZE are automatically uploaded as multithreaded-multipart, smaller files are uploaded using the traditional method. SIZE is in Mega-Bytes, default chunk size is 15MB, minimum allowed chunk size is 5MB, maximum is 5GB.")
-    optparser.add_option(      "--range", dest="range", type="string", action="store", help="Range of an object offsets in bytes for partial get, ie. --range: bytes=100-200.")
+    optparser.add_option(      "--range", dest="range", type="string", action="store", help="Range of an object offsets in bytes for partial get, ie. --range: bytes=1-20, bytes=10-, bytes=-30 (suffix length specification, last 30 characters).")
 
     optparser.add_option(      "--list-md5", dest="list_md5", action="store_true", help="Include MD5 sums in bucket listings (only for 'ls' command).")
     optparser.add_option("-H", "--human-readable-sizes", dest="human_readable_sizes", action="store_true", help="Print sizes in human readable form (eg 1kB instead of 1234).")
