@@ -8,8 +8,6 @@ site/
 /.idea/
 /Minio.iml
 **/access.log
-vendor/**/*.js
-vendor/**/*.json
 release
 .DS_Store
 *.syso
@@ -25,51 +23,14 @@ config.json
 
 # Generated code
 
-kineticd/src/common/*.pb.*
-kineticd/src/*.pb.*
-kineticd/src/version_info.h
-
 # Binaries
-*.o
-*.lo
-*.so
-*.so.*
-libx86/*.a
-libarm/*.a
-kineticd/*.a
-kineticd/.libs/
-kineticd/.deps/
-kineticd/qual/qual_local
-kineticd/vendor
-kineticd/kinetic_test
-kineticd/print_device_information
-kineticd/drive_filler_upper
-kineticd/zac_ha_exercise_drive
-kineticd/bond_manager
-kineticd/installer/tmp
-kineticd/build_arm
-kineticd/build_x86
-kineticd/build
-kineticd/manifest_stress
-kineticd/x86_package_install
 
-# CMake artifacts
-
-kineticd/CMakeCache.txt
-kineticd/CMakeFiles/
-kineticd/cmake_install.cmake
-kineticd/CMakeScripts
-kineticd/Makefile
-kineticd/leveldb-prefix
-kineticd/k_api-prefix
-kineticd/kinetic_cpp_client-prefix
-kineticd/ha_cmd-prefix
-kineticd/ha_zac_cmds/zac_local
-kineticd/lldp-prefix
-kineticd/lldp/lldp_local
-kineticd/kmem-prefix
-kineticd/qual-prefix
-
-kineticd/CMakeFiles/3.10.2/
+#libraries
 lib
+
+#Executables
 bin
+
+*.pyc
+s3cmd/testsuite
+s3cmd/testsuite-out

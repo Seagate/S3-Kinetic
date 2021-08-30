@@ -1,4 +1,5 @@
 PWD := $(shell pwd)
+$(shell ./gox86env.sh)
 GOPATH := $(shell go env GOPATH)
 LDFLAGS := $(shell go run buildscripts/gen-ldflags.go)
 
@@ -7,10 +8,21 @@ GOOS := $(shell go env GOOS)
 
 VERSION ?= $(shell git describe --tags)
 TAG ?= "minio/minio:$(VERSION)"
-
 BUILD_LDFLAGS := '$(LDFLAGS)'
-
 all: build
+	@echo off
+	if [ ! -f "minio" ]; \
+	then \
+		echo === New executable minio was not created ===; \
+	fi
+	if [ -f "minio" ]; \
+	then \
+		[ ! -d "./bin" ] && mkdir ./bin; \
+		cp minio ./bin/s3kinetic.X86; \
+		mv minio ./bin/; \
+		echo === New executable minio was created in ./bin directory ===; \
+	fi
+	@echo on
 
 checks:
 	@echo "Checking dependencies"
@@ -62,28 +74,20 @@ spelling:
 check: test
 test: verifiers build
 	@echo "Running unit tests"
-	@GO111MODULE=on CGO_ENABLED=1 go test -tags kqueue ./... 1>/dev/null
+	@GO111MODULE=on CGO_ENABLED=0 go test -tags kqueue ./... 1>/dev/null
 
-test-race: verifiers build
-	@echo "Running unit tests under -race"
-	@(env bash $(PWD)/buildscripts/race.sh)
-
-# Verify minio binary
-verify:
-	@echo "Verifying build with race"
-	@GO111MODULE=on CGO_ENABLED=1 go build -race -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/minio 1>/dev/null
+verify: build
+	@echo "Verifying build"
 	@(env bash $(PWD)/buildscripts/verify-build.sh)
 
-# Verify healing of disks with minio binary
-verify-healing:
-	@echo "Verify healing build with race"
-	@GO111MODULE=on CGO_ENABLED=1 go build -race -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/minio 1>/dev/null
-	@(env bash $(PWD)/buildscripts/verify-healing.sh)
+coverage: build
+	@echo "Running all coverage for minio"
+	@(env bash $(PWD)/buildscripts/go-coverage.sh)
 
 # Builds minio locally.
 build: checks
 	@echo "Building minio binary to './minio'"
-	@GO111MODULE=on CGO_ENABLED=1 go build -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/minio 1>/dev/null
+	@GO111MODULE=on CGO_ENABLED=1 go build -x -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/minio 1>/dev/null
 
 docker: build
 	@docker build -t $(TAG) . -f Dockerfile.dev
@@ -101,6 +105,4 @@ clean:
 	@rm -rvf minio
 	@rm -rvf build
 	@rm -rvf release
-	@rm *.a
-	@rm cmd/*.a
 

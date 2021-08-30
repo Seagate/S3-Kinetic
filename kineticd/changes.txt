@@ -1,2 +1,0 @@
-Version No.         Author                  Changes
-1.6.0               Palomino Labs, Inc.     Initial release
