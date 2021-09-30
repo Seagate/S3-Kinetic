@@ -42,7 +42,6 @@ import (
         //"log"
 	jsoniter "github.com/json-iterator/go"
 	//mioutil "github.com/minio/minio/pkg/ioutil"
-    //"github.com/minio/minio/cmd"
 )
 
 var hiddenMultiParts = true
@@ -501,7 +500,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     key := bucket + "/" + object + "." + fs.metaJSONFile
     kineticMutex.Lock()
     kc = GetKineticConnection()
-    cvalue, size, err := kc.CGet(key, -1, kopts) // -1 to indicate it doesn't know the size
+    cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1) // -1 to indicate it doesn't know the size
     if err == nil {
         // Remove the temporary metaJSONFile
         kc.Delete(key, kopts)

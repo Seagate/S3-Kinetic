@@ -799,7 +799,6 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 //THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        //log.Println("***GetObjectNInfo***", object)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return nil, err
 	}
@@ -863,7 +862,7 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 		return nil, rErr
 	}
 	// Read the object, doesn't exist returns an s3 compatible error.
-	size := length
+	size := objInfo.Size
 	// Check if range is valid
 	if off > size || off+length > size {
 		err = InvalidRange{off, length, size}
@@ -875,6 +874,7 @@ func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object str
 	}
 	kc := GetKineticConnection()
 	kc.Key = []byte(bucket + "/" + object)
+        kc.DataOffset = int(off)
 	var reader1 io.Reader = kc
 	reader := io.LimitReader(reader1, length)
     closeFn := func() {
@@ -1062,7 +1062,6 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 //THAI:
 func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
         defer common.KUntrace(common.KTrace("Enter"))
-	//log.Println(" GET OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}
@@ -1120,7 +1119,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
-    cvalue, size, err := kc.CGet(key, -1, kopts)  // -1 to indicate it doesn't know the size
+    cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1)  // -1 to indicate it doesn't know the size
 	ReleaseConnection(kc.Idx)
 	if err != nil {
 		err = errFileNotFound

@@ -2685,6 +2685,7 @@ def main():
         if 'cmd' in cmd:
             commands[cmd['cmd']] = cmd
 
+    debug(commands)
     optparser = OptionParser(option_class=OptionAll, formatter=MyHelpFormatter())
     #optparser.disable_interspersed_args()
 
@@ -2780,6 +2781,7 @@ def main():
 
     optparser.add_option(      "--disable-multipart", dest="enable_multipart", action="store_false", help="Disable multipart upload on files bigger than --multipart-chunk-size-mb")
     optparser.add_option(      "--multipart-chunk-size-mb", dest="multipart_chunk_size_mb", type="int", action="store", metavar="SIZE", help="Size of each chunk of a multipart upload. Files bigger than SIZE are automatically uploaded as multithreaded-multipart, smaller files are uploaded using the traditional method. SIZE is in Mega-Bytes, default chunk size is 15MB, minimum allowed chunk size is 5MB, maximum is 5GB.")
+    optparser.add_option(      "--range", dest="range", type="string", action="store", help="Range of an object offsets in bytes for partial get, ie. --range: bytes=1-20, bytes=10-, bytes=-30 (suffix length specification, last 30 characters).")
 
     optparser.add_option(      "--list-md5", dest="list_md5", action="store_true", help="Include MD5 sums in bucket listings (only for 'ls' command).")
     optparser.add_option("-H", "--human-readable-sizes", dest="human_readable_sizes", action="store_true", help="Print sizes in human readable form (eg 1kB instead of 1234).")
@@ -2886,7 +2888,18 @@ def main():
             error(u"Option --progress is not yet supported on MS Windows platform. Assuming --no-progress.")
             cfg.progress_meter = False
 
+    if options.range:
+        if options.add_header == None:
+            options.add_header = []
+        #options.add_header.append("accept-ranges:" + options.range) #"bytes:100-200"
+        options.add_header.append("Range:" + options.range) #"bytes:100-200"
+    
+    #'accept-ranges:bytes:15-25'
+
     ## Pre-process --add-header's and put them to Config.extra_headers SortedDict()
+    debug(u'>>>> options.add_header: %s' % options.add_header)
+    debug(dir(options.add_header))
+    debug(type(options.add_header))
     if options.add_header:
         for hdr in options.add_header:
             try:
@@ -2904,7 +2917,9 @@ def main():
                   (key.strip().lower(), val.strip()))
             cfg.extra_headers[key.strip().lower()] = val.strip()
 
-    # Process --remove-header
+    debug(u'cfg.extra_header: %s' % cfg.extra_headers)
+    # Process --remove-header 
+    debug(u'options.remove_header: %s' % options.remove_headers)
     if options.remove_headers:
         cfg.remove_headers = options.remove_headers
 
@@ -3054,10 +3069,15 @@ def main():
     if len(args) < 1:
         optparser.print_help()
         sys.exit(EX_USAGE)
+    debug(u"1. options = %s" % options)
 
+    debug(u"2. # of arguments = %d" % len(args)) 
+    debug(u"args = %s" % args)
     ## Unicodise all remaining arguments:
     args = [unicodise(arg) for arg in args]
+    debug(u"unicoise args = %s" % args)
 
+    debug("Commands: %s" % commands)
     command = args.pop(0)
     try:
         debug(u"Command: %s" % commands[command]["cmd"])
@@ -3073,6 +3093,8 @@ def main():
         error(u"Not enough parameters for command '%s'" % command)
         sys.exit(EX_USAGE)
 
+    debug(u"# of arguments = %d" % len(args)) 
+    debug(u"args = %s" % args)
     rc = cmd_func(args)
     if rc is None: # if we missed any cmd_*() returns
         rc = EX_GENERAL

@@ -751,9 +751,11 @@ class S3(object):
             raise ValueError("Expected URI type 's3', got '%s'" % uri.type)
         request = self.create_request("OBJECT_GET", uri = uri)
         labels = { 'source' : uri.uri(), 'destination' : dest_name, 'extra' : extra_label }
+        if self.config.extra_headers:
+            request.headers.update(self.config.extra_headers)
         response = self.recv_file(request, stream, labels, start_position)
         return response
-
+    
     def object_batch_delete(self, remote_list):
         """ Batch delete given a remote_list """
         uris = [remote_list[item]['object_uri_str'] for item in remote_list]
@@ -1763,7 +1765,6 @@ class S3(object):
             if "x-amz-meta-s3cmd-attrs" in response["headers"]:
                 attrs = parse_attrs_header(response["headers"]["x-amz-meta-s3cmd-attrs"])
                 response["s3cmd-attrs"] = attrs
-            debug("Response:\n" + pprint.pformat(response))
         except ParameterError as e:
             raise
         except (IOError, Exception) as e:

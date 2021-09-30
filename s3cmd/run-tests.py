@@ -222,7 +222,6 @@ def test(label, cmd_args = [], retcode = 0, must_find = [], must_not_find = [], 
     not_find_list_patterns = []
     not_find_list_patterns.extend(must_not_find)
     not_find_list_patterns.extend(must_not_find_re)
-
     for index in range(len(find_list)):
         stdout = unicodise(stdout)
         match = find_list[index].search(stdout)
@@ -369,7 +368,7 @@ test_s3cmd("Create multiple buckets", ['mb', pbucket(2), pbucket(3)],
 ## ====== Invalid bucket name
 test_s3cmd("Invalid bucket name", ["mb", "--bucket-location=EU", pbucket('EU')],
     retcode = EX_USAGE,
-    must_find = "ERROR: Parameter problem: Bucket name '%s' contains disallowed character" % bucket('EU'),
+    must_find_re = "ERROR:(.*)Parameter problem: Bucket name '%s' contains disallowed character" % bucket('EU'),
     must_not_find_re = "Bucket.*created")
 
 
@@ -382,10 +381,10 @@ test_flushdir("Create cache dir", "testsuite/cachetest")
 
 ## ====== Sync to S3
 test_s3cmd("Sync to S3", ['sync', 'testsuite/', pbucket(1) + '/xyz/', '--exclude', 'demo/*', '--exclude', '*.png', '--no-encrypt', '--exclude-from', 'testsuite/exclude.encodings', '--exclude', 'testsuite/cachetest/.s3cmdcache', '--cache-file', 'testsuite/cachetest/.s3cmdcache'],
-           must_find = ["ERROR: Upload of 'testsuite/permission-tests/permission-denied.txt' is not possible (Reason: Permission denied)",
-                        "WARNING: 32 non-printable characters replaced in: crappy-file-name/non-printables",
+           must_find_re = ["ERROR:(.*:)Upload of 'testsuite/permission-tests/permission-denied.txt' is not possible \(Reason: Permission denied\)",
+                        "WARNING:(.*):32 non-printable characters replaced in: crappy-file-name/non-printables",
            ],
-           must_not_find_re = ["demo/", "^(?!WARNING: Skipping).*\.png$", "permission-denied-dir"],
+           must_not_find_re = ["demo/", "^(?!WARNING:(.*):Skipping).*\.png$", "permission-denied-dir"],
            retcode = EX_PARTIAL)
 
 ## ====== Create new file and sync with caching enabled
@@ -504,7 +503,7 @@ test_mkdir("Create file-dir dir", "testsuite-out/xyz/dir-test/file-dir")
 
 ## ====== Skip dst dirs
 test_s3cmd("Skip over dir", ['sync', '%s/xyz' % pbucket(1), 'testsuite-out'],
-           must_find = "ERROR: Download of 'xyz/dir-test/file-dir' failed (Reason: testsuite-out/xyz/dir-test/file-dir is a directory)",
+           must_find = "Download of 'xyz/dir-test/file-dir' failed (Reason: testsuite-out/xyz/dir-test/file-dir is a directory)",
            retcode = EX_PARTIAL)
 
 
@@ -689,8 +688,8 @@ test_s3cmd("Sync remote2remote", ['sync', '%s/xyz/' % pbucket(1), '%s/copy/' % p
 ## ====== Don't Put symbolic link
 test_s3cmd("Don't put symbolic links", ['put', 'testsuite/etc/linked1.png', 's3://%s/xyz/' % bucket(1),],
            retcode = EX_USAGE,
-           must_find = ["WARNING: Skipping over symbolic link: testsuite/etc/linked1.png"],
-           must_not_find_re = ["^(?!WARNING: Skipping).*linked1.png"])
+           must_find_re = ["WARNING:(.*):Skipping over symbolic link: testsuite/etc/linked1.png"],
+           must_not_find_re = ["^(?!WARNING:(.*):Skipping).*linked1.png"])
 
 ## ====== Put symbolic link
 test_s3cmd("Put symbolic links", ['put', 'testsuite/etc/linked1.png', 's3://%s/xyz/' % bucket(1),'--follow-symlinks' ],

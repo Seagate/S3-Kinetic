@@ -33,7 +33,8 @@ char* allocate_pvalue_buffer(int size);
 void deallocate_gvalue_buffer(char* buff);
 
 
-char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
+char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* dataSize, int* status);
+char* PartialGet(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int offset, int reqSize, int* dataSize, int* st);
 char* GetMeta(int64_t user_id, char* key, struct _CPrimaryStoreValue* psvalue, int* size, int* status);
 
 int Put(int64_t user_id, char* key, char* current_version, _CPrimaryStoreValue* psvalue, char* value, size_t size,
