@@ -186,7 +186,9 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
         if etag == "" {
                 etag = GenETag()
         }
-    nxtVers := fs.nextVersion(bucket, object)
+    objKey := fs.makeKey(bucket, object)
+    objVer, _ := fs.currentVersion(objKey)
+    nxtVers := fs.newVersion(objVer)
     key :=  bucket + "/" + object + "." + nxtVers + "." + fs.encodePartFile(partID, etag, data.ActualSize())
         meta := make(map[string]string)
         fsMeta := newFSMetaV1()
@@ -245,7 +247,8 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 Timeout:         60000, //60 sec
                 Priority:        kinetic_proto.Command_NORMAL,
         }
-    vers, _ := fs.version(fs.makeKey(bucket, object))
+    objKey := fs.makeKey(bucket, object)
+    vers, _ := fs.currentVersion(objKey)
     common.KTrace(fmt.Sprintf("version: %s", vers))
     startKey := bucket + "/" + object + "." + vers + "."
 	endKey := common.IncStr(startKey)
@@ -415,11 +418,8 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         Priority:        kinetic_proto.Command_NORMAL,
     }
     objKey := fs.makeKey(bucket, object)
-    objVer, _ := fs.version(objKey)
-    nxtVer := fs.initialVersion()
-    if objVer != "" {
-        nxtVer = fs.computeNextVersion(objVer)
-    }
+    objVer, _ := fs.currentVersion(objKey)
+    nxtVer := fs.newVersion(objVer)
     startKey := bucket + "/" + object + "." + nxtVer + "."
     endKey := common.IncStr(startKey)
 	kineticMutex.Lock()
@@ -581,7 +581,8 @@ func (ko *KineticObjects) AbortMultipartUpload(ctx context.Context, bucket, obje
     ReleaseConnection(kc.Idx)
     kineticMutex.Unlock()
     // Delete all multiparts belong to the new version object
-    nxtVer := ko.nextVersion(bucket, object)
+    objVer, _ := ko.currentVersion(objKey)
+    nxtVer := ko.newVersion(objVer)
     err := ko.deleteParts(objKey, nxtVer)
     return err
 }

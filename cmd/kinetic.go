@@ -1895,9 +1895,9 @@ func (ko *KineticObjects) option() Opts {
         }
 }
 
-func (ko *KineticObjects) version(key string) (string, error) {
+func (ko *KineticObjects) currentVersion(key string) (string, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    var version string = ""
+    var curVer string = ""
     option := ko.option()
     kineticMutex.Lock()
     kc := GetKineticConnection()
@@ -1914,33 +1914,26 @@ func (ko *KineticObjects) version(key string) (string, error) {
         C.free(unsafe.Pointer(cvalue))
         common.KTrace(fmt.Sprintf("err = %+v, Meta: %+v", err, meta))
         if err == nil {
-            version = meta.Version
+            curVer = meta.Version
+            if (curVer == "") {
+                // Key exists without version. Start with the initial new version.
+                curVer = ko.newVersion(curVer)
+            }
         }
     }
-    return version, err
+    return curVer, err
 }
-func (ko* KineticObjects) initialVersion() string {
-    ver := fmt.Sprintf("%.5d", 0)
-    return ver
-}
-// computeNextVersion
-// Version is in the range [0..99999]
+// newVersion
+// Version is in the range [1..99999]
 // return:  next version string with length of 5 chars
-func (ko* KineticObjects) computeNextVersion(curVer string) string {
-    nVer, _ := strconv.Atoi(curVer)
-    nNxtVer := (nVer + 1) % (100000)
-    nxtVer := fmt.Sprintf("%.5d", nNxtVer)
-    return nxtVer
-}
-
-func (ko* KineticObjects) nextVersion(bucket, obj string) string {
-    objKey := ko.makeKey(bucket, obj)
-    version, _ := ko.version(objKey)
+func (ko* KineticObjects) newVersion(aCurVersion string) string {
     var nxtVer string
-    if version == "" {
-        nxtVer = ko.initialVersion()
+    if (aCurVersion == "") {
+        nxtVer = fmt.Sprintf("%.5d", 1)
     } else {
-        nxtVer = ko.computeNextVersion(version)
+        curVer, _ := strconv.Atoi(aCurVersion)
+        nNxtVer := (curVer + 1) % 100000 + 1
+        nxtVer = fmt.Sprintf("%.5d", nNxtVer)
     }
     return nxtVer
 }
