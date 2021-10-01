@@ -1932,7 +1932,10 @@ func (ko* KineticObjects) newVersion(aCurVersion string) string {
         nxtVer = fmt.Sprintf("%.5d", 1)
     } else {
         curVer, _ := strconv.Atoi(aCurVersion)
-        nNxtVer := (curVer + 1) % 100000 + 1
+        nNxtVer := (curVer + 1) % 100000
+        if (nNxtVer == 0) {
+            nNxtVer += 1
+        }
         nxtVer = fmt.Sprintf("%.5d", nNxtVer)
     }
     return nxtVer
