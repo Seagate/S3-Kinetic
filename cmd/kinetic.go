@@ -1914,7 +1914,7 @@ func (ko *KineticObjects) version(key string) (string, error) {
         C.free(unsafe.Pointer(cvalue))
         common.KTrace(fmt.Sprintf("err = %+v, Meta: %+v", err, meta))
         if err == nil {
-            version = meta.Version
+            version = meta.Meta["version"]
         }
     }
     return version, err
