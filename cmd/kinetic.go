@@ -229,8 +229,6 @@ func allocateValBuf(bufSize int) []byte {
 
 func initKineticMeta(kc *Client) error {
         defer common.KUntrace(common.KTrace("Enter"))
-	value := allocateValBuf(0)
-	bucketKey := "bucket." + minioMetaBucket
 	kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
@@ -240,39 +238,52 @@ func initKineticMeta(kc *Client) error {
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
 	}
-	var bucketInfo BucketInfo
-	bucketInfo.Name = bucketKey
-	bucketInfo.Created = time.Now()
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	enc.Encode(bucketInfo)
-        gbuf := allocateValBuf(buf.Len())
-	copy(gbuf, buf.Bytes())
-    _, err := kc.CPut(bucketKey, gbuf, buf.Len(), value, 0, kopts)
-        if err != nil {
+        var bucketInfo BucketInfo
+        var enc *gob.Encoder
+        var err error = nil
+	value := allocateValBuf(0)
+	bucketKey := "bucket." + minioMetaBucket
+        if (!kc.DoesObjExist(bucketKey, kopts)) {
+            common.KTrace(fmt.Sprintf("Create key %s", bucketKey))
+	    bucketInfo.Name = bucketKey
+	    bucketInfo.Created = time.Now()
+	    var buf bytes.Buffer
+	    enc = gob.NewEncoder(&buf)
+	    enc.Encode(bucketInfo)
+            gbuf := allocateValBuf(buf.Len())
+	    copy(gbuf, buf.Bytes())
+            _, err = kc.CPut(bucketKey, gbuf, buf.Len(), value, 0, kopts)
+            if err != nil {
                 return  err
+            }
         }
 	bucketKey = "bucket." + minioMetaTmpBucket
-	bucketInfo.Name = bucketKey
-	bucketInfo.Created = time.Now()
-        var buf1 bytes.Buffer
-	enc = gob.NewEncoder(&buf1)
-	enc.Encode(bucketInfo)
-        gbuf1 := allocateValBuf(buf1.Len())
-        copy(gbuf1, buf1.Bytes())
-	_, err = kc.CPut(bucketKey, gbuf1, buf1.Len(), value, 0, kopts)
-        if err != nil {
+        if (!kc.DoesObjExist(bucketKey, kopts)) {
+            common.KTrace(fmt.Sprintf("Create key %s", bucketKey))
+	    bucketInfo.Name = bucketKey
+	    bucketInfo.Created = time.Now()
+            var buf1 bytes.Buffer
+	    enc = gob.NewEncoder(&buf1)
+	    enc.Encode(bucketInfo)
+            gbuf1 := allocateValBuf(buf1.Len())
+            copy(gbuf1, buf1.Bytes())
+	    _, err = kc.CPut(bucketKey, gbuf1, buf1.Len(), value, 0, kopts)
+            if err != nil {
                 return  err
+            }
         }
 	bucketKey = "bucket." + minioMetaMultipartBucket
-	bucketInfo.Name = bucketKey
-	bucketInfo.Created = time.Now()
-        var buf2 bytes.Buffer
-	enc = gob.NewEncoder(&buf2)
-	enc.Encode(bucketInfo)
-        gbuf2 := allocateValBuf(buf2.Len())
-        copy(gbuf2, buf2.Bytes())
-	_, err = kc.CPut(bucketKey, gbuf2, buf2.Len(), value, 0, kopts)
+        if (!kc.DoesObjExist(bucketKey, kopts)) {
+            common.KTrace(fmt.Sprintf("Create key %s", bucketKey))
+	    bucketInfo.Name = bucketKey
+	    bucketInfo.Created = time.Now()
+            var buf2 bytes.Buffer
+	    enc = gob.NewEncoder(&buf2)
+	    enc.Encode(bucketInfo)
+            gbuf2 := allocateValBuf(buf2.Len())
+            copy(gbuf2, buf2.Bytes())
+	    _, err = kc.CPut(bucketKey, gbuf2, buf2.Len(), value, 0, kopts)
+        }
 
 	return err
 }
@@ -514,6 +525,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 		buf := bytes.NewBuffer(value[:size])
 		dec := gob.NewDecoder(buf)
 		dec.Decode(&bi)
+                common.KTrace(fmt.Sprintf("bucket info: %+v", bi))
         common.KTrace("Free meta")
         C.free(unsafe.Pointer(cvalue))
 	} else {
@@ -1040,6 +1052,7 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 	//log.Println(" GET OBJ INFO: ", object)
 	oi, err := ko.getObjectInfoWithLock(ctx, bucket, object)
 	if err == errCorruptedFormat || err == io.EOF {
+            common.KTrace(fmt.Sprintf("IF erro = %+v", err))
 		objectLock := ko.NewNSLock(ctx, bucket, object)
 		if err = objectLock.GetLock(globalObjectTimeout); err != nil {
 			return oi, toObjectErr(err, bucket, object)
@@ -1914,11 +1927,7 @@ func (ko *KineticObjects) currentVersion(key string) (string, error) {
         C.free(unsafe.Pointer(cvalue))
         common.KTrace(fmt.Sprintf("err = %+v, Meta: %+v", err, meta))
         if err == nil {
-            curVer = meta.Version
-            if (curVer == "") {
-                // Key exists without version. Start with the initial new version.
-                curVer = ko.newVersion(curVer)
-            }
+            curVer = meta.Meta["version"]
         }
     }
     return curVer, err

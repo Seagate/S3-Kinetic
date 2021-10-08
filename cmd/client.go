@@ -520,6 +520,21 @@ func (c *Client) AbortBatch(cmd Opts) error {
 	err = c.Send(message, value1, 0)
 	return err
 }
+/****************
+// DoesObjExist(key string, option Opts) bool
+// Description:  Determine existence of object with the given key
+****************/
+func (c *Client) DoesObjExist(key string, option Opts) bool {
+    bExist := false
+    cValue, _, err := c.CGetMeta(key, option)
+    if (err == nil) {
+        if (cValue != nil) {
+            bExist = true
+            C.free(unsafe.Pointer(cValue))
+        }
+    }
+    return bExist
+}
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))

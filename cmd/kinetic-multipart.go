@@ -524,7 +524,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     if len(fsMeta.Meta) == 0 {
         fsMeta.Meta = make(map[string]string)
     }
-    fsMeta.Version = nxtVer
+    fsMeta.Meta["version"] = nxtVer
     fsMeta.Meta["size"] =  strconv.FormatInt(objectActualSize, 10)
     fsMeta.Meta["etag"] = s3MD5
     // Save consolidated actual size.
