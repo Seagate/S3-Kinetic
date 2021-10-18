@@ -55,35 +55,13 @@ To compile MinIO (s3kinetic.x.y), assume that the following directories are unde
    - uboot-linux (this is uboot for ARM)
    - make sure the branch for kineticd is `features/kinetic-minio-skinny-5MBvalue`
 
-If this is the first time, do the followings (assume the current directory is `~/albany-minio`):
-   - go to `uboot-linux` directory,  do:
+If this is the first time, do the following (assuming the current directory is `~/albany-minio`):
+   - go to `uboot-linux` directory and call this command:
 
          ./build_embedded_image.sh -t ramdef
 
-   - go to `kineticd` directory under `albany-minio` directory, do the following commands to install the required packages:
-
-         cd kineticd
-         ./x86_package_installation.sh
-
 To compile, do the following:
-- Go back to `albany-minio` directory:
 
-         cd ~/albany-minio
-
-- To compile for ARM, LAMARRKV:
-
-         source ~/uboot-linux/envsetup.h
-         ./s3kinetic.sh ARM LAMARRKV  (for LAMARRKV using ARM processors)
-
-- To compile for x86:
-
-         source kineticd/x86_envsetup.sh
-         ./s3kinetic.sh X86 NONSMR    (for non-smr drive using SATA interface (like standard SATA drive), X86 processor).
-         ./s3kinetic.sh X86 SMR       (for smr drive using SATA interface, X86 processor).
-
-An exectuable 'minio' and s3kinetic.x.y  will be created and are ready to run.
-
-**Notes:**  If there is no change in kineticd, another way to compile is to do make as following:
 - for ARM:
 
          make -f Makefile.arm
