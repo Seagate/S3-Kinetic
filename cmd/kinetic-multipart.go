@@ -87,6 +87,7 @@ func (fs *KineticObjects) ListMultipartUploads(ctx context.Context, bucket, obje
 func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object string, opts ObjectOptions) (string, error) {
 	//log.Println("NewMultipartUpload", bucket, object, opts)
         defer common.KUntrace(common.KTrace("Enter"))
+        common.KTrace(fmt.Sprintf("bucket: %s, object: %s", bucket, object))
 
         if err := checkNewMultipartArgs(ctx, bucket, object, fs); err != nil {
                 return "", toObjectErr(err, bucket)
@@ -190,6 +191,7 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
     objVer, _ := fs.currentVersion(objKey)
     nxtVers := fs.newVersion(objVer)
     key :=  bucket + "/" + object + "." + nxtVers + "." + fs.encodePartFile(partID, etag, data.ActualSize())
+    common.KTrace(fmt.Sprintf("key: %s", key))
         meta := make(map[string]string)
         fsMeta := newFSMetaV1()
 	fsMeta.Meta = meta
@@ -399,6 +401,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 // Implements S3 compatible Complete multipart API.
 func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket string, object string, uploadID string, parts []CompletePart, opts ObjectOptions) (oi ObjectInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("bucket: %s, object: %s", bucket, object))
     var actualSize int64
 
     s3MD5 := getCompleteMultipartMD5(parts)
@@ -571,6 +574,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
 
 func (ko *KineticObjects) AbortMultipartUpload(ctx context.Context, bucket, object, uploadID string) error {
     defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("bucket: %s, object: %s", bucket, object))
     // Delete temorary json file.
     // If this file name has version in it then it doesn't have to be deleted separately
     objKey := bucket + SlashSeparator + object
