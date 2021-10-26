@@ -84,16 +84,18 @@ II. COMPILE AND RUN minio or s3kinetic.X.Y:
           - Make sure certificate.pem and private.pem are in this directory
             cp certificates/*.pem .
           - Make sure there is directory metadata.db that has users.json.
+            mkdir metadata.db
+            touch metadata.db/users.json
 
           - To save some memory, disable web browser by:
             export MINIO_BROWSER=off
 
           - start minio by typing:
-             ./minio server kinetic:skinny:sda kineticd --store_partition=/dev/sda --store_device=sda --metadata_db_path=./metatdata.db
+             ./minio server kinetic:skinny:sda kineticd --store_device=/dev/sda 
 
              to turn on  'TRACE":
 
-             ./minio --trace  server kinetic:skinny:sda kineticd --store_partition=/dev/sda --store_device=sda --metadata_db_path=./metatdata.db
+             ./minio --trace  server kinetic:skinny:sda kineticd --store_device=/dev/sda
  
           - Wait till these messages appear:
 
