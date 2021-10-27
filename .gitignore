@@ -27,8 +27,7 @@ config.json
 
 #libraries
 lib
-!libarm
-!libx86
+libarm
 
 #Executables
 bin
