@@ -18,57 +18,34 @@ This program uses the frontend of MinIO to send/receive S3 objects and, as the b
    Go to this web site to install golang:
       https://tecadmin.net/install-go-on-ubuntu
 
-2. Install MinIO-Kinetic: 
-   The MinIO and kineticd are now under one roof for compiling. Clone albany-minio:
+2. Checkout MinIO-Kinetic: 
 
          git clone ssh://git@lco-esd-cm01.colo.seagate.com:7999/in/albany-minio.git
-
-3. Compile and run MinIO or s3kinetic.X.Y:
-The script s3kinetic.sh will be used to start the compiling.  The command is the following:
-
-         ./s3kinetic.sh arg1 arg2
-         arg1 = X86 or ARM
-         arg2 = NONSMR or SMR or LAMARRKV
-         
-   The NONSMR or SMR is the disk drive type. NONSMR is implied that the standard SATA disk drive. SMR is for the standard SMR SATA interface drive with zac media management.
-
-   There will be two executable files exactly the same, but they have different names as shown below:
-      - minio
-      - s3kinetic.arg1.arg2
-
-   Examples:
-   * s3kinetic.ARM.LAMARRKV
-   * s3kinetic.X86.NONSMR
-   * s3kinetic.X86.SMR
-    
-   The above examples are the combinations that were tested. The other combinations like s3kinetic.ARM.NONSMR, s3kinetic.ARM.SMR are not in the CMakeList.txt configuration, therefore they may not be compiled.  These combinations may be used by INTERPOSER.
 
 ---
 
 ## Compilation
-Under `albany-minio` directory, there is `kineticd` directory.
-Any change in "kineticd" directory can be committed normally using git commands(`git add`, `git commit`...).
-Any change in "albany-minio" directory  can be committed normally using git commands (`git add`, `git commit`...).
 
-To compile MinIO (s3kinetic.x.y), assume that the following directories are under user's home directory:
+The steps to compile MinIO (s3kinetic.x.y) depends on the target architecture. 
+
+### x86
+It is enough to type the following command in the main folder (`albany-minio`):
+
+         make -f Makefile.x86
+
+### ARM
+Assuming that the following directories are under user's home directory:
    - albany-minio
    - uboot-linux (this is uboot for ARM)
-   - make sure the branch for kineticd is `features/kinetic-minio-skinny-5MBvalue`
 
-If this is the first time, do the following (assuming the current directory is `~/albany-minio`):
+If this is the first time, do the following:
    - go to `uboot-linux` directory and call this command:
 
          ./build_embedded_image.sh -t ramdef
 
-To compile, do the following:
-
-- for ARM:
+Go to the `albany-minio` folder and do the following:
 
          make -f Makefile.arm
-
-- for x86:
-
-         make -f Makefile.x86
 
 ---
 
@@ -103,11 +80,11 @@ To compile, do the following:
 
 - Start minio by typing:
 
-         ./minio server kinetic:skinny:sda kineticd --store_partition=/dev/sda --store_device=sda --metadata_db_path=./metatdata.db
+          ./minio server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
 
    to turn on  `TRACE`:
 
-         ./minio --trace  server kinetic:skinny:sda kineticd --store_partition=/dev/sda --store_device=sda --metadata_db_path=./metatdata.db
+         ./minio --trace server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
 
 - Wait till these messages appear:
 
