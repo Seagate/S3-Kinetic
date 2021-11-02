@@ -53,11 +53,11 @@ Go to the `albany-minio` folder and do the following:
 
 ### Under LAMARRKV or Interposer ARM:
 
-- Copy minio or s3kinetic.X.Y (ARM version) to the Lamarrkvdrive under directory `/mnt/util`:
+- Copy minio or s3kinetic.X.Y (ARM version) from the `bin` folder to the Lamarrkvdrive under directory `/mnt/util`:
 
          scp minio (or s3kinetic.X.Y) root@ip_address:/mnt/util/
 
-- ssh into Lamarrkv drive:
+- ssh into Lamarrkv drive. If you encounter any issues, please, read the section `Conecting to a Serial Port` from [Kinetic Notes](https://seagatetechnology.sharepoint.com/:b:/r/sites/gteamdrv2/kinetic/Shared%20Documents/HowTo/KineticInteractions_Includes_stepsforfw_update_locationof_slod.pdf?csf=1&web=1&e=T6QNhx). 
 
          ssh root@ip_address
 
@@ -112,7 +112,7 @@ Make sure there is a spare disk drive available. Ex /dev/sdb
 
 Type the following line:
 
-          ./minio server kinetic:skinny:sdx kineticd --store_partition=/dev/sdxn --store_device=sdx --metadata_db_path=./metatdata.db
+          ./minio server kinetic:skinny:sdx kineticd --store_device=/dev/sdxn
 
 Notes: sdxn is a partition number. Ex: /dev/sdb1 
 under x86, a partition can be used for storage instead of the whole drive.            
