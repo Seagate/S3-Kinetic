@@ -488,6 +488,7 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 
 func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi BucketInfo, err error) {
         defer common.KUntrace(common.KTrace("Enter"))
+        common.KTrace(fmt.Sprintf("bucket: %s", bucket))
 
 	//log.Println(" GET BUCKET INFO ", bucket)
         bucketLock := ko.NewNSLock(ctx, bucket, "")
@@ -1409,19 +1410,13 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         kineticMutex.Unlock()
         return nil
     }
+    version := fsMeta.Meta["version"]
     for _, part := range  fsMeta.Parts {
-        key =  bucket + SlashSeparator + object + "." +  fsMeta.Version + "." + fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
+        key =  bucket + SlashSeparator + object + "." +  version + "." + fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
         kc.Delete(key, kopts)
 	}
     key = bucket + SlashSeparator + object
     err = kc.Delete(key, kopts)
-    if err != nil {
-        ReleaseConnection(kc.Idx)
-        kineticMutex.Unlock()
-        return err
-    }
-    metakey := key
-    err = kc.Delete(metakey, kopts)
     if err != nil {
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
