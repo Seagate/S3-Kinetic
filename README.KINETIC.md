@@ -57,7 +57,7 @@ Go to the `albany-minio` folder and do the following:
 
          scp minio (or s3kinetic.X.Y) root@ip_address:/mnt/util/
 
-- ssh into Lamarrkv drive. If you encounter any issues, please, read the section `Conecting to a Serial Port` from [Kinetic Notes](https://seagatetechnology.sharepoint.com/:b:/r/sites/gteamdrv2/kinetic/Shared%20Documents/HowTo/KineticInteractions_Includes_stepsforfw_update_locationof_slod.pdf?csf=1&web=1&e=T6QNhx). 
+- ssh into Lamarrkv drive. If you encounter any issues, please, read the section `Conecting to a Serial Port` from Kinetic Notes (https://seagatetechnology.sharepoint.com/:b:/r/sites/gteamdrv2/kinetic/Shared%20Documents/HowTo/KineticInteractions_Includes_stepsforfw_update_locationof_slod.pdf?csf=1&web=1&e=T6QNhx). 
 
          ssh root@ip_address
 
