@@ -1195,6 +1195,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 // for future object operations.
 func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
         defer common.KUntrace(common.KTrace("Enter"))
+        common.KTrace(fmt.Sprintf("bucket: %s, object: %s", bucket, object))
 	//log.Println(" PutObject ", object, bucket, r)
 	if err := checkPutObjectArgs(ctx, bucket, object, ko, r.Size()); err != nil {
 		return ObjectInfo{}, err
@@ -1293,6 +1294,10 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 		return ObjectInfo{}, errInvalidArgument
 	}
     common.KTrace(fmt.Sprintf("blockSizeV1 = %d, bufSize = %d, data Size: %d", blockSizeV1, bufSize, data.Size()))
+        key = bucket + "/" + object
+        objVer, _ := ko.currentVersion(key)
+        nxtVer := ko.newVersion(objVer)
+        fsMeta.Meta["version"] = nxtVer
         fsMeta.Meta["etag"] = r.MD5CurrentHexString()
         fsMeta.Meta["size"] = strconv.FormatInt(data.Size(), 10)
         fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
@@ -1308,7 +1313,6 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	//wg.Add(1)
 	//go func() {
 	// Write to kinetic
-	key = bucket + "/" + object
         kc = GetKineticConnection()
 	_, err = kc.CPut(key, buf, int(len(bytes)), goBuf, int(bufSize), kopts)
 	if err != nil {
@@ -1910,6 +1914,7 @@ func (ko *KineticObjects) option() Opts {
 
 func (ko *KineticObjects) currentVersion(key string) (string, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("key: %s", key))
     var curVer string = ""
     option := ko.option()
     kineticMutex.Lock()
@@ -1930,12 +1935,14 @@ func (ko *KineticObjects) currentVersion(key string) (string, error) {
             curVer = meta.Meta["version"]
         }
     }
+    common.KTrace(fmt.Sprintf("curVersion: %s", curVer))
     return curVer, err
 }
 // newVersion
 // Version is in the range [1..99999]
 // return:  next version string with length of 5 chars
 func (ko* KineticObjects) newVersion(aCurVersion string) string {
+    defer common.KUntrace(common.KTrace("Enter"))
     var nxtVer string
     if (aCurVersion == "") {
         nxtVer = fmt.Sprintf("%.5d", 1)
@@ -1943,10 +1950,11 @@ func (ko* KineticObjects) newVersion(aCurVersion string) string {
         curVer, _ := strconv.Atoi(aCurVersion)
         nNxtVer := (curVer + 1) % 100000
         if (nNxtVer == 0) {
-            nNxtVer += 1
+            nNxtVer = 1
         }
         nxtVer = fmt.Sprintf("%.5d", nNxtVer)
     }
+    common.KTrace(fmt.Sprintf("nxtVer: %s", nxtVer))
     return nxtVer
 }
 
