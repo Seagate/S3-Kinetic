@@ -3,6 +3,7 @@
 
 from __future__ import absolute_import, print_function
 
+import argparse
 import sys
 import os
 import re
@@ -16,17 +17,12 @@ sys.path.append('../s3cmd')
 import S3.Exceptions
 from S3.ExitCodes import *
 
-import gvars as g
-#import utils as u
-import tester as t
-import fsTester as ft
-import s3cmdTester as s3t
-import regressionTester as rt
+from gvars import GlobalVars 
+from fsTester import FSTester
+from s3cmdTester import S3cmdTester
+from regressionTester import RegressionTester
 
-
-count_pass = 0
-count_fail = 0
-count_skip = 0
+gAllTests = {"fs", "s3cmd", "regression"} 
 
 def prepareTestSuite():
     # Unpack testsuite/ directory
@@ -49,71 +45,47 @@ def prepareTestSuite():
 
     if not os.path.isdir('testsuite/crappy-file-name'):
         os.system("tar xvz -C testsuite -f testsuite/crappy-file-name.tar.gz")
-        # TODO: also unpack if the tarball is newer than the directory timestamp
-        #       for instance when a new version was pulled from SVN.
 
     return True 
 
-def usage():
-    print("Usage:")
-    print("-h, --help\n\t\tPrint this usage information")
-    print("-t, --test list of test\n\t\tfs, regression, s3, all[default]")
-    print("-c, --config configFile\n\t\tSet config file")
-    print("-p, --bucket-prefix bucketPrefix\n\t\tSet bucket prefix")
-    print("-v, --vebose\n\t\tSet verbose on/off")
-    print("\nExamples:")
-    print("To test only fs and regression\n\t\t%s -t fs,regression" % (sys.argv[0]))
-
-def parseArgs(gVars):
-    argv = sys.argv[1:]
-    while argv:
-        arg = argv.pop(0)
-        if arg in ("-t", "--test"):
-            tests = argv.pop(0)
-            print(type(tests))
-            print("tests: ", tests)
-            gVars.setTest(tests.split(','))
-            continue
-
-        if arg.startswith('--bucket-prefix='):
-            print("Usage: '--bucket-prefix PREFIX', not '--bucket-prefix=PREFIX'")
-            sys.exit(0)
-        if arg in ("-h", "--help"):
-            usage()
-            sys.exit(0)
-        if arg in ("-c", "--config"):
-            config_file = argv.pop(0)
-            gVars.setConfigFile(config_file)
-            continue
-        if arg in ("-v", "--verbose"):
-            gVars.setVerbose(True)
-            continue
-        if arg in ("-p", "--bucket-prefix"):
-            try:
-                bucket_prefix = argv.pop(0)
-                gVars.setBucketPrefix(bucket_prefix)
-            except IndexError:
-                print("Bucket prefix option must explicitly supply a bucket name prefix")
-                sys.exit(0)
-            continue
-        if arg in ("-l", "--list"):
-            exclude_tests = range(0, 999)
-            break
-
+def setArgs():
+    global gAllTests
+    tests = list(gAllTests)
+    tests.append('all')
+    print('test: ' + str(tests))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-t', '--test', default='all',
+        choices=tests, nargs='*',
+        help='tests to be performed: ' + str(tests) + ' (default: all)')
+    parser.add_argument('-c', '--config', help='s3cmd config file path (default: user s3cmd config)')
+    parser.add_argument('-v', '--verbose', action="store_true", default=False,
+                        help='turn on verbose')
+    parser.add_argument('-b', "--bucketprefix", help='bucket prefix')
+    return parser
+    
 def main():
+    parser = setArgs()
+    args = parser.parse_args()
+    if 'all' in args.test:
+        args.test = gAllTests
+
+    print("%s\n" % (args))
+    gVars = GlobalVars()
+    gVars.setConfig(args.config)
+    gVars.setBucketPrefix(args.bucketprefix)
+    gVars.setVerbose(args.verbose)
+    print(gVars)
+    
     if not prepareTestSuite():
         sys.exit(1)
 
-    gVars = g.GlobalVars()
-    parseArgs(gVars)
-
-    for test in gVars.tests():
+    for test in args.test:
         if test == "fs":
-            tester = ft.FSTester(gVars)
+            tester = FSTester(gVars)
         elif test == 's3cmd':
-            tester = s3t.S3cmdTester(gVars)
+            tester = S3cmdTester(gVars)
         elif test == 'regression':
-            tester = rt.RegressionTester(gVars)
+            tester = RegressionTester(gVars)
         else:
             print("Invalid test: ", test)
             continue

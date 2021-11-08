@@ -9,10 +9,7 @@ import S3.Config
 
 import utils as u
 
-gTests = ["fs", "s3cmd", "regression"] 
-
 class GlobalVars:
-    __tests = gTests
     __config = None
     __configFile = None 
     __outDir = "testsuite-out"
@@ -37,25 +34,28 @@ class GlobalVars:
 
         self.setBucketPrefix(u"%s-" % getpass.getuser().lower())
 
-    def setTest(self, tests):
-        if "all" in tests:
-            self.__tests = gTests
+    def __str__(self):
+        nameWidth = 20
+        s = ("%s:" % ("Encoding")).ljust(nameWidth, " ") +  self.encoding()
+        s = s + ("\n%s:" % ("Config file")).ljust(nameWidth, " ") +  str(self.configFile())
+        s = s + ("\n%s:" % ("Bucket prefix")).ljust(nameWidth, " ") +  str(self.bucketPrefix())
+        s = s + ("\n%s:" % ("Verbose")).ljust(nameWidth, " ") +  str(self.verbose())
+
+        return s
+
+    def setConfig(self, fpath=None):
+        if fpath == None:
+            if os.getenv("HOME"):
+                self.__configFile = os.path.join(u.unicodise(os.getenv("HOME"), self.encoding()), \
+                                        ".s3cfg")
+            elif os.name == "nt" and os.getenv("USERPROFILE"):
+                self.__configFile = os.path.join(
+                    u.unicodise(os.getenv("USERPROFILE"), self.encoding()), \
+                    os.getenv("APPDATA") and unicodise(os.getenv("APPDATA"), encoding) \
+                    or 'Application Data', "s3cmd.ini")
         else:
-            self.__tests = tests
-
-    def tests(self):
-        return self.__tests
-
-    def setConfig(self):
-        self.setConfigFile(None)
-        if os.getenv("HOME"):
-            self.__configFile = os.path.join(u.unicodise(os.getenv("HOME"), self.encoding()), \
-                                    ".s3cfg")
-        elif os.name == "nt" and os.getenv("USERPROFILE"):
-            self.__configFile = os.path.join(
-                                u.unicodise(os.getenv("USERPROFILE"), self.encoding()), \
-                                os.getenv("APPDATA") and unicodise(os.getenv("APPDATA"), encoding) \
-                                or 'Application Data', "s3cmd.ini")
+            self.__configFile = fpath
+        self.__config = S3.Config.Config(self.configFile())
 
     def setEncoding(self):
         self.__encoding = locale.getpreferredencoding()
@@ -68,7 +68,6 @@ class GlobalVars:
             # python 3 support
             # In python 3, unicode -> str, and str -> bytes
             unicode = str
-        print("Encoding: ", self.encoding())
 
     def setHaveEncoding(self):
         self.__haveEncoding = os.path.isdir('testsuite/encodings/' + self.encoding())
@@ -90,18 +89,8 @@ class GlobalVars:
             return None
         
     def setPatterns(self):
-        ## Patterns for Unicode tests
-        '''
-        try:
-            unicode
-        except NameError:
-            # python 3 support
-            # In python 3, unicode -> str, and str -> bytes
-            unicode = str
-        '''
         self.__patterns = {}
         self.__patterns['UTF-8'] = u"ŪņЇЌœđЗ/☺ unicode € rocks ™"
-        self.__patterns['GBK'] = u"12月31日/1-特色條目"
 
     def haveCurl(self):
         if self.__havecurl == None:
@@ -110,22 +99,6 @@ class GlobalVars:
             else:
                 self.__haveCurl = False
         return self.__haveCurl
-
-    def loadConfig(self, cfgFile = None):
-        if cfgFile == None:
-            if os.getenv("HOME"):
-                self.__configFile = os.path.join(u.unicodise(os.getenv("HOME"), \
-                                               self.__encoding), ".s3cfg")
-            elif os.name == "nt" and os.getenv("USERPROFILE"):
-                self.__configFile = os.path.join(u.unicodise(os.getenv("USERPROFILE"), self.__encoding),
-                        os.getenv("APPDATA") and \
-                        u.unicodise(os.getenv("APPDATA"), self.__encoding) or \
-                        'Application Data', "s3cmd.ini")
-        else:
-            self.__configFile = cfgFile
-
-        self.config = S3.Config.Config(self.configFile())
-        print("global: ", self.configFile())
 
     def encoding(self):
         return self.__encoding
@@ -137,13 +110,11 @@ class GlobalVars:
         return self.__verbose
 
     def setBucketPrefix(self, prefix):
-        self.__bucketPrefix = prefix        
+        if prefix != None:
+            self.__bucketPrefix = prefix        
          
     def bucketPrefix(self):
         return self.__bucketPrefix
-
-    def setConfigFile(self, aFilename):
-        self.__configFile = aFilename
 
     def configFile(self):
         return self.__configFile
