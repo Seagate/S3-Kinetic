@@ -11,8 +11,6 @@ from subprocess import Popen, PIPE, STDOUT
 import locale
 import getpass
 
-sys.path.append('../s3cmd')
-
 import S3.Exceptions
 from S3.ExitCodes import *
 
@@ -48,11 +46,6 @@ class FSTester(tester.Tester):
             return tester.execute(self.gVars(), label, cmd)
         else:
             return tester.execute(self.gVars(), label, [])
-    '''
-    def flushdir(self, label, dir_name):
-        rmdir(gVars, label + "(rm)", dir_name)
-        return mkdir(gVars, label + "(mk)", dir_name)
-    '''
 
     def copy(self, label, src_file, dst_file):
         if os.name == "posix":
@@ -67,8 +60,7 @@ class FSTester(tester.Tester):
         return tester.execute(self.gVars(), label, cmd)
 
     def test(self):
-        super().prepare()
-        print()
+        super().test()
         ## ====== Make destination dir for get
         self.mkdir("Make dst dir for get", "testsuite-out")
 
@@ -79,14 +71,3 @@ class FSTester(tester.Tester):
         ## ====== Create dir with name of a file
         self.mkdir("Create file-dir dir", "testsuite-out/xyz/dir-test/file-dir")
         super().complete()
-
-        '''
-        try:
-            input("Press enter to continue")
-        except SyntaxError:
-            pass
-        '''
-
-
-
-     

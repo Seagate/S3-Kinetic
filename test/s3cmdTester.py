@@ -10,30 +10,17 @@ import gvars as g
 import utils as u
 import fs
 import tester
-#import curlTester as ct
 
 class S3cmdTester(tester.Tester):
     def __init__(self, gVars):
         super().setGVars(gVars)
         super().setName("S3cmd")
 
-    ##========  Test prepration
-    def prepare(self):
-        fillChar = '='
-        width = 40
-        label = self.name() + " Test"
-        sFill = fillChar*int(((width - len(label) - 2)/2)) 
-        print()
-        print("%s %s %s" % (sFill, label, sFill)) 
-        tester.clearAll(self.gVars())
-        tester.init(self.gVars())
-
     def test(self):
-        super().prepare()
-        print()
-
+        super().test()
         util = u.Util(self.gVars())
         fSys = fs.FS(self.gVars())
+
         ## ====== Create one bucket (EU)
         self.s3cmd("Create one bucket (EU)", ['mb', '--bucket-location=EU', util.pbucket(1)],
             must_find = "Bucket '%s/' created" % util.pbucket(1))
@@ -141,10 +128,6 @@ class S3cmdTester(tester.Tester):
             must_not_find = ['abortmp'], stdin = f)
         f.close()
 
-        ## ====== Clean up local destination dir
-        #fSys.rmdir("testsuite-out")
-        #fSys.mkdir("testsuite-out") 
-
         ## ====== Moving things without trailing '/'
         os.system('dd if=/dev/urandom of=testsuite-out/urandom1.bin bs=1k count=1 > /dev/null 2>&1')
         os.system('dd if=/dev/urandom of=testsuite-out/urandom2.bin bs=1k count=1 > /dev/null 2>&1')
@@ -208,37 +191,11 @@ class S3cmdTester(tester.Tester):
             'testsuite/etc/logo.png', '%s/xyz/etc/logo.png' % util.pbucket(1)],
             must_find = [ "-> '%s/xyz/etc/logo.png'" % util.pbucket(1) ])
 
-        '''
-        ## ====== Retrieve from URL
-        curlTester = ct.CurlTester(self.gVars())
-        cfg = S3.Config.Config(self.gVars().configFile())
-        if self.gVars().haveCurl():
-            curlTester.test/urlHEAD(
-                "Retrieve from URL", 'http://%s.%s/xyz/etc/logo.png' %
-                (util.bucket(1), cfg.host_base),
-                must_find_re = ['Content-Length: 22059'])
-
-        ## ====== Change ACL to Private
-        self.s3cmd(self.gVars(), "Change ACL to Private", ['setacl', '--acl-private', '%s/xyz/etc/l*.png' % util.pbucket(1)],
-            must_find = [ "logo.png: ACL set to Private" ])
-
-        ## ====== Verify Private ACL
-        if have_curl:
-            tester.curl_HEAD("Verify Private ACL", 'http://%s.%s/xyz/etc/logo.png' % (bucket(1), cfg.host_base),
-                           must_find_re = [ '403 Forbidden' ])
-        '''
         ## ====== Change ACL to Public
         self.s3cmd("Change ACL to Public", ['setacl', '--acl-public', '--recursive',
             '%s/xyz/etc/' % util.pbucket(1) , '-v'],
             must_find = [ "logo.png: ACL set to Public" ])
 
-        '''
-        ## ====== Verify Public ACL
-        if have_curl:
-            tester.curl_HEAD("Verify Public ACL", 'http://%s.%s/xyz/etc/logo.png' % (bucket(1), cfg.host_base),
-                           must_find_re = [ '200 OK',
-                                            'Content-Length: 22059'])
-        '''
         ## ====== Sync more to S3
         self.s3cmd("Sync more to S3", ['sync', 'testsuite/', 's3://%s/xyz/' % util.bucket(1), '--no-encrypt' ],
                    must_find = [ "'testsuite/demo/some-file.xml' -> '%s/xyz/demo/some-file.xml' " % util.pbucket(1) ],
@@ -328,48 +285,18 @@ class S3cmdTester(tester.Tester):
                           "remote copy: '%s/xyz/blahBlah/blah.txt' -> '%s/copy/blahBlah/blah.txt'" % (util.pbucket(1), util.pbucket(2)) ],
             must_not_find = [ "demo/dir1/file1-1.txt" ])
 
-        '''
-        ## ====== Verify ACL and MIME type
-        self.s3cmd(self.gVars(), "Verify ACL and MIME type", ['info', '%s/copy/etc2/Logo.PNG' % util.pbucket(2) ],
-            must_find_re = [ "MIME type:.*image/png",
-                             "ACL:.*\*anon\*: READ",
-                             "URL:.*https?://%s.%s/copy/etc2/Logo.PNG" % (bucket(2), cfg.host_base) ])
-        '''
         ## ====== modify MIME type
         self.s3cmd("Modify MIME type", ['modify', '--mime-type=binary/octet-stream', '%s/copy/etc2/Logo.PNG' % util.pbucket(2) ])
 
-        '''
-        self.s3cmd(self.gVars(), "Verify ACL and MIME type", ['info', '%s/copy/etc2/Logo.PNG' % util.pbucket(2) ],
-            must_find_re = [ "MIME type:.*binary/octet-stream",
-                             "ACL:.*\*anon\*: READ",
-                             "URL:.*https?://%s.%s/copy/etc2/Logo.PNG" % (util.bucket(2), cfg.host_base) ])
-        '''
 
         self.s3cmd("Modify MIME type back", ['modify', '--mime-type=image/png', '%s/copy/etc2/Logo.PNG' % util.pbucket(2) ])
-        '''
-        self.s3cmd(self.gVars(), "Verify ACL and MIME type", ['info', '%s/copy/etc2/Logo.PNG' % util.pbucket(2) ],
-            must_find_re = [ "MIME type:.*image/png",
-                             "ACL:.*\*anon\*: READ",
-                             "URL:.*https?://%s.%s/copy/etc2/Logo.PNG" % (util.bucket(2), cfg.host_base) ])
-        '''
 
         self.s3cmd("Add cache-control header", ['modify', '--add-header=cache-control: max-age=3600, public', '%s/copy/etc2/Logo.PNG' % util.pbucket(2) ],
             must_find_re = [ "modify: .*" ])
 
-        '''
-        if have_curl:
-            tester.curl_HEAD("HEAD check Cache-Control present", 'http://%s.%s/copy/etc2/Logo.PNG' % (bucket(2), cfg.host_base),
-                           must_find_re = [ "Cache-Control: max-age=3600" ])
-        '''
-
         self.s3cmd("Remove cache-control header", ['modify', '--remove-header=cache-control', '%s/copy/etc2/Logo.PNG' % util.pbucket(2) ],
                    must_find_re = [ "modify: .*" ])
 
-        '''
-        if have_curl:
-            tester.curl_HEAD("HEAD check Cache-Control not present", 'http://%s.%s/copy/etc2/Logo.PNG' % (bucket(2), cfg.host_base),
-                           must_not_find_re = [ "Cache-Control: max-age=3600" ])
-        '''
         ## ====== sign
         self.s3cmd("sign string", ['sign', 's3cmd'], must_find_re = ["Signature:"])
         self.s3cmd("signurl time", ['signurl', '%s/copy/etc2/Logo.PNG' % util.pbucket(2), str(int(time.time()) + 60)], must_find_re = ["http://"])
@@ -449,33 +376,9 @@ class S3cmdTester(tester.Tester):
         self.s3cmd("Create expiration rule with date only", ['expire', util.pbucket(1), '--expiry-date=2020-12-31T00:00:00.000Z'],
             must_find = [ "Bucket '%s/': expiration configuration is set." % util.pbucket(1)])
 
-        ## ====== Get current expiration setting
-        '''
-        self.s3cmd(self.gVars(), "Get current expiration setting", ['info', util.pbucket(1)],
-            must_find = [ "Expiration Rule: all objects in this bucket will expire in '2020-12-31T00:00:00.000Z'"])
-        '''
-    
         ## ====== Delete expiration rule
         self.s3cmd("Delete expiration rule", ['expire', util.pbucket(1)],
             must_find = [ "Bucket '%s/': expiration configuration is deleted." % util.pbucket(1)])
-        '''
-        ## ====== set Requester Pays flag
-        self.s3cmd(self.gVars(), "Set requester pays", ['payer', '--requester-pays', util.pbucket(2)])
-
-        ## ====== get Requester Pays flag
-        self.s3cmd(self.gVars(), "Get requester pays flag", ['info', util.pbucket(2)],
-            must_find = [ "Payer:     Requester"])
-
-        ## ====== ls using Requester Pays flag
-        self.s3cmd(self.gVars(), "ls using requester pays flag", ['ls', '--requester-pays', util.pbucket(2)])
-
-        ## ====== clear Requester Pays flag
-        self.s3cmd(self.gVars(), "Clear requester pays", ['payer', util.pbucket(2)])
-
-        ## ====== get Requester Pays flag
-        self.s3cmd(self.gVars(), "Get requester pays flag", ['info', util.pbucket(2)],
-            must_find = [ "Payer:     BucketOwner"])
-        '''
         ## ====== Recursive delete maximum exceeed
         self.s3cmd("Recursive delete maximum exceeded", ['del', '--recursive', '--max-delete=1', '--exclude', 'Atomic*', '%s/xyz/etc' % util.pbucket(1)],
             must_not_find = [ "delete: '%s/xyz/etc/TypeRa.ttf'" % util.pbucket(1) ])
@@ -505,4 +408,3 @@ class S3cmdTester(tester.Tester):
             must_find = [ "Bucket '%s/' removed" % util.pbucket(2),
                       "Bucket '%s/' removed" % util.pbucket(3) ])
         super().complete()
-        # vim:et:ts=4:sts=4:ai

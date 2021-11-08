@@ -19,8 +19,7 @@ class RegressionTester(tester.Tester):
         super().setGVars(gVars)
 
     def test(self):
-        super().prepare()
-        print()
+        super().test()
         self.testValFileSpanTwoZones()
         super().complete()
 

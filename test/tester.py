@@ -37,7 +37,6 @@ class Tester:
         return self.__name
 
     def prepare(self):
-        print()
         util = u.Util(self.gVars())
         fSys = fs.FS(self.gVars())
 
@@ -51,6 +50,10 @@ class Tester:
         print("\n%s %s %s" % (sFill, label, sFill)) 
         self.clearAll()
         self.init()
+        print()
+
+    def test(self):
+        self.prepare()
 
     def complete(self):
         width = 40
@@ -64,30 +67,22 @@ class Tester:
         success = True
         fSystem = fs.FS(self.gVars())
         util = u.Util(self.gVars())
-        #print("\x1b[32;1mClear all...\x1b[0m")
         print(("%s " % ("Clear all")).ljust(30, "."), end=' ')
         # Remove test output directory
         fSystem.rmdir(self.gVars().outDir())
-
         # Remove all buckets
         self.s3cmd(None, ['rb', '-r', '--force', util.pbucket(1), util.pbucket(2), util.pbucket(3)])
         # Verify they were removed
         self.s3cmd(None, ['ls'],
                must_not_find = [util.pbucket(1), util.pbucket(2), util.pbucket(3)])
-
-
-        message = ""
-        #print("\x1b[31;1mClear all...OK\x1b[0m")
-        print("\x1b[32;1mOK\x1b[0m%s" % (message))
+        print("\x1b[32;1mOK\x1b[0m")
 
     def init(self):
         success = True
         fSystem = fs.FS(self.gVars())
         print(("%s " % ("Initialize")).ljust(30, "."), end=' ')
         success = fSystem.mkdir(self.gVars().outDir())
-
-        message = ""
-        print("\x1b[32;1mOK\x1b[0m%s" % (message))
+        print("\x1b[32;1mOK\x1b[0m")
         return success
         
     def s3cmd(self, label, cmd_args = [], **kwargs):
@@ -152,9 +147,6 @@ def execute(gVars, label, cmd_args = [], retcode = 0, must_find = [],
         print(("%3d  %s " % (gVars.numTests()+1, label)).ljust(30, "."), end=' ')
         sys.stdout.flush()
 
-    if False: #run_tests.count(gVars.testCount()) == 0 or exclude_tests.count(gVars.testCount()) > 0:
-        return skip()
-
     if not cmd_args:
         return skip(label)
 
@@ -165,7 +157,6 @@ def execute(gVars, label, cmd_args = [], retcode = 0, must_find = [],
     if type(retcode) not in [list, tuple]: retcode = [retcode]
     if p.returncode not in retcode:
         return failure("retcode: %d, expected one of: %s" % (p.returncode, retcode))
-
     if type(must_find) not in [ list, tuple ]: must_find = [must_find]
     if type(must_find_re) not in [ list, tuple ]: must_find_re = [must_find_re]
     if type(must_not_find) not in [ list, tuple ]: must_not_find = [must_not_find]
@@ -192,7 +183,8 @@ def execute(gVars, label, cmd_args = [], retcode = 0, must_find = [],
     for index in range(len(not_find_list)):
         match = not_find_list[index].search(stdout)
         if match:
-            return failure("pattern found: %s (match: %s)" % (not_find_list_patterns[index], match.group(0)))
+            return failure("pattern found: %s (match: %s)" %
+                           (not_find_list_patterns[index], match.group(0)))
 
     return success()
 

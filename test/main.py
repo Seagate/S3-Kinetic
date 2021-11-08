@@ -57,7 +57,7 @@ def prepareTestSuite():
 def usage():
     print("Usage:")
     print("-h, --help\n\t\tPrint this usage information")
-    print("-t, --test list of test\n\t\tfs,regression,s3,all.  Default is all")
+    print("-t, --test list of test\n\t\tfs, regression, s3, all[default]")
     print("-c, --config configFile\n\t\tSet config file")
     print("-p, --bucket-prefix bucketPrefix\n\t\tSet bucket prefix")
     print("-v, --vebose\n\t\tSet verbose on/off")
@@ -99,17 +99,6 @@ def parseArgs(gVars):
         if arg in ("-l", "--list"):
             exclude_tests = range(0, 999)
             break
-        '''
-        if ".." in arg:
-            range_idx = arg.find("..")
-            range_start = arg[:range_idx] or 0
-            range_end = arg[range_idx+2:] or 999
-            run_tests.extend(range(int(range_start), int(range_end) + 1))
-        elif False: #arg.startswith("-"):
-            exclude_tests.append(int(arg[1:]))
-        else:
-            pass #run_tests.append(int(arg))
-        '''
 
 def main():
     if not prepareTestSuite():
