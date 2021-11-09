@@ -6,13 +6,10 @@ import time
 import S3.Config
 from S3.ExitCodes import *
 
-import gvars as g
-import utils as u
-import fs
-#import s3cmdTester as t
-import tester
+from utils import Util
+from tester import Tester
 
-class RegressionTester(tester.Tester):
+class RegressionTester(Tester):
 
     def __init__(self, gVars):
         super().setName("Regression")
@@ -24,7 +21,7 @@ class RegressionTester(tester.Tester):
         super().complete()
 
     def testValFileSpanTwoZones(self):
-        util = u.Util(self.gVars())
+        util = Util(self.gVars())
         os.system('mkdir -p testsuite-out')
         os.system('dd if=/dev/urandom of=testsuite-out/urandom.bin bs=1M count=16 > /dev/null 2>&1')
 

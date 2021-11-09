@@ -6,20 +6,19 @@ import time
 import S3.Config
 from S3.ExitCodes import *
 
-import gvars as g
-import utils as u
-import fs
-import tester
+from utils import Util
+from fs import FS
+from tester import Tester
 
-class S3cmdTester(tester.Tester):
+class S3cmdTester(Tester):
     def __init__(self, gVars):
         super().setGVars(gVars)
         super().setName("S3cmd")
 
     def test(self):
         super().test()
-        util = u.Util(self.gVars())
-        fSys = fs.FS(self.gVars())
+        util = Util(self.gVars())
+        fSys = FS(self.gVars())
 
         ## ====== Create one bucket (EU)
         self.s3cmd("Create one bucket (EU)", ['mb', '--bucket-location=EU', util.pbucket(1)],
