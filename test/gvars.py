@@ -14,7 +14,6 @@ class GlobalVars:
     __configFile = None 
     __outDir = "testsuite-out"
     __largeObjFilename = "urandom.bin"
-    __smallObjFilename = "urandom.bin"
     __bucketPrefix = None
     __encoding = None
     __haveEncoding = False
@@ -42,6 +41,9 @@ class GlobalVars:
         s = s + ("\n%s:" % ("Verbose")).ljust(nameWidth, " ") +  str(self.verbose())
 
         return s
+
+    def largeObjFilename(self):
+        return self.__largeObjFilename
 
     def setConfig(self, fpath=None):
         if fpath == None:

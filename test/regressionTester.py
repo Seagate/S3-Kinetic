@@ -22,36 +22,11 @@ class RegressionTester(Tester):
 
     def testValFileSpanTwoZones(self):
         util = Util(self.gVars())
-        os.system('mkdir -p testsuite-out')
-        os.system('dd if=/dev/urandom of=testsuite-out/urandom.bin bs=1M count=16 > /dev/null 2>&1')
-
-        self.s3cmd(None, ['mb', '--bucket-location=EU', util.pbucket(1)],
-            must_find = "Bucket '%s/' created" % util.pbucket(1))
-
-
-        ## ====== Multipart put from stdin
-        f = open('testsuite-out/urandom.bin', 'r')
-        self.s3cmd("Value file spans two zones", ['put', '--multipart-chunk-size-mb=5',
-            'testsuite-out/urandom.bin', '%s/urandom.bin' % util.pbucket(1)],
-        must_find = ['%s/urandom.bin' % util.pbucket(1)],
-        must_not_find = ['abortmp'],
-        stdin = f, complete=False, first=True)
-        f.close()
-
+        bucket = util.pbucket(1)
+        self.s3cmd(None, ['mb', '--bucket-location=EU', bucket],
+            must_find = "Bucket '%s/' created" % bucket)
+        label = "Value file spans two zones"
+        self.putMultiPartObj(label, complete=False)
         for i in range(51):
-            ## ====== Multipart put from stdin
-            f = open('testsuite-out/urandom.bin', 'r')
-            self.s3cmd("Value file spans two zones", ['put', '--multipart-chunk-size-mb=5',
-                'testsuite-out/urandom.bin', '%s/urandom.bin' % util.pbucket(1)],
-            must_find = ['%s/urandom.bin' % util.pbucket(1)],
-            must_not_find = ['abortmp'],
-            stdin = f, complete=False, first=False)
-            f.close()
-
-        f = open('testsuite-out/urandom.bin', 'r')
-        self.s3cmd("Value file spans two zones", ['put', '--multipart-chunk-size-mb=5',
-            'testsuite-out/urandom.bin', '%s/urandom.bin' % util.pbucket(1)],
-        must_find = ['%s/urandom.bin' % util.pbucket(1)],
-        must_not_find = ['abortmp'],
-        stdin = f, first=False)
-        f.close()
+            self.putMultiPartObj(label, complete=False, first=False)
+        self.putMultiPartObj(label, first=False)

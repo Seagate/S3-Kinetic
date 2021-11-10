@@ -103,10 +103,6 @@ class S3cmdTester(Tester):
         ## ====== FIXME
         self.s3cmd("Recursive put", ['put', '--recursive', 'testsuite/etc', '%s/xyz/' % util.pbucket(1) ])
 
-        ## ====== Clean up local destination dir
-        fSys.rmdir("testsuite-out")
-        fSys.mkdir("testsuite-out")
-
         ## ====== Put from stdin
         f = open('testsuite/single-file/single-file.txt', 'r')
         self.s3cmd("Put from stdin", ['put', '-', '%s/single-file/single-file.txt' % util.pbucket(1)],
@@ -115,17 +111,10 @@ class S3cmdTester(Tester):
         f.close()
 
         ## ====== Multipart put
-        fSys.mkdir("testsuite-out")
-        os.system('dd if=/dev/urandom of=testsuite-out/urandom.bin bs=1M count=16 > /dev/null 2>&1')
-        self.s3cmd("Put multipart", ['put', '--multipart-chunk-size-mb=5', 'testsuite-out/urandom.bin', '%s/urandom.bin' % util.pbucket(1)],
-            must_not_find = ['abortmp'])
+        self.putMultiPartObj("Put multipart")
 
         ## ====== Multipart put from stdin
-        f = open('testsuite-out/urandom.bin', 'r')
-        self.s3cmd("Multipart large put from stdin", ['put', '--multipart-chunk-size-mb=5', '-', '%s/urandom2.bin' % util.pbucket(1)],
-            must_find = ['%s/urandom2.bin' % util.pbucket(1)],
-            must_not_find = ['abortmp'], stdin = f)
-        f.close()
+        self.putMultiPartObj("Multipart large put from stdin", stdin=True)
 
         ## ====== Moving things without trailing '/'
         os.system('dd if=/dev/urandom of=testsuite-out/urandom1.bin bs=1k count=1 > /dev/null 2>&1')
@@ -155,10 +144,6 @@ class S3cmdTester(Tester):
             must_find = must_find,
             must_not_find = must_not_find)
 
-        ## ====== Clean up local destination dir
-        #fSys.rmdir("testsuite-out")
-        #fSys.mkdir("testsuite-out")
-
         ## ====== Sync from S3
         must_find = [ "'%s/xyz/binary/random-crap.md5' -> 'testsuite-out/xyz/binary/random-crap.md5'" % util.pbucket(1) ]
 
@@ -179,11 +164,6 @@ class S3cmdTester(Tester):
         self.s3cmd("Skip over dir", ['sync', '%s/xyz' % util.pbucket(1), 'testsuite-out'],
             must_find = "Download of 'xyz/dir-test/file-dir' failed (Reason: testsuite-out/xyz/dir-test/file-dir is a directory)",
             retcode = EX_PARTIAL)
-
-        ## ====== Clean up local destination dir
-        # Keep
-        fSys.rmdir("testsuite-out")
-        fSys.mkdir("testsuite-out")
 
         ## ====== Put public, guess MIME
         self.s3cmd("Put public, guess MIME", ['put', '--guess-mime-type', '--acl-public',
@@ -236,15 +216,15 @@ class S3cmdTester(Tester):
             must_not_find = [ "delete: 'testsuite-out/logo.png'" ])
 
         ## ====== Sync more from S3
+        fSys.rmdir("testsuite-out")
+        fSys.mkdir("testsuite-out")
         self.s3cmd("Sync more from S3", ['sync', '--delete-removed', '%s/xyz' % util.pbucket(1), 'testsuite-out'],
             must_find = [ "'%s/xyz/etc2/Logo.PNG' -> 'testsuite-out/xyz/etc2/Logo.PNG'" % util.pbucket(1),
                           "'%s/xyz/demo/some-file.xml' -> 'testsuite-out/xyz/demo/some-file.xml'" % util.pbucket(1) ],
             must_not_find_re = [ "not-deleted.*etc/logo.png", "delete: 'testsuite-out/logo.png'" ])
 
-        ## ====== Make dst dir for get
-        fSys.rmdir("testsuite-out")
-
         ## ====== Get multiple files
+        fSys.rmdir("testsuite-out")
         self.s3cmd("Get multiple files", ['get', '%s/xyz/etc2/Logo.PNG' % util.pbucket(1),
             '%s/xyz/etc/AtomicClockRadio.ttf' % util.pbucket(1), 'testsuite-out'],
             retcode = EX_USAGE,
@@ -256,10 +236,8 @@ class S3cmdTester(Tester):
             retcode = 0,
             must_find = [ '->' ])
 
-        ## ====== Make dst dir for get
-        fSys.mkdir("testsuite-out")
-
         ## ====== put/get non-ASCII filenames
+        fSys.mkdir("testsuite-out")
         self.s3cmd("Get unicode filenames", ['get', u'%s/xyz/encodings/UTF-8/ŪņЇЌœđЗ/Žůžo' % util.pbucket(1), 'testsuite-out'],
                    retcode = 0,
                    must_find = [ '->' ])

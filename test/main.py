@@ -22,7 +22,7 @@ from fsTester import FSTester
 from s3cmdTester import S3cmdTester
 from regressionTester import RegressionTester
 
-gAllTests = {"fs", "s3cmd", "regression"} 
+gAllTests = ("fs", "s3cmd", "regression") 
 
 def prepareTestSuite():
     # Unpack testsuite/ directory
@@ -52,7 +52,6 @@ def setArgs():
     global gAllTests
     tests = list(gAllTests)
     tests.append('all')
-    print('test: ' + str(tests))
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--test', default='all',
         choices=tests, nargs='*',
@@ -67,6 +66,7 @@ def main():
     parser = setArgs()
     args = parser.parse_args()
     if 'all' in args.test:
+        #args.test.clear()
         args.test = gAllTests
 
     print("%s\n" % (args))

@@ -24,6 +24,30 @@ class Tester:
     def __init__(self, gVars):
         self.__gVars = gVars
 
+    def putMultiPartObj(self, label, stdin=False, complete=True, first=True):
+        util = u.Util(self.gVars())
+        bucket = util.pbucket(1)
+        source = '%s/%s' % (self.gVars().outDir(), self.gVars().largeObjFilename())
+        f = None
+        if stdin: 
+            f = open(source, 'r')
+            source='-'
+
+        dest = '%s/%s' % (bucket, self.gVars().largeObjFilename())
+        cmd = ['put', '--multipart-chunk-size-mb=5', source, dest]
+        aMust_find = ['%s' % (dest)]
+        aMust_not_find = ['abortmp']
+        ## ====== Multipart put from stdin
+        aS3cmd = list(cmd)
+        if stdin:
+            self.s3cmd(label, aS3cmd, must_find = aMust_find,
+                must_not_find = aMust_not_find, stdin = f, complete=complete, first=first)
+        else:
+            self.s3cmd(label, aS3cmd, must_find = aMust_find,
+                must_not_find = aMust_not_find, complete=complete, first=first)
+        if f != None: 
+            f.close()
+         
     def setGVars(self, gVars):
         self.__gVars = gVars 
 
@@ -82,6 +106,8 @@ class Tester:
         fSystem = fs.FS(self.gVars())
         print(("%s " % ("Initialize")).ljust(30, "."), end=' ')
         success = fSystem.mkdir(self.gVars().outDir())
+        os.system('dd if=/dev/urandom of=%s/%s bs=1M count=16 > /dev/null 2>&1' % \
+            (self.gVars().outDir(), self.gVars().largeObjFilename()))
         print("\x1b[32;1mOK\x1b[0m")
         return success
         
@@ -149,7 +175,6 @@ def execute(gVars, label, cmd_args = [], retcode = 0, must_find = [],
 
     if not cmd_args:
         return skip(label)
-
     p = Popen(cmd_args, stdin = stdin, stdout = PIPE, stderr = STDOUT,
               universal_newlines = True, close_fds = True)
     stdout, stderr = p.communicate()
@@ -187,4 +212,5 @@ def execute(gVars, label, cmd_args = [], retcode = 0, must_find = [],
                            (not_find_list_patterns[index], match.group(0)))
 
     return success()
+
 
