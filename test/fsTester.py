@@ -59,8 +59,7 @@ class FSTester(tester.Tester):
         cmd.append(dst_file)
         return tester.execute(self.gVars(), label, cmd)
 
-    def test(self):
-        super().test()
+    def _test(self):
         ## ====== Make destination dir for get
         self.mkdir("Make dst dir for get", "testsuite-out")
 
@@ -70,4 +69,3 @@ class FSTester(tester.Tester):
 
         ## ====== Create dir with name of a file
         self.mkdir("Create file-dir dir", "testsuite-out/xyz/dir-test/file-dir")
-        super().complete()

@@ -78,6 +78,8 @@ class Tester:
 
     def test(self):
         self.prepare()
+        self._test()
+        self.complete()
 
     def complete(self):
         width = 40

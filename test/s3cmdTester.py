@@ -15,8 +15,7 @@ class S3cmdTester(Tester):
         super().setGVars(gVars)
         super().setName("S3cmd")
 
-    def test(self):
-        super().test()
+    def _test(self):
         util = Util(self.gVars())
         fSys = FS(self.gVars())
 
@@ -384,4 +383,3 @@ class S3cmdTester(Tester):
         self.s3cmd("Remove remaining buckets", ['rb', '--recursive', util.pbucket(2), util.pbucket(3)],
             must_find = [ "Bucket '%s/' removed" % util.pbucket(2),
                       "Bucket '%s/' removed" % util.pbucket(3) ])
-        super().complete()
