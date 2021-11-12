@@ -336,14 +336,6 @@ class S3cmdTester(Tester):
         self.s3cmd("Simple delete with rm", ['rm', '%s/xyz/test_rm/TypeRa.ttf' % util.pbucket(1)],
             must_find = [ "delete: '%s/xyz/test_rm/TypeRa.ttf'" % util.pbucket(1) ])
 
-        ## ====== Create expiration rule with days and prefix
-        self.s3cmd("Create expiration rule with days and prefix", ['expire', util.pbucket(1), '--expiry-days=365', '--expiry-prefix=log/'],
-            must_find = [ "Bucket '%s/': expiration configuration is set." % util.pbucket(1)])
-
-        ## ====== Create expiration rule with date and prefix
-        self.s3cmd("Create expiration rule with date and prefix", ['expire', util.pbucket(1), '--expiry-date=2020-12-31T00:00:00.000Z', '--expiry-prefix=log/'],
-            must_find = [ "Bucket '%s/': expiration configuration is set." % util.pbucket(1)])
-
         ## ====== Create expiration rule with days only
         self.s3cmd("Create expiration rule with days only", ['expire', util.pbucket(1), '--expiry-days=365'],
             must_find = [ "Bucket '%s/': expiration configuration is set." % util.pbucket(1)])
