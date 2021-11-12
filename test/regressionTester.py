@@ -25,6 +25,6 @@ class RegressionTester(Tester):
             must_find = "Bucket '%s/' created" % bucket)
         label = "Value file spans two zones"
         self.putMultiPartObj(label, complete=False)
-        for i in range(51):
+        for i in range(36):
             self.putMultiPartObj(label, complete=False, first=False)
         self.putMultiPartObj(label, first=False)
