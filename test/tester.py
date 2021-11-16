@@ -7,6 +7,7 @@ import sys
 import os
 import re
 import time
+from colorama import Fore, Style
 from subprocess import Popen, PIPE, STDOUT
 import locale
 import getpass
@@ -101,7 +102,7 @@ class Tester:
         # Verify they were removed
         self.s3cmd(None, ['ls'],
                must_not_find = [util.pbucket(1), util.pbucket(2), util.pbucket(3)])
-        print("\x1b[32;1mOK\x1b[0m")
+        print("%s%sOK%s" % (Fore.GREEN, Style.BRIGHT, Style.RESET_ALL))
 
     def init(self):
         success = True
@@ -110,7 +111,7 @@ class Tester:
         success = fSystem.mkdir(self.gVars().outDir())
         os.system('dd if=/dev/urandom of=%s/%s bs=1M count=16 > /dev/null 2>&1' % \
             (self.gVars().outDir(), self.gVars().largeObjFilename()))
-        print("\x1b[32;1mOK\x1b[0m")
+        print("%s%sOK%s" % (Fore.GREEN, Style.BRIGHT, Style.RESET_ALL))
         return success
         
     def s3cmd(self, label, cmd_args = [], **kwargs):
@@ -138,7 +139,7 @@ def execute(gVars, label, cmd_args = [], retcode = 0, must_find = [],
         global count_fail
         if message:
             message = u"  (%r)" % message
-        print(u"\x1b[31;1mFAIL%s\x1b[0m" % (message))
+        print("%s%sFAIL%s%s" % (Fore.RED, Style.BRIGHT, message, Style.RESET_ALL))
         gVars.incTestFailed()
         command_output()
         #return 1
@@ -150,7 +151,7 @@ def execute(gVars, label, cmd_args = [], retcode = 0, must_find = [],
             gVars.incTestSucceeded()
             if message:
                 message = "  (%r)" % message
-            print("\x1b[32;1mOK\x1b[0m%s" % (message))
+            print("%s%sOK%s%s" % (Fore.GREEN, Style.BRIGHT, message, Style.RESET_ALL))
 
         if gVars.verbose():
             command_output()
@@ -161,7 +162,7 @@ def execute(gVars, label, cmd_args = [], retcode = 0, must_find = [],
         if message != None:
             if message:
                 message = "  (%r)" % message
-            print("\x1b[33;1mSKIP\x1b[0m%s" % (message))
+            print("%s%sSKIP%s%s" % (Fore.YELLOW, Style.BRIGHT, message, Style.RESET_ALL))
         #count_skip += 1
         return 0
 
