@@ -6,16 +6,8 @@ from __future__ import absolute_import, print_function
 import argparse
 import sys
 import os
-import re
-import time
-from subprocess import Popen, PIPE, STDOUT
-import locale
-import getpass
 
 sys.path.append('../s3cmd')
-
-import S3.Exceptions
-from S3.ExitCodes import *
 
 from gvars import GlobalVars 
 from fsTester import FSTester

@@ -3,7 +3,6 @@
 
 import os
 import time
-import S3.Config
 from S3.ExitCodes import *
 
 from utils import Util

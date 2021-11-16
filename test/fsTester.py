@@ -1,18 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, print_function
-
-import sys
 import os
-import re
-import time
-from subprocess import Popen, PIPE, STDOUT
-import locale
-import getpass
-
-import S3.Exceptions
-from S3.ExitCodes import *
 
 import gvars as g
 import utils as u

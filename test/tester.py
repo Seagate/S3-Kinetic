@@ -1,19 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, print_function
-
 import sys
 import os
 import re
-import time
 from colorama import Fore, Style
 from subprocess import Popen, PIPE, STDOUT
-import locale
-import getpass
-import S3.Exceptions
-import S3.Config
-from S3.ExitCodes import *
+
 import utils as u
 import gvars as g
 import fs
