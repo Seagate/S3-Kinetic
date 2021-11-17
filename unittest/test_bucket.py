@@ -22,11 +22,16 @@ class TestBucket(unittest.TestCase):
     def execute(self, args):
         args.insert(0, PYTHON)
         args.insert(1, S3CMD)
-        completed_p = subprocess.run(args, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
+        completed_p = subprocess.run(args, stdout=PIPE, stderr=STDOUT, universal_newlines=True,
+            close_fds=True)
         self.assertEqual(completed_p.returncode, EX_OK)
 
     def test_make(self):
+        # create a single bucket
         args = ['mb', '%s%s'%(S3, makeBucketName(1))]
+        self.execute(args)
+        # create multiple buckets
+        args = ['mb', '%s%s'%(S3, makeBucketName(2)), '%s%s'%(S3, makeBucketName(3))]
         self.execute(args)
 
     def test_list(self):
@@ -38,7 +43,11 @@ class TestBucket(unittest.TestCase):
         self.execute(args)
 
     def test_remove(self):
+        # remove a single bucket
         args = ['rb', '%s%s'%(S3, makeBucketName(1))]
+        self.execute(args)
+        # remove multiple buckets
+        args = ['rb', '%s%s'%(S3, makeBucketName(2)), '%s%s'%(S3, makeBucketName(3))]
         self.execute(args)
 
 if __name__ == '__main__':
