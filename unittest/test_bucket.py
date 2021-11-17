@@ -22,8 +22,7 @@ class TestBucket(unittest.TestCase):
     def execute(self, args):
         args.insert(0, PYTHON)
         args.insert(1, S3CMD)
-        completed_p = subprocess.run(args, stdout=PIPE, stderr=STDOUT,
-            universal_newlines=True, close_fds=True)
+        completed_p = subprocess.run(args, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
         self.assertEqual(completed_p.returncode, EX_OK)
 
     def test_mb(self):
