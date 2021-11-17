@@ -7,7 +7,10 @@ S3CMD = '%s/s3cmd'%PATH_TO_S3CMD
 S3 = 's3://'
 IN_FILE = '/dev/urandom'
 TESTSUITE_OUT_DIR = 'testsuite-out'
-ONE_MB_FN = '_1M.bin'
+_1MB_FN = '_1MB.bin'
 
-def makeBucketName(suffix):
+def bucketName(suffix):
     return '%s%s' % (BUCKET_PREFIX, suffix)
+
+def get_1MB_fpath():
+    return '%s/%s'%(TESTSUITE_OUT_DIR, _1MB_FN)
