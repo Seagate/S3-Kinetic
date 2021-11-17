@@ -25,19 +25,19 @@ class TestBucket(unittest.TestCase):
         completed_p = subprocess.run(args, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
         self.assertEqual(completed_p.returncode, EX_OK)
 
-    def test_mb(self):
+    def test_make(self):
         args = ['mb', '%s%s'%(S3, makeBucketName(1))]
         self.execute(args)
 
-    def test_ls(self):
+    def test_list(self):
         args = ['ls']
         self.execute(args)
 
-    def test_la(self):
+    def test_list_all(self):
         args = ['la']
         self.execute(args)
 
-    def test_rb(self):
+    def test_remove(self):
         args = ['rb', '%s%s'%(S3, makeBucketName(1))]
         self.execute(args)
 
