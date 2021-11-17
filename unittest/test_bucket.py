@@ -19,10 +19,10 @@ class TestBucket(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def execute(self, args, stdin=None):
+    def execute(self, args):
         args.insert(0, PYTHON)
         args.insert(1, S3CMD)
-        completed_p = subprocess.run(args, stdin=stdin, stdout=PIPE, stderr=STDOUT,
+        completed_p = subprocess.run(args, stdout=PIPE, stderr=STDOUT,
             universal_newlines=True, close_fds=True)
         self.assertEqual(completed_p.returncode, EX_OK)
 
