@@ -5,7 +5,7 @@ import subprocess
 # define constants
 PYTHON = 'python3'
 PATH_TO_S3CMD = '../s3cmd'
-S3CMD = '%s/s3cmd'%PATH_TO_S3CMD
+S3CMD = f'{PATH_TO_S3CMD}/s3cmd'
 
 class BaseTest(unittest.TestCase):
     def setUp(self):
