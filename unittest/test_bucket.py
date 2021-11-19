@@ -21,7 +21,7 @@ class TestBucket(bt.BaseTest):
     def test_make_single(self):
         # create a single bucket
         bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['mb', '--bucket-location=EU', bucket]
+        args = ['mb', bucket]
         result = self._execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK)
         # verify bucket was created
