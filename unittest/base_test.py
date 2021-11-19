@@ -6,7 +6,7 @@ import subprocess
 import shutil
 
 #--- define constants ---
-BUCKET_PREFIX = '%s-s3cmd-unittest-' % getpass.getuser().lower()
+BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
 IN_FILE = '/dev/urandom'
 PYTHON = 'python'  # s3cmd does not work with python3
 PATH_TO_S3CMD = '../s3cmd'
@@ -20,7 +20,7 @@ def makeBucketName(suffix):
     return f"{BUCKET_PREFIX}{suffix}"
 
 def get_1MB_fpath():
-    return '%s/%s'%(TESTSUITE_OUT_DIR, _1MB_FN)
+    return f'{TESTSUITE_OUT_DIR}/{_1MB_FN}'
 
 '''
 '  Description:  Base class for test classes
