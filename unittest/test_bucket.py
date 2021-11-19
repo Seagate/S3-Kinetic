@@ -5,7 +5,7 @@ import unittest
 
 import base_test as bt
 
-sys.path.append(bt.PATH_TO_S3CMD) # required to see bt.S3
+sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExistCodes
 import S3.ExitCodes as xcodes
 
 # define constants
