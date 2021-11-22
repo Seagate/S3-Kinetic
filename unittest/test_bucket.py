@@ -34,12 +34,6 @@ class TestBucket(bt.BaseTest):
         self.assertNotEqual(result.stdout.find(bucket), -1, msg=ERR_NOT_FOUND%(bucket)) 
 
     def test_make_invalid(self):
-        # create a single bucket
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['mb', '--bucket-location=EU', bucket]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # create a bucket with invalid name
         args = ['mb', '--bucket-location=EU', f'{bt.S3}{bt.makeBucketName("EU")}']
         result = self._execute(args)
         self.assertEqual(result.returncode, xcodes.EX_USAGE, msg=result.stdout)
