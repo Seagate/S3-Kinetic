@@ -101,7 +101,7 @@ class TestBucket(bt.BaseTest):
         result = self._execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the put object seen
-        self.assertNotEqual(result.stdout.find(bucket), -1, msg=ERR_NOT_FOUND%(bucket)) 
+        self.assertNotEqual(result.stdout.find(f'{bucket}/{bt._1MB_FN}'), -1, msg=ERR_NOT_FOUND%(bucket)) 
 
     '''
     Ensure disk usage of a bucket equals to sum of sizes of all objects in the bucket
