@@ -14,13 +14,18 @@ _1MB = 1048576
 ERR_NOT_FOUND = 'ERROR: %s not found'
 ERR_FOUND = 'ERROR: %s found'
 
-'''
-' class TestBucket
-'
-' Description: Test s3cmd related to bucket
-''' 
 class TestBucket(bt.BaseTest):
-
+    '''
+    Test s3cmd APIs related to buckets. 
+    
+    This class verifies different common operations like:
+       * create a bucket
+       * delete a bucket
+       * list buckets
+       * delete buckets
+       
+    A bucket could be seen as a folder in which objects can be stored
+    ''' 
     def test_make_single(self):
         # create a single bucket
         bucket = f'{bt.S3}{bt.makeBucketName(1)}'
@@ -64,9 +69,7 @@ class TestBucket(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_CONFLICT, msg=result.stdout)
 
     '''
-    ' def test_list():
-    '
-    ' Description:  list all buckets (no contents)
+    List all buckets (no contents)
     '''
     def test_list(self):
         # make a bucket
@@ -81,9 +84,7 @@ class TestBucket(bt.BaseTest):
         self.assertNotEqual(result.stdout.find(bucket), -1, msg=ERR_NOT_FOUND%(bucket)) 
 
     '''
-    ' def test_list_all():
-    '
-    ' Description:  list bucket contents (no contents)
+    List bucket contents
     '''
     def test_list_all(self):
         # make a bucket
@@ -102,6 +103,9 @@ class TestBucket(bt.BaseTest):
         # verify the put object seen
         self.assertNotEqual(result.stdout.find(bucket), -1, msg=ERR_NOT_FOUND%(bucket)) 
 
+    '''
+    Ensure disk usage of a bucket equals to sum of sizes of all objects in the bucket
+    '''
     def test_disk_usage(self):
         # make a bucket
         bucket = f'{bt.S3}{bt.makeBucketName(1)}'
@@ -109,14 +113,17 @@ class TestBucket(bt.BaseTest):
         result = self._execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # put an object to the bucket
-        args = ['put', bt.get_1MB_fpath(), bucket]
+        args = ['put', bt.get_1MB_fpath(), f'{bucket}/{bt._1MB_FN}_1']
+        result = self._execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        args = ['put', bt.get_1MB_fpath(), f'{bucket}/{bt._1MB_FN}_2']
         result = self._execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # disk usage
         args = ['du', bucket]
         result = self._execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertNotEqual(result.stdout.find(str(_1MB)), -1, msg=f'ERROR: Incorrect disk usage size')
+        self.assertNotEqual(result.stdout.find(str(2*_1MB)), -1, msg=f'ERROR: Incorrect disk usage size')
 
     def test_remove_single_empty(self):
         # make a bucket

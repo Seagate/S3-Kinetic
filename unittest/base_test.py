@@ -22,15 +22,14 @@ def makeBucketName(suffix):
 def get_1MB_fpath():
     return f'{TESTSUITE_OUT_DIR}/{_1MB_FN}'
 
-'''
-'  Description:  Base class for test classes
-'''
 class BaseTest(unittest.TestCase):
     '''
-    ' def tearDown()
-    ' Description: Clean up anything used by this class
+    Base class for test classes
     '''
     def tearDown(self):
+        '''
+        Clean up anything used by this class
+        '''
         self._removeAllTestBuckets()
 
     def _execute(self, args):
