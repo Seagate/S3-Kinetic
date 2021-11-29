@@ -31,10 +31,7 @@ class BaseTest(unittest.TestCase):
     ' Description: Clean up anything used by this class
     '''
     def tearDown(self):
-        # remove all buckets
-        self._removeBucket(f'{S3}{makeBucketName(1)}')
-        self._removeBucket(f'{S3}{makeBucketName(2)}')
-        
+        self._removeAllTestBuckets()
 
     def _execute(self, args):
         args.insert(0, PYTHON)
@@ -46,4 +43,14 @@ class BaseTest(unittest.TestCase):
     def _removeBucket(self, name):
         args = ['rb', '--recursive', name]
         self._execute(args)
-            
+
+    def _removeAllTestBuckets(self):
+        bucket = f'{S3}{BUCKET_PREFIX}'
+        args = ['ls']
+        result = self._execute(args)
+        flist = result.stdout.split(' ')
+        for f in flist:
+            if not f.startswith(bucket):
+                continue
+            itemList = f.split('\n')
+            self._removeBucket(itemList[0])
