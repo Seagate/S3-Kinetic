@@ -1,9 +1,9 @@
-import unittest
-import os
 import getpass
-from subprocess import Popen, PIPE, STDOUT
-import subprocess
+import os
 import shutil
+import subprocess
+from subprocess import Popen, PIPE, STDOUT
+import unittest
 
 #--- define constants ---
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
