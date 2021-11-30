@@ -79,10 +79,8 @@ class TestBucket(bt.BaseTest):
         result = self._execute(args)
         self.assertEqual(result.returncode, xcodes.EX_CONFLICT, msg=result.stdout)
 
-    '''
-    List all buckets (no contents)
-    '''
     def test_list(self):
+        ''' List all buckets (no contents) '''
         # make a bucket
         bucket = f'{bt.S3}{bt.makeBucketName(1)}'
         args = ['mb', bucket]
@@ -94,10 +92,8 @@ class TestBucket(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout) 
         self.assertNotEqual(result.stdout.find(bucket), -1, msg=ERR_NOT_FOUND%(bucket)) 
 
-    '''
-    List bucket contents
-    '''
     def test_list_all(self):
+        ''' List bucket contents '''
         # make a bucket
         bucket = f'{bt.S3}{bt.makeBucketName(1)}'
         args = ['mb', bucket]
@@ -115,10 +111,8 @@ class TestBucket(bt.BaseTest):
         fobject = f'{bucket}/{bt._1MB_FN}'
         self.assertNotEqual(result.stdout.find(fobject), -1, msg=ERR_NOT_FOUND%(fobject)) 
 
-    '''
-    Ensure disk usage of a bucket equals to sum of sizes of all objects in the bucket
-    '''
     def test_disk_usage(self):
+        ''' Ensure disk usage of a bucket equals to total size of all objects in the bucket '''
         # make a bucket
         bucket = f'{bt.S3}{bt.makeBucketName(1)}'
         args = ['mb', bucket]
