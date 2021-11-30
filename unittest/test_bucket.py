@@ -26,6 +26,17 @@ class TestBucket(bt.BaseTest):
        
     A bucket could be seen as a folder in which objects can be stored
     ''' 
+    @classmethod
+    def setUpClass(self):
+        # create a clean testsuite output directory
+        if os.path.isdir(bt.TESTSUITE_OUT_DIR):
+            shutil.rmtree(bt.TESTSUITE_OUT_DIR)
+
+        os.mkdir(bt.TESTSUITE_OUT_DIR)
+        # create a 1M file in the testsuite directory
+        os.system(f'dd if={bt.IN_FILE} of={bt.get_1MB_fpath()} bs=1M count=1 > /dev/null 2>&1')
+        
+
     def test_make_single(self):
         # create a single bucket
         bucket = f'{bt.S3}{bt.makeBucketName(1)}'
@@ -205,15 +216,5 @@ class TestBucket(bt.BaseTest):
         self.assertEqual(result.stdout.find(bucket1), -1, msg=ERR_FOUND%(bucket1)) 
         self.assertEqual(result.stdout.find(bucket2), -1, msg=ERR_FOUND%(bucket2)) 
 
-def prepareData():
-    # create a clean testsuite output directory
-    if os.path.isdir(bt.TESTSUITE_OUT_DIR):
-        shutil.rmtree(bt.TESTSUITE_OUT_DIR)
-
-    os.mkdir(bt.TESTSUITE_OUT_DIR)
-    # create a 1M file in the testsuite directory
-    os.system(f'dd if={bt.IN_FILE} of={bt.get_1MB_fpath()} bs=1M count=1 > /dev/null 2>&1')
-    
 if __name__ == '__main__':
-    prepareData()
     unittest.main()
