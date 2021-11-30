@@ -112,7 +112,7 @@ class TestBucket(bt.BaseTest):
         self.assertNotEqual(result.stdout.find(fobject), -1, msg=ERR_NOT_FOUND%(fobject)) 
 
     def test_disk_usage(self):
-        ''' Ensure disk usage of a bucket equals to total size of all objects in the bucket '''
+        ''' Report disk usage of a bucket '''
         # make a bucket
         bucket = f'{bt.S3}{bt.makeBucketName(1)}'
         args = ['mb', bucket]
