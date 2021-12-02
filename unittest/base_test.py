@@ -10,6 +10,9 @@ PATH_TO_S3CMD = '../s3cmd'     # place here for the next line
 sys.path.append(PATH_TO_S3CMD) # required to see S3.ExitCodes
 import S3.ExitCodes as xcodes
 
+#local imports
+import bucket as b
+
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
 TESTSUITE_OUT_DIR = 'testsuite-out'
 TESTSUITE_DAT_DIR = 'testsuite-dat'
@@ -49,15 +52,15 @@ def removeBucket(name):
     executeS3cmd(args)
 
 def removeAllTestBuckets():
-    bucket = f'{S3}{BUCKET_PREFIX}'
     args = ['ls']
     result = executeS3cmd(args)
     flist = result.stdout.split(' ')
     for f in flist:
-        if not f.startswith(bucket):
+        if not f.startswith(f'{S3}{BUCKET_PREFIX}'):
             continue
         itemList = f.split('\n')
-        removeBucket(itemList[0])
+        bucket = b.Bucket(itemList[0], nameType='full')
+        bucket.remove()
 
 def removeContentAllTestBuckets():
     bucket = f'{S3}{BUCKET_PREFIX}'
@@ -92,6 +95,11 @@ class BaseTest(unittest.TestCase):
         '''
         removeAllTestBuckets()
 
+    def _isBucketExist(self, bucket):
+        args = ['ls', bucket]
+        result = executeS3cmd(args)
+        return (result.returncode == xcodes.EX_OK and result.stdout.find(bucket) != -1)
+
     def _isObjExist(self, fullObj):
         args = ['la', fullObj]
         result = executeS3cmd(args)
@@ -105,7 +113,7 @@ class BaseTest(unittest.TestCase):
     def _makeBucket(self, suffix, refresh=False):
         bucketName = makeBucketName(suffix)
         bucket = f'{S3}{bucketName}'
-        if not self._isObjExist(bucket):
+        if not self._isBucketExist(bucket):
             args = ['mb', bucket]
             executeS3cmd(args)
         elif refresh:
