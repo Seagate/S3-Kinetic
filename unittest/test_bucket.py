@@ -1,3 +1,5 @@
+import os
+import shutil
 import sys
 import unittest
 
@@ -21,6 +23,7 @@ class TestBucket(bt.BaseTest):
        
     A bucket could be seen as a folder in which objects can be stored
     ''' 
+
     def test_make_single(self):
         bucket = b.Bucket(1)
         args = ['mb', bucket.fullName()]
@@ -53,10 +56,8 @@ class TestBucket(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_CONFLICT, msg=result.stdout)
 
-    '''
-    List all buckets (no contents)
-    '''
     def test_list(self):
+        ''' List all buckets (no contents) '''
         # make a bucket
         bucket = b.Bucket(1)
         bucket.make()
@@ -66,10 +67,8 @@ class TestBucket(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         self.assertTrue(result.stdout.find(bucket.fullName()) != -1, msg=msg.Message.notFound(bucket.fullName()))
 
-    '''
-    List bucket contents
-    '''
     def test_list_all(self):
+        ''' List bucket contents '''
         # make a bucket
         bucket = b.Bucket(1)
         bucket.make()
@@ -81,10 +80,8 @@ class TestBucket(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         self.assertTrue(result.stdout.find(obj.fullName()) != -1, msg=msg.Message.notFound(obj.name(), bucket.fullName()))
 
-    '''
-    Ensure disk usage of a bucket equals to sum of sizes of all objects in the bucket
-    '''
     def test_disk_usage(self):
+        ''' Report disk usage of a bucket '''
         # make a bucket
         bucket = b.Bucket(1)
         bucket.make()
