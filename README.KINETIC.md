@@ -1,61 +1,93 @@
-# MinIO-Kinetic
+A. MinIO-Kinetic
 
-Kinetic is a key-value database able to run in the drive. [MinIO](https://github.com/minio/minio) is a regular key-value database with an API compatible with [Amazon S3](https://aws.amazon.com/s3/) cloud storage service. MinIO-Kinetic is the project to have a key-value database running in the drive with an API compatible with S3.
+	Kinetic is a key-value database able to run in the drive. [MinIO](https://github.com/minio/minio) is a regular key-value database with an API compatible with [Amazon S3](https://aws.amazon.com/s3/) cloud storage service. MinIO-Kinetic is the project to have a key-value database running in the drive with an API compatible with S3.
 
-This program uses the frontend of MinIO to send/receive S3 objects and, as the backend, the program uses kinetic to interact with the drive.
+	This program uses the frontend of MinIO to send/receive S3 objects and, as the backend, the program uses kinetic to interact with the drive.
 
+B. Installation
+
+	**Notes for version 1.7**: 
+	- This procedure will work for ubuntu 16.04, 18.04.
+	- Also works for g++ gcc compiler 5 and 7
+	- This is a manual method for quick development.
+	- Normal instructions are via installer similar to kineticd installer.
+
+	1. Install Golang: 
+	   Go to this web site to install golang:
+	      https://tecadmin.net/install-go-on-ubuntu
+
+	2. Checkout MinIO-Kinetic: 
+
+              git clone ssh://git@lco-esd-cm01.colo.seagate.com:7999/in/albany-minio.git
+
+C. Compiling:
+
+	The steps to compile MinIO (s3kinetic.x.y) depends on the target architecture. 
+	Assuming that the following directories are under user's home directory:
+	   - albany-minio
+	   - uboot-linux (this is uboot for ARM)
+	   - kineticd
+
+	1. X86
+		a.  If the directory "./lib" has X86 libraries (after compiling using method b below),
+            it is enough to type the following command in the main folder (`albany-minio`) if there is no change
+            in kineticd:
+
+        	    make -f Makefile.x86
+	
+		b.  Otherwise use the following command (assuming that the current directory is albany-minio):
+         
+		    ./s3kinetic.sh ARG1 ARG2 ARG3 ARG4
+	   
+                    ARG1 = uboot-linux directory
+	            ARG2 = kineticd directory
+         	    ARG3 = X86 or ARM
+       	            ARG4 = SMR or NONSMR or LAMARRKV
+
+                    ex: My uboot-linux, kineticd are under /home/myhomedir/uboot-linux and /home/myhomedir/kineticd
+
+         	    ./s3kinetic.sh ~/uboot-linux ~/kineticd X86 SMR
+
+	In both cases, there will be two executable files name 'minio' and 's3kinetic.x86' will be generated
+        and stored in directory './bin'.
+  
+
+	2. ARM
+
+	    If this is the first time, do the following:
+   	    - go to `uboot-linux` directory and call this command:
+
+              ./build_embedded_image.sh -t ramdef
+
+            Go to the `albany-minio` folder and do the following:
+              ./s3kinetic.sh ARG1 ARG2 ARG3 ARG4
+
+              ARG1 = uboot-linux directory
+              ARG2 = kineticd directory
+              ARG3 = ARM
+              ARG4 = LAMARRKV
+
+            ex: My uboot-linux, kineticd are under /home/myhomedir/uboot-linux and /home/myhomedir/kineticd
+
+             ./s3kinetic.sh ~/uboot-linux ~/kineticd ARM LAMARRKV
+
+	    There will be two executable files name 'minio' and 's3kinetic.arm' will be generated
+            and stored in directory'./bin'.
+
+
+        Notes:
+          After the first time, if there is no change in uboot or kineticd, quick way to compile is just typing:
+                make -f Makefile.arm
+        
 ---
 
-## Installation
-
-**Notes for version 1.7**: 
-- This procedure will work for ubuntu 16.04, 18.04.
-- Also works for g++ gcc compiler 5 and 7
-- This is a manual method for quick development.
-- Normal instructions are via installer similar to kineticd installer.
-
-1. Install Golang: 
-   Go to this web site to install golang:
-      https://tecadmin.net/install-go-on-ubuntu
-
-2. Checkout MinIO-Kinetic: 
-
-         git clone ssh://git@lco-esd-cm01.colo.seagate.com:7999/in/albany-minio.git
-
----
-
-## Compilation
-
-The steps to compile MinIO (s3kinetic.x.y) depends on the target architecture. 
-
-### x86
-It is enough to type the following command in the main folder (`albany-minio`):
-
-         make -f Makefile.x86
-
-### ARM
-Assuming that the following directories are under user's home directory:
-   - albany-minio
-   - uboot-linux (this is uboot for ARM)
-
-If this is the first time, do the following:
-   - go to `uboot-linux` directory and call this command:
-
-         ./build_embedded_image.sh -t ramdef
-
-Go to the `albany-minio` folder and do the following:
-
-         make -f Makefile.arm
-
----
-
-## Running MinIO or s3kinetic.X.Y:
+D. Running MinIO or s3kinetic.X:
 
 ### Under LAMARRKV or Interposer ARM:
 
-- Copy minio or s3kinetic.X.Y (ARM version) from the `bin` folder to the Lamarrkvdrive under directory `/mnt/util`:
+- Copy minio or s3kinetic.X (ARM version) from the `bin` folder to the Lamarrkvdrive under directory `/mnt/util`:
 
-         scp minio (or s3kinetic.X.Y) root@ip_address:/mnt/util/
+         scp minio (or s3kinetic.X) root@ip_address:/mnt/util/
 
 - ssh into Lamarrkv drive. If you encounter any issues, please, read the section `Conecting to a Serial Port` from [Kinetic Notes](https://seagatetechnology.sharepoint.com/%3Ab%3A/r/sites/gteamdrv2/kinetic/Shared%20Documents/HowTo/KineticInteractions_Includes_stepsforfw_update_locationof_slod.pdf?csf=1&web=1&e=T6QNhx). 
 
@@ -139,7 +171,7 @@ If any Store Corrupt Error:
 
 ---
 
-## Testing
+E. Testing
 
 Using s3cmd commands to test.
 1. S3CMD Installation
@@ -181,7 +213,7 @@ There is s3-benchmark test.
 
 ---
 
-## Running MinIO (or s4kinetic.x.y) with file system (ext4 or xfs)
+## Running MinIO (or s4kinetic.x) with file system (ext4 or xfs)
 
 This command will allow users to run minio on a storage filesystem such as ext4 or xfs or other file systems:
 
