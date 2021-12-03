@@ -24,7 +24,7 @@ This program uses the frontend of MinIO to send/receive S3 objects and, as the b
 
 ---
 
-## Compiling:
+## Compilation:
 
 The steps to compile MinIO (s3kinetic.x.y) depends on the target architecture. 
 assuming that the following directories are under user's home directory:
@@ -36,6 +36,7 @@ assuming that the following directories are under user's home directory:
 If the directory "./lib" has X86 libraries (after compiling using method b below),
 it is enough to type the following command in the main folder (`albany-minio`) if there is no change
 in kineticd:
+
     make -f Makefile.x86
 	
 Otherwise use the following command (assuming that the current directory is albany-minio):
