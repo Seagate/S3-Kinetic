@@ -7,36 +7,34 @@ import base_test as bt
 sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
 import S3.ExitCodes as xcodes
 
-BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
-S3 = 's3://'
-
 class Bucket:
     def __init__(self, name, nameType='suffix'):
         if nameType == 'suffix':
             self.__suffix = name 
-            self.__name = f"{BUCKET_PREFIX}{self.__suffix}"
-            self.__fullName = f'{S3}{self.__name}'
+            self.__name = f"{bt.BUCKET_PREFIX}{self.__suffix}"
+            self.__fullName = f'{bt.S3}{self.__name}'
         elif nameType == 'full':
             self.__fullName = name
-            self.__name = name.replace(S3, '')
-            self.__suffix = name.replace(BUCKET_PREFIX, '') 
+            self.__name = name.replace(bt.S3, '')
+            self.__suffix = name.replace(bt.BUCKET_PREFIX, '') 
         else:
             raise Exception(f'Invalid name type: {nameType}.  Choices: "suffix" and "full"')
-
-    def isExist(self):
-        args = ['ls']
-        result = bt.executeS3cmd(args)
-        return (result.returncode == xcodes.EX_OK and result.stdout.find(self.fullName()) != -1)
 
     def isEmpty(self):
         args = ['la', self.fullName()]
         result = bt.executeS3cmd(args)
         return (result.returncode == xcodes.EX_OK and result.stdout.find(self.fullName()) == -1)
 
-    def isContain(self, obj):
-        args = ['la', obj]
+    def isContain(self, aName):
+        objFullName = f'{self.fullName()}/{aName}'
+        args = ['la', objFullName]
         result = bt.executeS3cmd(args)
-        return (result.returncode == xcodes.EX_OK and result.stdout.find(obj) != -1)
+        return (result.returncode == xcodes.EX_OK and result.stdout.find(objFullName) != -1)
+
+    def isExist(self):
+        args = ['ls']
+        result = bt.executeS3cmd(args)
+        return (result.returncode == xcodes.EX_OK and result.stdout.find(self.fullName()) != -1)
 
     def name(self):
         return self.__name
@@ -54,11 +52,17 @@ class Bucket:
         return self.isExist()            
 
     def put(self, obj, newName=None):
+
         if newName == None:
-            args = ['put', obj, self.fullName()]
+            args = ['put', obj.fullFileName(), self.fullName()]
         else:
-            args = ['put', obj, f'{self.fullName()}/{newName}']
-        bt.executeS3cmd(args)
+            args = ['put', obj.fullFileName(), f'{self.fullName()}/{newName}']
+
+        if obj.mustBeInMultiPart():
+            args.insert(1, 'multipart_chunk_size_mb=5')
+
+        result =bt.executeS3cmd(args)
+        obj.setBucket(self)
 
     def remove(self):
         args = ['rb', '--recursive', self.fullName()]

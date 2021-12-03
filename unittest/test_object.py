@@ -3,8 +3,11 @@ import shutil
 import sys
 import unittest
 
-#i local imports
+# local imports
 import base_test as bt
+import object as o
+import bucket as b
+import message as msg
 
 sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
 import S3.ExitCodes as xcodes
@@ -22,267 +25,312 @@ class TestObject(bt.BaseTest):
 
         os.mkdir(bt.TESTSUITE_OUT_DIR)
 
-        # create a 16M file in the testsuite data directory
-        os.system(f'dd if={bt.IN_FILE} of={bt.get_16MB_fpath()} bs=1M count=16 > /dev/null 2>&1')
         # create a small file in the testsuite data directory
-        os.system(f'dd if={bt.IN_FILE} of={bt.get_1KB_fpath()} bs=1K count=1 > /dev/null 2>&1')
+        obj = o.Object(o.Size._1KB)
+        os.system(f'dd if={bt.IN_FILE} of={obj.fullFileName()} bs=1K count=1 > /dev/null 2>&1')
+        # create a small file in the testsuite data directory
+        obj = o.Object(o.Size._1MB)
+        os.system(f'dd if={bt.IN_FILE} of={obj.fullFileName()} bs=1M count=1 > /dev/null 2>&1')
+        # create a 16M file in the testsuite data directory
+        obj = o.Object(o.Size._16MB)
+        os.system(f'dd if={bt.IN_FILE} of={obj.fullFileName()} bs=1M count=16 > /dev/null 2>&1')
 
-        bucket1 = f'{bt.S3}{bt.makeBucketName(1)}'
-        bucket2 = f'{bt.S3}{bt.makeBucketName(2)}'
-        args = ['mb', '--recursive',  bucket1, bucket2]
-        bt.executeS3cmd(args)
+        bucket1 = b.Bucket(1)
+        bucket2 = b.Bucket(2)
+        bucket1.make()
+        bucket2.make()
 
     def tearDown(self):
         # Bypass super().tearDown().  We don't want to remove buckets
 
         # Remove contents of test buckets
-        bt.removeContentAllTestBuckets()
+        self.removeContentAllTestBuckets()
 
-    '''===
-    '  Non-public methods
-    ==='''
-    def _put_1KB(self):
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['put', bt.get_1KB_fpath(), bucket]
-        bt.executeS3cmd(args)
-        return bucket, f'{bucket}/{bt._1KB_FN}', bt._1KB_FN
-
-    def _put_1MB(self):
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['put', bt.get_1MB_fpath(), bucket]
-        bt.executeS3cmd(args)
-        return bucket, f'{bucket}/{bt._1MB_FN}', bt._1MB_FN
-
-    def _put_16MB(self):
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['put', '--multipart-chunk-size-mb=5', bt.get_16MB_fpath(), bucket]
-        bt.executeS3cmd(args)
-        return bucket, f'{bucket}/{bt._16MB_FN}', bt._16MB_FN
-
-    '''=== End of non-public methods ==='''
+    @classmethod
+    def removeContentAllTestBuckets(cls):
+        args = ['ls']
+        result = cls.execute(args)
+        flist = result.stdout.split(' ')
+        for f in flist:
+            if not f.startswith(f'{bt.S3}{bt.BUCKET_PREFIX}'):
+                continue
+            itemList = f.split('\n')
+            bucket = b.Bucket(itemList[0], nameType='full')
+            bucket.remove()
 
     '''===
     '  Put object section
     ==='''
     def test_put(self):
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['put', bt.get_1KB_fpath(), bucket]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._1KB)
+        args = ['put', obj.fullFileName(), bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        args = ['la', bucket]
-        result = bt.executeS3cmd(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the put object seen
-        fullObj = f'{bucket}/{bt._1KB_FN}'
-        self.assertNotEqual(result.stdout.find(fullObj), -1, msg=bt.ERR_NOT_FOUND%fullObj) 
+        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(), bucket.fullName())) 
         
     def test_put_stdin(self):
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        fullObj = f'{bucket}/stdin{bt._1KB_FN}'
-        f = open(bt.get_1KB_fpath(), 'r')
-        args = ['put', '-', fullObj]
-        result = bt.executeS3cmd(args, stdin=f)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._1KB)
+        objFullName = f'{bucket.fullName()}/{obj.name()}'
+        f = open(obj.fullFileName(), 'r')
+        args = ['put', '-', objFullName]
+        result = self.execute(args, stdin=f)
         f.close()
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        args = ['la', bucket]
-        result = bt.executeS3cmd(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the put object seen
-        self.assertNotEqual(result.stdout.find(fullObj), -1, msg=bt.ERR_NOT_FOUND%fullObj) 
+        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(), bucket.fullName()))
         
     def test_put_multipart(self):
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['put', '--multipart-chunk-size-mb=5', bt.get_16MB_fpath(), bucket]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._16MB)
+        args = ['put', '--multipart-chunk-size-mb=5', obj.fullFileName(), bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        args = ['la', bucket]
-        result = bt.executeS3cmd(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        fullObj = f'{bucket}/{bt._16MB_FN}'
-        self.assertNotEqual(result.stdout.find(fullObj), -1, msg=bt.ERR_NOT_FOUND%fullObj) 
+        obj.setBucket(bucket)
+        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(), bucket.fullName()))
 
     def test_put_multipart_stdin(self):
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        fullObj = f'{bucket}/stdin{bt._16MB_FN}'
-        f = open(bt.get_16MB_fpath(), 'r')
-        args = ['put', '--multipart-chunk-size-mb=5', '-', fullObj]
-        result = bt.executeS3cmd(args, stdin=f)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._16MB)
+        objFullName = f'{bucket.fullName()}/{obj.name()}'
+        f = open(obj.fullFileName(), 'r')
+        args = ['put', '--multipart-chunk-size-mb=5', '-', objFullName]
+        result = self.execute(args, stdin=f)
         f.close()
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        args = ['la', bucket]
-        result = bt.executeS3cmd(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertNotEqual(result.stdout.find(fullObj), -1, msg=bt.ERR_NOT_FOUND%fullObj) 
+        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(), bucket.fullName()))
 
     def test_put_multi(self):
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        fpath1 = bt.get_1KB_fpath()
-        fpath2 = bt.get_1MB_fpath()
-        args = ['put', fpath1, fpath2, bucket]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj1 = o.Object(o.Size._1KB)
+        obj2 = o.Object(o.Size._1MB)
+        args = ['put', obj1.fullFileName(), obj2.fullFileName(), bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        obj1.setBucket(bucket)
+        obj2.setBucket(bucket)
         # verify the file was stored
-        args = ['la', bucket]
-        result = bt.executeS3cmd(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the put object seen
-        fullObj = f'{bucket}/{bt._1KB_FN}'
-        self.assertNotEqual(result.stdout.find(fullObj), -1, msg=bt.ERR_NOT_FOUND%fullObj) 
-        fullObj = f'{bucket}/{bt._1MB_FN}'
-        self.assertNotEqual(result.stdout.find(fullObj), -1, msg=bt.ERR_NOT_FOUND%fullObj) 
+        self.assertTrue(bucket.isContain(obj1.name()), msg=msg.Message.notFound(obj1.name(), bucket.fullName()))
+        self.assertTrue(bucket.isContain(obj2.name()), msg=msg.Message.notFound(obj2.name(), bucket.fullName()))
         
     '''
     TODO: Minio does not work with a mix of small and large files')
     '''
     @unittest.skip
     def test_put_recursive(self):
-        bucket = self._makeBucket("recursive")
-        args =['put', '--recursive', '--multipart-chunk-size-mb=5', bt.TESTSUITE_DAT_DIR, bucket]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket("recursive")
+        bucket.make()
+        args =['put', '--recursive', '--multipart-chunk-size-mb=5', \
+            bt.TESTSUITE_DAT_DIR, bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify all files were uploaded
         args = ['la', bucket]
-        result = bt.executeS3cmd(args)
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         files = os.listdir(bt.TESTSUITE_DAT_DIR)
         for f in files:
-            self.assertNotEqual(result.stdout.find(f), -1, msg=bt.ERR_NOT_FOUND%f) 
+            self.assertNotEqual(result.stdout.find(f), -1, msg=msg.Message.notFound(f, bt.TESTSUITE_DAT_DIR)) 
+
     '''=== End of put object section ==='''
 
     '''===
     '  Get object section
     ==='''
     def test_get(self):
-        _, fullObj, obj = self._put_1KB()
-        args = ['get', fullObj, bt.TESTSUITE_OUT_DIR]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._1KB)
+        bucket.put(obj)
+        args = ['get', obj.fullName(), bt.TESTSUITE_OUT_DIR]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded
-        self.assertEqual(True, os.path.exists(f'{bt.TESTSUITE_OUT_DIR}/{obj}'),
-            msg=bt.ERR_NOT_FOUND%(f'{bt.TESTSUITE_OUT_DIR}/{obj}'))
+        self.assertTrue(os.path.exists(f'{bt.TESTSUITE_OUT_DIR}/{obj.name()}'),
+            msg=msg.Message.notFound(obj.name(), bt.TESTSUITE_OUT_DIR))
 
     @unittest.skip
     def test_get_multipart(self):
-        _, fullObj, obj = self._put_16MB()
-        args = ['get', fullObj, bt.TESTSUITE_OUT_DIR]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._16MB)
+        bucket.put(obj)
+        args = ['get', obj.fullName(), bt.TESTSUITE_OUT_DIR]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
-        fpath = f'{bt.TESTSUITE_OUT_DIR}/{obj}'
-        self.assertEqual(True, os.path.exists(fpath), msg=bt.ERR_NOT_FOUND%fpath)
-        self.assertEqual(bt._16MB, os.path.getsize(fpath))
+        fpath = f'{bt.TESTSUITE_OUT_DIR}/{obj.name()}'
+        self.assertTrue(os.path.exists(fpath), msg=msg.Message.notFound(obj.name(), bt.TESTSUITE_OUT_DIR)) 
+        self.assertEqual(bt._16MB, os.path.getsize(fpath), msg=msg.Message.mismatchSize(fpath))
 
     @unittest.skip
     def test_get_multi(self):
-        _, fullSmallObj, smallObj = self._put_1KB()
-        _, fullLargeObj, largeObj = self._put_16MB()
-        args = ['get', fullSmallObj, fullLargeObj, bt.TESTSUITE_OUT_DIR]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        smallObj = o.Object(o.Size._1KB)
+        largeObj = o.Object(o.Size._16MB)
+        bucket.put(smallObj)
+        bucket.put(largeObj)
+        args = ['get', smallObj.fullName(), largeObj.fullName(), bt.TESTSUITE_OUT_DIR]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
-        fpathSmall = f'{bt.TESTSUITE_OUT_DIR}/{smallObj}'
-        self.assertEqual(True, os.path.exists(fpathSmall), msg=bt.ERR_NOT_FOUND%fpathSmall)
-        fpathLarge = f'{bt.TESTSUITE_OUT_DIR}/{largeObj}'
-        self.assertEqual(True, os.path.exists(fpathLarge), msg=bt.ERR_NOT_FOUND%fpathLarge)
-        self.assertEqual(bt._16MB, os.path.getsize(fpathLarge))
+        fpathSmall = f'{bt.TESTSUITE_OUT_DIR}/{smallObj.name()}'
+        self.assertTrue(os.path.exists(fpathSmall), msg=msg.Message.notFound(smallObj.name(), bt.TESTSUITE_OUT_DIR))
+        fpathLarge = f'{bt.TESTSUITE_OUT_DIR}/{largeObj.name()}'
+        self.assertTrue(os.path.exists(fpathLarge), msg=msg.Message.notFound(largObj.name(), bt.TESTSUITE_OUT_DIR))
+
+        self.assertEqual(bt._1KB, os.path.getsize(fpathSmall), msg=msg.Message.mismatchSize(fpathSmall))
+        self.assertEqual(bt._16MB, os.path.getsize(fpathLarge), msg=msg.Message.mismatchSize(fpathLarge))
 
     '''=== End of get object section ==='''
         
     def test_delete(self):
-        _, fullObj, obj = self._put_1KB()
-        args = ['del', fullObj]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._1KB)
+        bucket.put(obj)
+        args = ['del', obj.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(self._isObjExist(fullObj))
+        self.assertFalse(bucket.isContain(obj.name()), msg=msg.Message.found(obj.name(), bucket.fullName()))
 
+    @unittest.skip
     def test_delete_multipart(self):
-        _, fullObj, obj = self._put_16MB()
-        args = ['del', fullObj]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._16MB)
+        bucket.put(obj)
+        args = ['del', obj.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(self._isObjExist(fullObj))
+        self.assertFalse(bucket.isContain(obj.name()), msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     def test_remove(self):
-        _, fullObj, obj = self._put_1KB()
-        args = ['rm', fullObj]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._1KB)
+        bucket.put(obj)
+        args = ['rm', obj.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(self._isObjExist(fullObj))
+        self.assertFalse(bucket.isContain(obj.name()), msg=msg.Message.found(obj.name(), bucket.fullName()))
 
+    @unittest.skip
     def test_remove_multipart(self):
-        _, fullObj, obj = self._put_16MB()
-        args = ['rm', fullObj]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._16MB)
+        bucket.put(obj)
+        args = ['rm', obj.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(self._isObjExist(fullObj))
+        self.assertFalse(bucket.isContain(obj.name()), msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     def test_delete_all_recursively(self):
-        bucket, _, _ = self._put_1KB()
-        bucket1, _, _ = self._put_16MB()
-        self.assertEqual(bucket, bucket1)
-        args = ['del', '--recursive', '--force', bucket]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj1 = o.Object(o.Size._1KB)
+        obj2 = o.Object(o.Size._16MB)
+        bucket.put(obj1)
+        bucket.put(obj2)
+        args = ['del', '--recursive', '--force', bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertTrue(self._isBucketEmpty(bucket))
+        self.assertTrue(bucket.isEmpty(), msg=msg.Message.notEmpty(bucket.fullName()))
 
     def test_remove_all_recursively(self):
-        bucket, _, _ = self._put_1KB()
-        bucket1, _, _ = self._put_16MB()
-        self.assertEqual(bucket, bucket1)
-        args = ['rm', '--recursive', '--force', bucket]
-        result = bt.executeS3cmd(args)
+        bucket = b.Bucket(1)
+        obj1 = o.Object(o.Size._1KB)
+        bucket.put(obj1)
+        obj2 = o.Object(o.Size._16MB)
+        bucket.put(obj2)
+        args = ['rm', '--recursive', '--force', bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertTrue(self._isBucketEmpty(bucket))
+        self.assertTrue(bucket.isEmpty(), msg=msg.Message.notEmpty(bucket.fullName()))
 
     '''>>> End of delete section <<<'''
 
     '''<<< Copy object section >>>''' 
 
     def test_copy_between_buckets(self):
-        bucket, fullObj, obj = self._put_1KB()
-        destBucket = self._makeBucket('dest', refresh=True)
-        args = ['cp', fullObj, destBucket]
-        result = bt.executeS3cmd(args)
+        srcBucket = b.Bucket(1)
+        srcBucket.make()
+        destBucket = b.Bucket(2)
+        destBucket.make()
+        obj = o.Object(o.Size._1KB)
+        srcBucket.put(obj)
+        args = ['cp', obj.fullName(), destBucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertTrue(self._isObjExist(fullObj), msg="Copied object is in destination")
+        obj.setBucket(destBucket)
+        self.assertTrue(destBucket.isContain(obj.name()),
+            msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
 
+    @unittest.skip
     def test_copy_multipart_between_buckets(self):
-        bucket, fullObj, obj = self._put_16MB()
-        destBucket = self._makeBucket('dest', refresh=True)
-        args = ['cp', '--multipart-chunk-size-mb=5', fullObj, destBucket]
-        result = bt.executeS3cmd(args)
+        srcBucket = b.Bucket(1)
+        srcBucket.make()
+        destBucket = b.Bucket(2)
+        destBucket.make()
+        obj = o.Object(o.Size._16MB)
+        srcBucket.put(obj)
+
+        args = ['cp', '--multipart-chunk-size-mb=5', obj.fullName(), destBucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertTrue(self._isObjExist(f'{destBucket}/{obj}'), msg="Copied object is not in destination")
+        obj.setBucket(destBucket)
+        self.assertTrue(destBucket.isContain(obj.name()),
+            msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
 
     '''>>> End of copy section <<<'''
 
     '''<<< Move object section >>>''' 
     def test_move(self):
-        bucket, fullObj, obj = self._put_1KB()
-        destBucket = self._makeBucket('dest', refresh=True)
-        args = ['mv', fullObj, f'{destBucket}/{obj}']
-        result = bt.executeS3cmd(args)
+        srcBucket = b.Bucket(1)
+        srcBucket.make()
+        destBucket = b.Bucket(2)
+        destBucket.make()
+        obj = o.Object(o.Size._1KB)
+        srcBucket.put(obj)
+
+        args = ['mv', obj.fullName(), destBucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertTrue(self._isObjExist(f'{destBucket}/{obj}'), msg="Moved object is not in destination")
-        self.assertFalse(self._isObjExist(fullObj), msg="Copied object {fullObj} is still in source")
+        self.assertTrue(destBucket.isContain(obj.name()),
+            msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
+        self.assertFalse(srcBucket.isContain(obj.name()),
+            msg=msg.Message.inSource(obj.name(), srcBucket.fullName()))
 
     def test_move_multi(self):
-        _, fobj_1, obj_1 = self._put_1KB()
-        _, fobj_2, obj_2 = self._put_1MB()
-        destBucket = self._makeBucket('dest', refresh=True)
-        args = ['mv', fobj_1, fobj_2, destBucket]
-        result = bt.executeS3cmd(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertTrue(self._isObjExist(f'{destBucket}/{obj_1}'), msg="Moved object is not in destination")
-        self.assertTrue(self._isObjExist(f'{destBucket}/{obj_2}'), msg="Moved object is not in destination")
-        self.assertFalse(self._isObjExist(fobj_1), msg=f'Copied object {fobj_1} is still in source')
-        self.assertFalse(self._isObjExist(fobj_2), msg=f'Copied object {fobj_2} is still in source')
+        srcBucket = b.Bucket(1)
+        srcBucket.make()
+        destBucket = b.Bucket(2)
+        destBucket.make()
+        obj1 = o.Object(o.Size._1KB)
+        obj2 = o.Object(o.Size._1MB)
+        srcBucket.put(obj1)
+        srcBucket.put(obj2)
 
-        
+        args = ['mv', obj1.fullName(), obj2.fullName(), destBucket.fullName()]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        self.assertTrue(destBucket.isContain(obj1.name()), msg=msg.Message.notInDest(obj1.name(), destBucket.fullName()))
+        self.assertTrue(destBucket.isContain(obj2.name()), msg=msg.Message.notInDest(obj2.name(), destBucket.fullName()))
+        self.assertFalse(srcBucket.isContain(obj1.name()), msg=msg.Message.inSource(obj1.name(), srcBucket.fullName()))
+        self.assertFalse(srcBucket.isContain(obj2.name()), msg=msg.Message.inSource(obj2.name(), srcBucket.fullName()))
+
     '''>>> End of move section <<<'''
 
 if __name__ == '__main__':
