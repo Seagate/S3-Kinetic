@@ -41,7 +41,7 @@ class Object:
             raise Exception(f'Invalid file name {name}.' + \
                              ' Choices: Size._1KB, Size._1MB, Size._16MB')
 
-        self.__fullFileName = f'{bt.TESTSUITE_DAT_DIR}/{self.__name}'
+        self.__fullFileName = f'{bt.DAT_DIR}/{self.__name}'
         self.__bucket = None
 
     def name(self):

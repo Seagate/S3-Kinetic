@@ -16,8 +16,8 @@ import object as o
 
 # Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
-TESTSUITE_OUT_DIR = 'testsuite-out'
-TESTSUITE_DAT_DIR = 'testsuite-dat'
+DOWNLOAD_DIR = 'test-download'
+DAT_DIR = 'test-dat'
 IN_FILE = '/dev/urandom'
 PYTHON = 'python'  # s3cmd does not work with python3
 S3 = 's3://'
@@ -40,10 +40,10 @@ class BaseTest(unittest.TestCase):
     def setUpClass(cls):
         cls.removeAllTestBuckets()
         # create a clean testsuite output directory
-        if os.path.isdir(TESTSUITE_DAT_DIR):
-            shutil.rmtree(TESTSUITE_DAT_DIR)
+        if os.path.isdir(DAT_DIR):
+            shutil.rmtree(DAT_DIR)
 
-        os.mkdir(TESTSUITE_DAT_DIR)
+        os.mkdir(DAT_DIR)
         # create a 1M file in the testsuite directory
         obj = o.Object(o.Size._1MB)
         os.system(f'dd if={IN_FILE} of={obj.fullFileName()} bs=1M count=1 > /dev/null 2>&1')

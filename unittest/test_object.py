@@ -25,10 +25,10 @@ class TestObject(bt.BaseTest):
     def setUpClass(self):
         super().setUpClass()
         # create a clean testsuite output directory
-        if os.path.isdir(bt.TESTSUITE_OUT_DIR):
-            shutil.rmtree(bt.TESTSUITE_OUT_DIR)
+        if os.path.isdir(bt.DOWNLOAD_DIR):
+            shutil.rmtree(bt.DOWNLOAD_DIR)
 
-        os.mkdir(bt.TESTSUITE_OUT_DIR)
+        os.mkdir(bt.DOWNLOAD_DIR)
 
         # create a small file in the testsuite data directory
         obj = o.Object(o.Size._1KB)
@@ -138,29 +138,29 @@ class TestObject(bt.BaseTest):
         bucket = b.Bucket("recursive")
         bucket.make()
         args =['put', '--recursive', '--multipart-chunk-size-mb=5', \
-            bt.TESTSUITE_DAT_DIR, bucket.fullName()]
+            bt.DAT_DIR, bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify all files were uploaded
         args = ['la', bucket]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        files = os.listdir(bt.TESTSUITE_DAT_DIR)
+        files = os.listdir(bt.DAT_DIR)
         for f in files:
             self.assertNotEqual(result.stdout.find(f), -1,
-                msg=msg.Message.notFound(f, bt.TESTSUITE_DAT_DIR)) 
+                msg=msg.Message.notFound(f, bt.DAT_DIR)) 
 
     def test_get(self):
         bucket = b.Bucket(1)
         bucket.make()
         obj = o.Object(o.Size._1KB)
         bucket.put(obj)
-        args = ['get', obj.fullName(), bt.TESTSUITE_OUT_DIR]
+        args = ['get', obj.fullName(), bt.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded
-        self.assertTrue(os.path.exists(f'{bt.TESTSUITE_OUT_DIR}/{obj.name()}'),
-            msg=msg.Message.notFound(obj.name(), bt.TESTSUITE_OUT_DIR))
+        self.assertTrue(os.path.exists(f'{bt.DOWNLOAD_DIR}/{obj.name()}'),
+            msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR))
 
     @unittest.skip
     def test_get_multipart(self):
@@ -168,13 +168,13 @@ class TestObject(bt.BaseTest):
         bucket.make()
         obj = o.Object(o.Size._16MB)
         bucket.put(obj)
-        args = ['get', obj.fullName(), bt.TESTSUITE_OUT_DIR]
+        args = ['get', obj.fullName(), bt.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
-        fpath = f'{bt.TESTSUITE_OUT_DIR}/{obj.name()}'
+        fpath = f'{bt.DOWNLOAD_DIR}/{obj.name()}'
         self.assertTrue(os.path.exists(fpath),
-            msg=msg.Message.notFound(obj.name(), bt.TESTSUITE_OUT_DIR)) 
+            msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR)) 
         self.assertEqual(bt._16MB, os.path.getsize(fpath), msg=msg.Message.mismatchSize(fpath))
 
     @unittest.skip
@@ -186,16 +186,16 @@ class TestObject(bt.BaseTest):
         largeObj = o.Object(o.Size._16MB)
         bucket.put(smallObj)
         bucket.put(largeObj)
-        args = ['get', smallObj.fullName(), largeObj.fullName(), bt.TESTSUITE_OUT_DIR]
+        args = ['get', smallObj.fullName(), largeObj.fullName(), bt.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
-        fpathSmall = f'{bt.TESTSUITE_OUT_DIR}/{smallObj.name()}'
+        fpathSmall = f'{bt.DOWNLOAD_DIR}/{smallObj.name()}'
         self.assertTrue(os.path.exists(fpathSmall),
-            msg=msg.Message.notFound(smallObj.name(), bt.TESTSUITE_OUT_DIR))
-        fpathLarge = f'{bt.TESTSUITE_OUT_DIR}/{largeObj.name()}'
+            msg=msg.Message.notFound(smallObj.name(), bt.DOWNLOAD_DIR))
+        fpathLarge = f'{bt.DOWNLOAD_DIR}/{largeObj.name()}'
         self.assertTrue(os.path.exists(fpathLarge),
-            msg=msg.Message.notFound(largObj.name(), bt.TESTSUITE_OUT_DIR))
+            msg=msg.Message.notFound(largObj.name(), bt.DOWNLOAD_DIR))
 
         self.assertEqual(bt._1KB, os.path.getsize(fpathSmall),
             msg=msg.Message.mismatchSize(fpathSmall))
