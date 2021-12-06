@@ -5,6 +5,7 @@
     python  (s3cmd does not work with python3)
 
 ## Setup
+    Install memmory module kernel object
     Start minio-kinetic
 
 ## Execution 
