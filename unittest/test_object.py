@@ -13,9 +13,8 @@ sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
 import S3.ExitCodes as xcodes
 
 class TestObject(bt.BaseTest):
-    '''
-    Test s3cmd APIs related to objects. 
-    '''
+    """Test s3cmd APIs related to objects.""" 
+
     @classmethod
     def setUpClass(self):
         super().setUpClass()
@@ -58,9 +57,6 @@ class TestObject(bt.BaseTest):
             bucket = b.Bucket(itemList[0], nameType='full')
             bucket.remove()
 
-    '''===
-    '  Put object section
-    ==='''
     def test_put(self):
         bucket = b.Bucket(1)
         bucket.make()
@@ -69,9 +65,11 @@ class TestObject(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(), bucket.fullName())) 
+        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(),
+            bucket.fullName())) 
         
     def test_put_stdin(self):
+        """Put an object into a bucket by reading the object from stdin."""
         bucket = b.Bucket(1)
         bucket.make()
         obj = o.Object(o.Size._1KB)
@@ -82,7 +80,8 @@ class TestObject(bt.BaseTest):
         f.close()
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(), bucket.fullName()))
+        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(),
+            bucket.fullName()))
         
     def test_put_multipart(self):
         bucket = b.Bucket(1)
@@ -93,9 +92,11 @@ class TestObject(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
         obj.setBucket(bucket)
-        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(), bucket.fullName()))
+        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(),
+            bucket.fullName()))
 
     def test_put_multipart_stdin(self):
+        """Put a multipart object into a bucket by reading the object from stdin."""
         bucket = b.Bucket(1)
         bucket.make()
         obj = o.Object(o.Size._16MB)
@@ -106,7 +107,8 @@ class TestObject(bt.BaseTest):
         f.close()
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(), bucket.fullName()))
+        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(),
+            bucket.fullName()))
 
     def test_put_multi(self):
         bucket = b.Bucket(1)
@@ -119,14 +121,14 @@ class TestObject(bt.BaseTest):
         obj1.setBucket(bucket)
         obj2.setBucket(bucket)
         # verify the file was stored
-        self.assertTrue(bucket.isContain(obj1.name()), msg=msg.Message.notFound(obj1.name(), bucket.fullName()))
-        self.assertTrue(bucket.isContain(obj2.name()), msg=msg.Message.notFound(obj2.name(), bucket.fullName()))
+        self.assertTrue(bucket.isContain(obj1.name()), msg=msg.Message.notFound(obj1.name(),
+            bucket.fullName()))
+        self.assertTrue(bucket.isContain(obj2.name()), msg=msg.Message.notFound(obj2.name(),
+            bucket.fullName()))
         
-    '''
-    TODO: Minio does not work with a mix of small and large files')
-    '''
     @unittest.skip
     def test_put_recursive(self):
+        """Recursively put all objects in a file directory."""
         bucket = b.Bucket("recursive")
         bucket.make()
         args =['put', '--recursive', '--multipart-chunk-size-mb=5', \
@@ -139,13 +141,9 @@ class TestObject(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         files = os.listdir(bt.TESTSUITE_DAT_DIR)
         for f in files:
-            self.assertNotEqual(result.stdout.find(f), -1, msg=msg.Message.notFound(f, bt.TESTSUITE_DAT_DIR)) 
+            self.assertNotEqual(result.stdout.find(f), -1,
+                msg=msg.Message.notFound(f, bt.TESTSUITE_DAT_DIR)) 
 
-    '''=== End of put object section ==='''
-
-    '''===
-    '  Get object section
-    ==='''
     def test_get(self):
         bucket = b.Bucket(1)
         bucket.make()
@@ -169,11 +167,13 @@ class TestObject(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
         fpath = f'{bt.TESTSUITE_OUT_DIR}/{obj.name()}'
-        self.assertTrue(os.path.exists(fpath), msg=msg.Message.notFound(obj.name(), bt.TESTSUITE_OUT_DIR)) 
+        self.assertTrue(os.path.exists(fpath),
+            msg=msg.Message.notFound(obj.name(), bt.TESTSUITE_OUT_DIR)) 
         self.assertEqual(bt._16MB, os.path.getsize(fpath), msg=msg.Message.mismatchSize(fpath))
 
     @unittest.skip
     def test_get_multi(self):
+        """Get multiple objects from a bucket."""
         bucket = b.Bucket(1)
         bucket.make()
         smallObj = o.Object(o.Size._1KB)
@@ -185,15 +185,17 @@ class TestObject(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
         fpathSmall = f'{bt.TESTSUITE_OUT_DIR}/{smallObj.name()}'
-        self.assertTrue(os.path.exists(fpathSmall), msg=msg.Message.notFound(smallObj.name(), bt.TESTSUITE_OUT_DIR))
+        self.assertTrue(os.path.exists(fpathSmall),
+            msg=msg.Message.notFound(smallObj.name(), bt.TESTSUITE_OUT_DIR))
         fpathLarge = f'{bt.TESTSUITE_OUT_DIR}/{largeObj.name()}'
-        self.assertTrue(os.path.exists(fpathLarge), msg=msg.Message.notFound(largObj.name(), bt.TESTSUITE_OUT_DIR))
+        self.assertTrue(os.path.exists(fpathLarge),
+            msg=msg.Message.notFound(largObj.name(), bt.TESTSUITE_OUT_DIR))
 
-        self.assertEqual(bt._1KB, os.path.getsize(fpathSmall), msg=msg.Message.mismatchSize(fpathSmall))
-        self.assertEqual(bt._16MB, os.path.getsize(fpathLarge), msg=msg.Message.mismatchSize(fpathLarge))
+        self.assertEqual(bt._1KB, os.path.getsize(fpathSmall),
+            msg=msg.Message.mismatchSize(fpathSmall))
+        self.assertEqual(bt._16MB, os.path.getsize(fpathLarge),
+            msg=msg.Message.mismatchSize(fpathLarge))
 
-    '''=== End of get object section ==='''
-        
     def test_delete(self):
         bucket = b.Bucket(1)
         bucket.make()
@@ -202,7 +204,8 @@ class TestObject(bt.BaseTest):
         args = ['del', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(bucket.isContain(obj.name()), msg=msg.Message.found(obj.name(), bucket.fullName()))
+        self.assertFalse(bucket.isContain(obj.name()),
+            msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     @unittest.skip
     def test_delete_multipart(self):
@@ -213,7 +216,8 @@ class TestObject(bt.BaseTest):
         args = ['del', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(bucket.isContain(obj.name()), msg=msg.Message.found(obj.name(), bucket.fullName()))
+        self.assertFalse(bucket.isContain(obj.name()),
+            msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     def test_remove(self):
         bucket = b.Bucket(1)
@@ -223,7 +227,8 @@ class TestObject(bt.BaseTest):
         args = ['rm', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(bucket.isContain(obj.name()), msg=msg.Message.found(obj.name(), bucket.fullName()))
+        self.assertFalse(bucket.isContain(obj.name()),
+            msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     @unittest.skip
     def test_remove_multipart(self):
@@ -234,9 +239,11 @@ class TestObject(bt.BaseTest):
         args = ['rm', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(bucket.isContain(obj.name()), msg=msg.Message.found(obj.name(), bucket.fullName()))
+        self.assertFalse(bucket.isContain(obj.name()),
+            msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     def test_delete_all_recursively(self):
+        """Recursively delete all objects from a bucket."""
         bucket = b.Bucket(1)
         bucket.make()
         obj1 = o.Object(o.Size._1KB)
@@ -249,6 +256,7 @@ class TestObject(bt.BaseTest):
         self.assertTrue(bucket.isEmpty(), msg=msg.Message.notEmpty(bucket.fullName()))
 
     def test_remove_all_recursively(self):
+        """Recursively remove (the same as delete) all objects from a bucket."""
         bucket = b.Bucket(1)
         obj1 = o.Object(o.Size._1KB)
         bucket.put(obj1)
@@ -259,11 +267,8 @@ class TestObject(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         self.assertTrue(bucket.isEmpty(), msg=msg.Message.notEmpty(bucket.fullName()))
 
-    '''>>> End of delete section <<<'''
-
-    '''<<< Copy object section >>>''' 
-
     def test_copy_between_buckets(self):
+        """Copy an object from a bucket to another."""
         srcBucket = b.Bucket(1)
         srcBucket.make()
         destBucket = b.Bucket(2)
@@ -279,6 +284,7 @@ class TestObject(bt.BaseTest):
 
     @unittest.skip
     def test_copy_multipart_between_buckets(self):
+        """Copy a multipart object from a bucket to another."""
         srcBucket = b.Bucket(1)
         srcBucket.make()
         destBucket = b.Bucket(2)
@@ -293,10 +299,8 @@ class TestObject(bt.BaseTest):
         self.assertTrue(destBucket.isContain(obj.name()),
             msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
 
-    '''>>> End of copy section <<<'''
-
-    '''<<< Move object section >>>''' 
     def test_move(self):
+        """Move an object from a bucket to another."""
         srcBucket = b.Bucket(1)
         srcBucket.make()
         destBucket = b.Bucket(2)
@@ -313,6 +317,7 @@ class TestObject(bt.BaseTest):
             msg=msg.Message.inSource(obj.name(), srcBucket.fullName()))
 
     def test_move_multi(self):
+        """Move multiple objects from a bucket to another."""
         srcBucket = b.Bucket(1)
         srcBucket.make()
         destBucket = b.Bucket(2)
@@ -330,8 +335,6 @@ class TestObject(bt.BaseTest):
         self.assertTrue(destBucket.isContain(obj2.name()), msg=msg.Message.notInDest(obj2.name(), destBucket.fullName()))
         self.assertFalse(srcBucket.isContain(obj1.name()), msg=msg.Message.inSource(obj1.name(), srcBucket.fullName()))
         self.assertFalse(srcBucket.isContain(obj2.name()), msg=msg.Message.inSource(obj2.name(), srcBucket.fullName()))
-
-    '''>>> End of move section <<<'''
 
 if __name__ == '__main__':
     unittest.main()
