@@ -1,10 +1,12 @@
 import getpass
 import sys
 
-# import locals
-import base_test as bt
+# local imports
+import base_test as bt # required to see PATH_TO_S3CMD used in the next instruction
 
-sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
+if bt.PATH_TO_S3CMD not in sys.path:
+    sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
+
 import S3.ExitCodes as xcodes
 
 class Bucket:

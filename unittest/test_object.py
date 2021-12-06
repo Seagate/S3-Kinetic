@@ -4,12 +4,18 @@ import sys
 import unittest
 
 # local imports
+import base_test as bt # required to see PATH_TO_S3CMD used in the next instruction
+if bt.PATH_TO_S3CMD not in sys.path:
+    sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
+
+import S3.ExitCodes as xcodes
+
+# local imports
 import base_test as bt
 import object as o
 import bucket as b
 import message as msg
 
-sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
 import S3.ExitCodes as xcodes
 
 class TestObject(bt.BaseTest):

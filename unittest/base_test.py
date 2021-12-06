@@ -6,14 +6,15 @@ from subprocess import Popen, PIPE, STDOUT
 import sys
 import unittest
 
-PATH_TO_S3CMD = '../s3cmd'     # place here for the next line
-sys.path.append(PATH_TO_S3CMD) # required to see S3.ExitCodes
-import S3.ExitCodes as xcodes
+PATH_TO_S3CMD = '../s3cmd' # required for the next instruction
+if PATH_TO_S3CMD not in sys.path:
+    sys.path.append(PATH_TO_S3CMD) # required to see S3.ExitCodes
 
 #local imports
 import bucket as b
 import object as o
 
+# Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
 TESTSUITE_OUT_DIR = 'testsuite-out'
 TESTSUITE_DAT_DIR = 'testsuite-dat'

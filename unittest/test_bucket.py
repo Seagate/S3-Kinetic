@@ -3,13 +3,15 @@ import shutil
 import sys
 import unittest
 
-import base_test as bt
+import base_test as bt # require base_test to see PATH_TO_S3CMD
+if bt.PATH_TO_S3CMD not in sys.path:
+    sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
+import S3.ExitCodes as xcodes
+
+# local imports
 import bucket as b
 import object as o
 import message as msg
-
-sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
-import S3.ExitCodes as xcodes
 
 class TestBucket(bt.BaseTest):
     '''
