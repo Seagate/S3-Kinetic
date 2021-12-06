@@ -30,10 +30,10 @@ def executeS3cmd(args, stdin=None):
     return result
 
 class BaseTest(unittest.TestCase):
+    """Base class for test classes."""
+    '''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    '''
-    Base class for test classes
     '''
     @classmethod
     def setUpClass(cls):
@@ -61,10 +61,8 @@ class BaseTest(unittest.TestCase):
 
     @classmethod
     def execute(cls, args, stdin=None):
+        """Execute s3cmd."""
         return executeS3cmd(args, stdin)
 
     def tearDown(self):
-        '''
-        Clean up anything used by this class
-        '''
         self.removeAllTestBuckets()

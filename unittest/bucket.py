@@ -8,7 +8,15 @@ sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
 import S3.ExitCodes as xcodes
 
 class Bucket:
+    """A class used to represent bucket."""
+
     def __init__(self, name, nameType='suffix'):
+        """Initialize this bucket.
+
+        Parameters:
+            name     -- bucket name suffix or fullname
+            nameType --- 'suffix' or 'full' bucket name (prefix with s3://) (default is 'suffix')
+        """
         if nameType == 'suffix':
             self.__suffix = name 
             self.__name = f"{bt.BUCKET_PREFIX}{self.__suffix}"
@@ -26,6 +34,7 @@ class Bucket:
         return (result.returncode == xcodes.EX_OK and result.stdout.find(self.fullName()) == -1)
 
     def isContain(self, aName):
+        """Return True if this bucket contain the specified object, False otherwise."""
         objFullName = f'{self.fullName()}/{aName}'
         args = ['la', objFullName]
         result = bt.executeS3cmd(args)
