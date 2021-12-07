@@ -12,9 +12,9 @@ import S3.ExitCodes as xcodes
 
 # local imports
 import base_test as bt
-import object as o
 import bucket as b
 import message as msg
+import object as o
 
 import S3.ExitCodes as xcodes
 
