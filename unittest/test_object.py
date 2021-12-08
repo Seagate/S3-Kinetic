@@ -71,7 +71,7 @@ class TestObject(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(),
+        self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName())) 
         
     def test_put_stdin(self):
@@ -86,7 +86,7 @@ class TestObject(bt.BaseTest):
         f.close()
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(),
+        self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
         
     def test_put_multipart(self):
@@ -98,7 +98,7 @@ class TestObject(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
         obj.setBucket(bucket)
-        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(),
+        self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
 
     def test_put_multipart_stdin(self):
@@ -113,7 +113,7 @@ class TestObject(bt.BaseTest):
         f.close()
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
-        self.assertTrue(bucket.isContain(obj.name()), msg=msg.Message.notFound(obj.name(),
+        self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
 
     def test_put_multi(self):
@@ -127,9 +127,9 @@ class TestObject(bt.BaseTest):
         obj1.setBucket(bucket)
         obj2.setBucket(bucket)
         # verify the file was stored
-        self.assertTrue(bucket.isContain(obj1.name()), msg=msg.Message.notFound(obj1.name(),
+        self.assertTrue(bucket.doesContain(obj1.name()), msg=msg.Message.notFound(obj1.name(),
             bucket.fullName()))
-        self.assertTrue(bucket.isContain(obj2.name()), msg=msg.Message.notFound(obj2.name(),
+        self.assertTrue(bucket.doesContain(obj2.name()), msg=msg.Message.notFound(obj2.name(),
             bucket.fullName()))
         
     @unittest.skip
@@ -210,7 +210,7 @@ class TestObject(bt.BaseTest):
         args = ['del', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(bucket.isContain(obj.name()),
+        self.assertFalse(bucket.doesContain(obj.name()),
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     @unittest.skip
@@ -222,7 +222,7 @@ class TestObject(bt.BaseTest):
         args = ['del', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(bucket.isContain(obj.name()),
+        self.assertFalse(bucket.doesContain(obj.name()),
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     def test_remove(self):
@@ -233,7 +233,7 @@ class TestObject(bt.BaseTest):
         args = ['rm', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(bucket.isContain(obj.name()),
+        self.assertFalse(bucket.doesContain(obj.name()),
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     @unittest.skip
@@ -245,7 +245,7 @@ class TestObject(bt.BaseTest):
         args = ['rm', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertFalse(bucket.isContain(obj.name()),
+        self.assertFalse(bucket.doesContain(obj.name()),
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     def test_delete_all_recursively(self):
@@ -285,7 +285,7 @@ class TestObject(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         obj.setBucket(destBucket)
-        self.assertTrue(destBucket.isContain(obj.name()),
+        self.assertTrue(destBucket.doesContain(obj.name()),
             msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
 
     @unittest.skip
@@ -302,7 +302,7 @@ class TestObject(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         obj.setBucket(destBucket)
-        self.assertTrue(destBucket.isContain(obj.name()),
+        self.assertTrue(destBucket.doesContain(obj.name()),
             msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
 
     def test_move(self):
@@ -317,9 +317,9 @@ class TestObject(bt.BaseTest):
         args = ['mv', obj.fullName(), destBucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertTrue(destBucket.isContain(obj.name()),
+        self.assertTrue(destBucket.doesContain(obj.name()),
             msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
-        self.assertFalse(srcBucket.isContain(obj.name()),
+        self.assertFalse(srcBucket.doesContain(obj.name()),
             msg=msg.Message.inSource(obj.name(), srcBucket.fullName()))
 
     def test_move_multi(self):
@@ -337,10 +337,10 @@ class TestObject(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
 
-        self.assertTrue(destBucket.isContain(obj1.name()), msg=msg.Message.notInDest(obj1.name(), destBucket.fullName()))
-        self.assertTrue(destBucket.isContain(obj2.name()), msg=msg.Message.notInDest(obj2.name(), destBucket.fullName()))
-        self.assertFalse(srcBucket.isContain(obj1.name()), msg=msg.Message.inSource(obj1.name(), srcBucket.fullName()))
-        self.assertFalse(srcBucket.isContain(obj2.name()), msg=msg.Message.inSource(obj2.name(), srcBucket.fullName()))
+        self.assertTrue(destBucket.doesContain(obj1.name()), msg=msg.Message.notInDest(obj1.name(), destBucket.fullName()))
+        self.assertTrue(destBucket.doesContain(obj2.name()), msg=msg.Message.notInDest(obj2.name(), destBucket.fullName()))
+        self.assertFalse(srcBucket.doesContain(obj1.name()), msg=msg.Message.inSource(obj1.name(), srcBucket.fullName()))
+        self.assertFalse(srcBucket.doesContain(obj2.name()), msg=msg.Message.inSource(obj2.name(), srcBucket.fullName()))
 
 if __name__ == '__main__':
     unittest.main()

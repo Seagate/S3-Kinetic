@@ -46,7 +46,7 @@ class Bucket:
         resultStrList = self.__strToList(result.stdout)
         return (result.returncode == xcodes.EX_OK and self.fullName() not in resultStrList)
 
-    def isContain(self, aName):
+    def doesContain(self, aName):
         """Return True if this bucket contain the specified object, False otherwise."""
         objFullName = f'{self.fullName()}/{aName}'
         args = ['la', objFullName]
@@ -54,7 +54,7 @@ class Bucket:
         resultStrList = self.__strToList(result.stdout)
         return (result.returncode == xcodes.EX_OK and objFullName in resultStrList)
 
-    def isExist(self):
+    def doesExist(self):
         args = ['ls']
         result = bt.executeS3cmd(args)
         resultStrList = self.__strToList(result.stdout)
@@ -67,13 +67,13 @@ class Bucket:
         return self.__fullName
 
     def make(self, refresh=True):
-        if not self.isExist():
+        if not self.doesExist():
             args = ['mb', self.fullName()]
             bt.executeS3cmd(args)
         elif refresh:
             args = ['del', '--recursive', '--force', self.fullName()]
             bt.executeS3cmd(args)
-        return self.isExist()            
+        return self.doesExist()            
 
     def put(self, obj, newName=None):
 

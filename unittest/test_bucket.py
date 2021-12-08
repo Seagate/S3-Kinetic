@@ -31,14 +31,14 @@ class TestBucket(bt.BaseTest):
         args = ['mb', bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertTrue(bucket.isExist(), msg=msg.Message.notFound(bucket.fullName()))
+        self.assertTrue(bucket.doesExist(), msg=msg.Message.notFound(bucket.fullName()))
 
     def test_make_invalid(self):
         bucket = b.Bucket('EU')
         args = ['mb', '--bucket-location=EU', bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_USAGE, msg=result.stdout)
-        self.assertFalse(bucket.isExist(), msg=msg.Message.found(bucket.fullName()))
+        self.assertFalse(bucket.doesExist(), msg=msg.Message.found(bucket.fullName()))
 
     def test_make_multi(self):
         # create 2 buckets
@@ -47,8 +47,8 @@ class TestBucket(bt.BaseTest):
         args = ['mb', bucket1.fullName(), bucket2.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertTrue(bucket1.isExist(), msg=msg.Message.notFound(bucket1.fullName()))
-        self.assertTrue(bucket2.isExist(), msg=msg.Message.notFound(bucket2.fullName()))
+        self.assertTrue(bucket1.doesExist(), msg=msg.Message.notFound(bucket1.fullName()))
+        self.assertTrue(bucket2.doesExist(), msg=msg.Message.notFound(bucket2.fullName()))
 
     def test_make_exist_bucket(self):
         bucket = b.Bucket(1)
@@ -107,7 +107,7 @@ class TestBucket(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify bucket removed
-        self.assertFalse(bucket.isExist(), msg=msg.Message.found(bucket.fullName()))
+        self.assertFalse(bucket.doesExist(), msg=msg.Message.found(bucket.fullName()))
 
     def test_remove_multi_empty(self):
         # create 2 bucket
@@ -120,8 +120,8 @@ class TestBucket(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify buckets removed
-        self.assertFalse(bucket1.isExist(), msg=msg.Message.found(bucket1.fullName()))
-        self.assertFalse(bucket2.isExist(), msg=msg.Message.found(bucket2.fullName()))
+        self.assertFalse(bucket1.doesExist(), msg=msg.Message.found(bucket1.fullName()))
+        self.assertFalse(bucket2.doesExist(), msg=msg.Message.found(bucket2.fullName()))
 
     def test_remove_single_non_empty(self):
         # create a bucket
@@ -135,7 +135,7 @@ class TestBucket(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify bucket removed
-        self.assertFalse(bucket.isExist(), msg=msg.Message.notFound(bucket.fullName()))
+        self.assertFalse(bucket.doesExist(), msg=msg.Message.notFound(bucket.fullName()))
 
     def test_remove_multi_non_empty(self):
         # create 2 bucket
@@ -153,8 +153,8 @@ class TestBucket(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify bucket removed
-        self.assertFalse(bucket1.isExist(), msg=msg.Message.found(bucket1.fullName()))
-        self.assertFalse(bucket2.isExist(), msg=msg.Message.found(bucket2.fullName()))
+        self.assertFalse(bucket1.doesExist(), msg=msg.Message.found(bucket1.fullName()))
+        self.assertFalse(bucket2.doesExist(), msg=msg.Message.found(bucket2.fullName()))
 
 if __name__ == '__main__':
     unittest.main()
