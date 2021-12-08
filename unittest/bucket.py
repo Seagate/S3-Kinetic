@@ -37,7 +37,7 @@ class Bucket:
         aList = aStr.split(sep[0])
         for i in range(1, len(sep)):
             # convert all string items in aList to lists, then put them together to form a list of all strings
-            aList = sum([item.split('\n') for item in aList], [])
+            aList = sum([item.split(sep[i]) for item in aList], [])
         return aList
 
     def isEmpty(self):
