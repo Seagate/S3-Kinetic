@@ -30,22 +30,35 @@ class Bucket:
         else:
             raise Exception(f'Invalid name type: {nameType}.  Choices: "suffix" and "full"')
 
+    def __strToList(self, aStr, sep=[' ', '\n']):
+        """Convert a string a list of string given a list of separators"""
+        if sep is None or len(sep) == 0:
+            return aStr
+        # convert all string items in tmpList to lists, then put them together to form
+        aList = aStr.split(sep[0])
+        for i in range(1, len(sep)): #sepChar in sep:
+            aList = sum([item.split('\n') for item in aList], [])
+        return aList
+
     def isEmpty(self):
         args = ['la', self.fullName()]
         result = bt.executeS3cmd(args)
-        return (result.returncode == xcodes.EX_OK and result.stdout.find(self.fullName()) == -1)
+        resultStrList = self.__strToList(result.stdout)
+        return (result.returncode == xcodes.EX_OK and self.fullName() not in resultStrList)
 
     def isContain(self, aName):
         """Return True if this bucket contain the specified object, False otherwise."""
         objFullName = f'{self.fullName()}/{aName}'
         args = ['la', objFullName]
         result = bt.executeS3cmd(args)
-        return (result.returncode == xcodes.EX_OK and result.stdout.find(objFullName) != -1)
+        resultStrList = self.__strToList(result.stdout)
+        return (result.returncode == xcodes.EX_OK and objFullName in resultStrList)
 
     def isExist(self):
         args = ['ls']
         result = bt.executeS3cmd(args)
-        return (result.returncode == xcodes.EX_OK and result.stdout.find(self.fullName()) != -1)
+        resultStrList = self.__strToList(result.stdout)
+        return (result.returncode == xcodes.EX_OK and self.fullName() in resultStrList)
 
     def name(self):
         return self.__name
