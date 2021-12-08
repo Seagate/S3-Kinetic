@@ -40,28 +40,11 @@ class TestObject(bt.BaseTest):
         obj = o.Object(o.Size._16MB)
         os.system(f'dd if={bt.IN_FILE} of={obj.fullFileName()} bs=1M count=16 > /dev/null 2>&1')
 
-        bucket1 = b.Bucket(1)
-        bucket2 = b.Bucket(2)
-        bucket1.make()
-        bucket2.make()
-
     def tearDown(self):
         # Bypass super().tearDown().  We don't want to remove buckets
 
-        # Remove contents of test buckets
-        self.removeContentAllTestBuckets()
-
-    @classmethod
-    def removeContentAllTestBuckets(cls):
-        args = ['ls']
-        result = cls.execute(args)
-        flist = result.stdout.split(' ')
-        for f in flist:
-            if not f.startswith(f'{bt.S3}{bt.BUCKET_PREFIX}'):
-                continue
-            itemList = f.split('\n')
-            bucket = b.Bucket(itemList[0], nameType='full')
-            bucket.remove()
+        # Remove all test buckets
+        self.removeAllTestBuckets()
 
     def test_put(self):
         bucket = b.Bucket(1)
