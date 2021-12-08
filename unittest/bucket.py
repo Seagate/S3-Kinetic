@@ -34,9 +34,9 @@ class Bucket:
         """Convert a string a list of string given a list of separators"""
         if sep is None or len(sep) == 0:
             return aStr
-        # convert all string items in tmpList to lists, then put them together to form
         aList = aStr.split(sep[0])
-        for i in range(1, len(sep)): #sepChar in sep:
+        for i in range(1, len(sep)):
+            # convert all string items in aList to lists, then put them together to form a list of all strings
             aList = sum([item.split('\n') for item in aList], [])
         return aList
 

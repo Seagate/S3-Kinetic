@@ -34,7 +34,7 @@ class Message:
     
     @classmethod
     def wrongSize(cls, arg):
-        return cls.MISMATCH_SIZE % (arg)
+        return cls.SIZE_MISMATCH % (arg)
 
     @classmethod
     def notInDest(cls, arg1, arg2):
