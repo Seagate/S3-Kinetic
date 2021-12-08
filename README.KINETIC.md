@@ -6,6 +6,10 @@ This program uses the frontend of MinIO to send/receive S3 objects and, as the b
 
 ---
 
+## Requirements                                                                                      
+    Golang                                                                                           
+    Kernel Memory Module -- See kineticd README.md, section Loading MemMgr Module, for instruction.  
+
 ## Installation
 
 **Notes for version 1.7**: 

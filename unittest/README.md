@@ -5,8 +5,6 @@
     python  (s3cmd does not work with python3)
 
 ## Setup
-    Install memory module kernel object.
-        See kineticd README.md, section Loading MemMgr Module, for instruction.
     Start minio-kinetic
 
 ## Execution 
