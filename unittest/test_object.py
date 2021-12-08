@@ -40,12 +40,6 @@ class TestObject(bt.BaseTest):
         obj = o.Object(o.Size._16MB)
         os.system(f'dd if={bt.IN_FILE} of={obj.fullFileName()} bs=1M count=16 > /dev/null 2>&1')
 
-    def tearDown(self):
-        # Bypass super().tearDown().  We don't want to remove buckets
-
-        # Remove all test buckets
-        self.removeAllTestBuckets()
-
     def test_put(self):
         bucket = b.Bucket(1)
         bucket.make()
