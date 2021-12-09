@@ -1,12 +1,10 @@
 #!/bin/bash
 #Command:
-# s3kinetic ARM LAMARRKV
-# s3kinetic X86 SMR
-# s3kinetic X86 NONSMR
-# $1 X86 or ARM
-# $2 kineticd directory (if $1==X86) or LAMARRKV (if $1==ARM)
-# $3 uboot-linux directoty (if $1==ARM)
-# $4 kinetic directory (if $1==ARM)
+# s3kinetic ARG1 ARG2 ARG3 ARG4
+# ARG1 =  X86 or ARM
+# ARG2 =  kineticd directory (if ARG1==X86) or LAMARRKV (if ARG1==ARM)
+# ARG3 =  uboot-linux directoty (if ARG1==ARM)
+# ARG4 =  kinetic directory (if ARG1==ARM)
 # Ex:  ./s3kinetic.sh X86 /home/thai/kineticd
 #      ./s3kinetic.sh ARM LAMARRKV ~/uboot_linux ~/kineticd
 git clean -xdf -e bin
@@ -32,7 +30,7 @@ else
     	echo "ARM"
 	cd $4
 	git clean -xdf
-    	source $3/envsetup.sh
+	source $3/envsetup.sh
     	cmake -DPRODUCT="$2"
     	make
     	./cplibarm.sh $albanydir/lib
