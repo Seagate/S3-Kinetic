@@ -3,53 +3,67 @@ import os
 import shutil
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
+import sys
 import unittest
 
-#--- define constants ---
+PATH_TO_S3CMD = '../s3cmd' # required for the next instruction
+if PATH_TO_S3CMD not in sys.path:
+    sys.path.append(PATH_TO_S3CMD) # required to see S3.ExitCodes
+
+#local imports
+import bucket as b
+import object as o
+
+# Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
+DOWNLOAD_DIR = 'test-download'
+DAT_DIR = 'test-dat'
 IN_FILE = '/dev/urandom'
 PYTHON = 'python'  # s3cmd does not work with python3
-PATH_TO_S3CMD = '../s3cmd'
 S3 = 's3://'
 S3CMD = f'{PATH_TO_S3CMD}/s3cmd'
-TESTSUITE_OUT_DIR = 'testsuite-out'
-_1MB_FN = '_1MB.bin'
 
-#--- define methods ---
-def makeBucketName(suffix):
-    return f"{BUCKET_PREFIX}{suffix}"
-
-def get_1MB_fpath():
-    return f'{TESTSUITE_OUT_DIR}/{_1MB_FN}'
+def executeS3cmd(args, stdin=None):
+    args.insert(0, PYTHON)
+    args.insert(1, S3CMD)
+    result = subprocess.run(args, stdin=stdin, stdout=PIPE, stderr=STDOUT, universal_newlines=True,
+        close_fds=True)
+    return result
 
 class BaseTest(unittest.TestCase):
+    """Base class for test classes."""
     '''
-    Base class for test classes
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
     '''
-    def tearDown(self):
-        '''
-        Clean up anything used by this class
-        '''
-        self._removeAllTestBuckets()
+    @classmethod
+    def setUpClass(cls):
+        cls.removeAllTestBuckets()
+        # create a clean testsuite output directory
+        if os.path.isdir(DAT_DIR):
+            shutil.rmtree(DAT_DIR)
 
-    def _execute(self, args):
-        args.insert(0, PYTHON)
-        args.insert(1, S3CMD)
-        result = subprocess.run(args, stdout=PIPE, stderr=STDOUT, universal_newlines=True,
-            close_fds=True)
-        return result
+        os.mkdir(DAT_DIR)
+        # create a 1M file in the testsuite directory
+        obj = o.Object(o.Size._1MB)
+        os.system(f'dd if={IN_FILE} of={obj.fullFileName()} bs=1M count=1 > /dev/null 2>&1')
 
-    def _removeBucket(self, name):
-        args = ['rb', '--recursive', name]
-        self._execute(args)
-
-    def _removeAllTestBuckets(self):
-        bucket = f'{S3}{BUCKET_PREFIX}'
+    @classmethod
+    def removeAllTestBuckets(cls):
         args = ['ls']
-        result = self._execute(args)
+        result = cls.execute(args)
         flist = result.stdout.split(' ')
         for f in flist:
-            if not f.startswith(bucket):
+            if not f.startswith(f'{S3}{BUCKET_PREFIX}'):
                 continue
             itemList = f.split('\n')
-            self._removeBucket(itemList[0])
+            bucket = b.Bucket(itemList[0], nameType='full')
+            bucket.remove()
+
+    @classmethod
+    def execute(cls, args, stdin=None):
+        """Execute s3cmd."""
+        return executeS3cmd(args, stdin)
+
+    def tearDown(self):
+        self.removeAllTestBuckets()

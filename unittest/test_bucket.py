@@ -3,16 +3,15 @@ import shutil
 import sys
 import unittest
 
-import base_test as bt
-
-sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
+import base_test as bt # require base_test to see PATH_TO_S3CMD
+if bt.PATH_TO_S3CMD not in sys.path:
+    sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
 import S3.ExitCodes as xcodes
 
-# define constants
-_1MB = 1048576
-
-ERR_NOT_FOUND = 'ERROR: %s not found'
-ERR_FOUND = 'ERROR: %s found'
+# local imports
+import bucket as b
+import object as o
+import message as msg
 
 class TestBucket(bt.BaseTest):
     '''
@@ -26,190 +25,136 @@ class TestBucket(bt.BaseTest):
        
     A bucket could be seen as a folder in which objects can be stored
     ''' 
-    @classmethod
-    def setUpClass(self):
-        # create a clean testsuite output directory
-        if os.path.isdir(bt.TESTSUITE_OUT_DIR):
-            shutil.rmtree(bt.TESTSUITE_OUT_DIR)
-
-        os.mkdir(bt.TESTSUITE_OUT_DIR)
-        # create a 1M file in the testsuite directory
-        os.system(f'dd if={bt.IN_FILE} of={bt.get_1MB_fpath()} bs=1M count=1 > /dev/null 2>&1')
-        
 
     def test_make_single(self):
-        # create a single bucket
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['mb', bucket]
-        result = self._execute(args)
+        bucket = b.Bucket(1)
+        args = ['mb', bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify bucket was created
-        args = ['ls']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout) 
-        self.assertNotEqual(result.stdout.find(bucket), -1, msg=ERR_NOT_FOUND%(bucket)) 
+        self.assertTrue(bucket.doesExist(), msg=msg.Message.notFound(bucket.fullName()))
 
     def test_make_invalid(self):
-        args = ['mb', '--bucket-location=EU', f'{bt.S3}{bt.makeBucketName("EU")}']
-        result = self._execute(args)
+        bucket = b.Bucket('EU')
+        args = ['mb', '--bucket-location=EU', bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_USAGE, msg=result.stdout)
+        self.assertFalse(bucket.doesExist(), msg=msg.Message.found(bucket.fullName()))
 
     def test_make_multi(self):
         # create 2 buckets
-        bucket1 = f'{bt.S3}{bt.makeBucketName(1)}'
-        bucket2 = f'{bt.S3}{bt.makeBucketName(2)}'
-        args = ['mb', bucket1, bucket2]
-        result = self._execute(args)
+        bucket1 = b.Bucket(1)
+        bucket2 = b.Bucket(2)
+        args = ['mb', bucket1.fullName(), bucket2.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify buckets created
-        args = ['ls']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout) 
-        self.assertNotEqual(result.stdout.find(bucket1), -1, msg=ERR_NOT_FOUND%(bucket1)) 
-        self.assertNotEqual(result.stdout.find(bucket2), -1, msg=ERR_NOT_FOUND%(bucket2)) 
+        self.assertTrue(bucket1.doesExist(), msg=msg.Message.notFound(bucket1.fullName()))
+        self.assertTrue(bucket2.doesExist(), msg=msg.Message.notFound(bucket2.fullName()))
 
     def test_make_exist_bucket(self):
-        # make a bucket
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['mb', bucket]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        bucket = b.Bucket(1)
+        bucket.make()
         # remake the same bucket
-        args = ['mb', bucket]
-        result = self._execute(args)
+        args = ['mb', bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_CONFLICT, msg=result.stdout)
 
     def test_list(self):
         ''' List all buckets (no contents) '''
         # make a bucket
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['mb', bucket]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        bucket = b.Bucket(1)
+        bucket.make()
         # list
         args = ['ls']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout) 
-        self.assertNotEqual(result.stdout.find(bucket), -1, msg=ERR_NOT_FOUND%(bucket)) 
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        self.assertTrue(result.stdout.find(bucket.fullName()) != -1, msg=msg.Message.notFound(bucket.fullName()))
 
     def test_list_all(self):
         ''' List bucket contents '''
         # make a bucket
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['mb', bucket]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        bucket = b.Bucket(1)
+        bucket.make()
         # put an object to the bucket
-        args = ['put', bt.get_1MB_fpath(), bucket]
-        result = self._execute(args)
+        obj = o.Object(o.Size._1MB)
+        bucket.put(obj)
+        args = ['la', bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # list bucket content
-        args = ['la']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the put object seen
-        fobject = f'{bucket}/{bt._1MB_FN}'
-        self.assertNotEqual(result.stdout.find(fobject), -1, msg=ERR_NOT_FOUND%(fobject)) 
+        self.assertTrue(result.stdout.find(obj.fullName()) != -1, msg=msg.Message.notFound(obj.name(), bucket.fullName()))
 
     def test_disk_usage(self):
         ''' Report disk usage of a bucket '''
         # make a bucket
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['mb', bucket]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        bucket = b.Bucket(1)
+        bucket.make()
         # put an object to the bucket
-        args = ['put', bt.get_1MB_fpath(), f'{bucket}/{bt._1MB_FN}_1']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        args = ['put', bt.get_1MB_fpath(), f'{bucket}/{bt._1MB_FN}_2']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        obj1 = o.Object(o.Size._1MB)
+        obj2 = o.Object(o.Size._1MB)
+        bucket.put(obj1, f'{obj1.name()}_1')
+        bucket.put(obj2, f'{obj2.name()}_2')
         # disk usage
-        args = ['du', bucket]
-        result = self._execute(args)
+        args = ['du', bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertNotEqual(result.stdout.find(str(2*_1MB)), -1, msg=f'ERROR: Incorrect disk usage size')
+        self.assertNotEqual(result.stdout.find(str(2*o.Size._1MB)), -1, msg=msg.Message.wrongDiskUsage())
 
     def test_remove_single_empty(self):
         # make a bucket
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['mb', bucket]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        bucket = b.Bucket(1)
+        bucket.make()
         # remove bucket
-        args = ['rb', bucket]
-        result = self._execute(args)
+        args = ['rb', bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify bucket removed
-        args = ['ls']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout) 
-        self.assertEqual(result.stdout.find(bucket), -1, msg=ERR_FOUND%(bucket)) 
+        self.assertFalse(bucket.doesExist(), msg=msg.Message.found(bucket.fullName()))
 
     def test_remove_multi_empty(self):
         # create 2 bucket
-        bucket1 = f'{bt.S3}{bt.makeBucketName(1)}'
-        bucket2 = f'{bt.S3}{bt.makeBucketName(2)}'
-        args = ['mb', bucket1, bucket2]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        bucket1 = b.Bucket(1)
+        bucket2 = b.Bucket(2)
+        bucket1.make()
+        bucket2.make()
         # remove multiple empty buckets
-        args = ['rb', bucket1, bucket2]
-        result = self._execute(args)
+        args = ['rb', bucket1.fullName(), bucket2.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify buckets removed
-        args = ['ls']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout) 
-        self.assertEqual(result.stdout.find(bucket1), -1, msg=ERR_FOUND%(bucket1)) 
-        self.assertEqual(result.stdout.find(bucket2), -1, msg=ERR_FOUND%(bucket2)) 
+        self.assertFalse(bucket1.doesExist(), msg=msg.Message.found(bucket1.fullName()))
+        self.assertFalse(bucket2.doesExist(), msg=msg.Message.found(bucket2.fullName()))
 
     def test_remove_single_non_empty(self):
         # create a bucket
-        bucket = f'{bt.S3}{bt.makeBucketName(1)}'
-        args = ['mb', bucket]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        bucket = b.Bucket(1)
+        bucket.make()
         # put an object to the bucket
-        args = ['put', bt.get_1MB_fpath(), bucket]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        obj = o.Object(o.Size._1MB)
+        bucket.put(obj)
         # remove the bucket
-        args = ['rb', '--recursive', bucket]
-        result = self._execute(args)
+        args = ['rb', '--recursive', bucket.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify bucket removed
-        args = ['ls']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout) 
-        self.assertEqual(result.stdout.find(bucket), -1, msg=ERR_FOUND%(bucket)) 
+        self.assertFalse(bucket.doesExist(), msg=msg.Message.notFound(bucket.fullName()))
 
     def test_remove_multi_non_empty(self):
         # create 2 bucket
-        bucket1 = f'{bt.S3}{bt.makeBucketName(1)}'
-        bucket2 = f'{bt.S3}{bt.makeBucketName(2)}'
-        args = ['mb', bucket1, bucket2]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        bucket1 = b.Bucket(1)
+        bucket2 = b.Bucket(2)
+        bucket1.make()
+        bucket2.make()
         # put an object to the buckets
-        args = ['put', bt.get_1MB_fpath(), bucket1]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-
-        args = ['put', bt.get_1MB_fpath(), bucket2]
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        obj1 = o.Object(o.Size._1MB)
+        obj2 = o.Object(o.Size._1MB)
+        bucket1.put(obj1)
+        bucket2.put(obj2)
         # remove those 2 buckets
-        args = ['rb', '--recursive', bucket1, bucket2]
-        result = self._execute(args)
+        args = ['rb', '--recursive', bucket1.fullName(), bucket2.fullName()]
+        result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify bucket removed
-        args = ['ls']
-        result = self._execute(args)
-        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout) 
-        self.assertEqual(result.stdout.find(bucket1), -1, msg=ERR_FOUND%(bucket1)) 
-        self.assertEqual(result.stdout.find(bucket2), -1, msg=ERR_FOUND%(bucket2)) 
+        self.assertFalse(bucket1.doesExist(), msg=msg.Message.found(bucket1.fullName()))
+        self.assertFalse(bucket2.doesExist(), msg=msg.Message.found(bucket2.fullName()))
 
 if __name__ == '__main__':
     unittest.main()

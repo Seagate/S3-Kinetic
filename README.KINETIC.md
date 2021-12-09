@@ -6,6 +6,10 @@ This program uses the frontend of MinIO to send/receive S3 objects and, as the b
 
 ---
 
+## Requirements                                                                                      
+    Golang                                                                                           
+    Kernel Memory Module -- See kineticd README.md, section Loading MemMgr Module, for instruction.  
+
 ## Installation
 
 **Notes for version 1.7**: 
@@ -57,7 +61,7 @@ Go to the `albany-minio` folder and do the following:
 
          scp minio (or s3kinetic.X.Y) root@ip_address:/mnt/util/
 
-- ssh into Lamarrkv drive. If you encounter any issues, please, read the section `Conecting to a Serial Port` from [Kinetic Notes](https://seagatetechnology.sharepoint.com/%3Ab%3A/r/sites/gteamdrv2/kinetic/Shared%20Documents/HowTo/KineticInteractions_Includes_stepsforfw_update_locationof_slod.pdf?csf=1&web=1&e=T6QNhx). 
+- ssh into Lamarrkv drive. If you encounter any issues, please, read the section `Conecting to a Serial Port` from [Kinetic Notes]( https://seagatetechnology.sharepoint.com/%3Ab%3A/r/teams/dataflowsoftware/Shared%20Documents/Projects/Kinetic/KineticInteractions_Includes_stepsforfw_update_locationof_slod.pdf?csf=1&web=1&e=eNloKP).
 
          ssh root@ip_address
 
