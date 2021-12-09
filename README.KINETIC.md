@@ -86,9 +86,9 @@ There will be an executable 's3kinetic.arm' generated and stored in directory'./
 
 ### Under LAMARRKV or Interposer ARM:
 
-- Copy minio or s3kinetic.X (ARM version) from the `bin` folder to the Lamarrkvdrive under directory `/mnt/util`:
+- Copy s3kinetic.arm from the `bin` folder to the Lamarrkvdrive under directory `/mnt/util`:
 
-         scp minio (or s3kinetic.X) root@ip_address:/mnt/util/
+         scp s3kinetic.X root@ip_address:/mnt/util/
 
 - ssh into Lamarrkv drive. If you encounter any issues, please, read the section `Conecting to a Serial Port` from [Kinetic Notes](https://seagatetechnology.sharepoint.com/%3Ab%3A/r/sites/gteamdrv2/kinetic/Shared%20Documents/HowTo/KineticInteractions_Includes_stepsforfw_update_locationof_slod.pdf?csf=1&web=1&e=T6QNhx). 
 
@@ -113,11 +113,11 @@ There will be an executable 's3kinetic.arm' generated and stored in directory'./
 
 - Start minio by typing:
 
-          ./minio server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
+          ./s3kinetic.arm server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
 
    to turn on  `TRACE`:
 
-         ./minio --trace server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
+         ./s3kinetic.arm --trace server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
 
 - Wait till these messages appear:
 
@@ -145,7 +145,7 @@ Make sure there is a spare disk drive available. Ex /dev/sdb
 
 Type the following line:
 
-          ./minio server kinetic:skinny:sdx kineticd --store_device=/dev/sdxn
+          ./s3kinetic.x86 server kinetic:skinny:sdx kineticd --store_device=/dev/sdxn
 
 Notes: sdxn is a partition number. Ex: /dev/sdb1 
 under x86, a partition can be used for storage instead of the whole drive.            
@@ -218,7 +218,7 @@ There is s3-benchmark test.
 
 This command will allow users to run minio on a storage filesystem such as ext4 or xfs or other file systems:
 
-         ./minio (or s3kinetic.x.y) server ./datadir
+         ./minio server ./datadir
 
 where `datadir` is a data directory. This directory can be aregular directory or a directory that is mounted to a storagepartition.
 
