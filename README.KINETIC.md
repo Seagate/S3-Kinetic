@@ -82,13 +82,13 @@ There will be an executable 's3kinetic.arm' generated and stored in directory'./
         
 ---
 
-## Running MinIO or s3kinetic.X:
+## Running s3kinetic.arm:
 
 ### Under LAMARRKV or Interposer ARM:
 
 - Copy s3kinetic.arm from the `bin` folder to the Lamarrkvdrive under directory `/mnt/util`:
 
-         scp s3kinetic.X root@ip_address:/mnt/util/
+         scp ./bin/s3kinetic.arm root@ip_address:/mnt/util/
 
 - ssh into Lamarrkv drive. If you encounter any issues, please, read the section `Conecting to a Serial Port` from [Kinetic Notes](https://seagatetechnology.sharepoint.com/%3Ab%3A/r/sites/gteamdrv2/kinetic/Shared%20Documents/HowTo/KineticInteractions_Includes_stepsforfw_update_locationof_slod.pdf?csf=1&web=1&e=T6QNhx). 
 
@@ -214,7 +214,7 @@ There is s3-benchmark test.
 
 ---
 
-## Running MinIO (or s4kinetic.x) with file system (ext4 or xfs)
+## Running MinIO with file system (ext4 or xfs)
 
 This command will allow users to run minio on a storage filesystem such as ext4 or xfs or other file systems:
 
