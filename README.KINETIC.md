@@ -41,19 +41,20 @@ in kineticd:
 	
 Otherwise use the following command (assuming that the current directory is albany-minio):
          
-    ./s3kinetic.sh ARG1 ARG2 ARG3 ARG4
+    ./s3kinetic.sh ARG1 ARG2
 	   
-    ARG1 = uboot-linux directory
+    ARG1 = X86
     ARG2 = kineticd directory
-    ARG3 = X86 or ARM
-    ARG4 = SMR or NONSMR or LAMARRKV
 
-    ex: My uboot-linux, kineticd are under /home/myhomedir/uboot-linux and /home/myhomedir/kineticd
+    ex: My kineticd is under /home/myhomedir/kineticd
 
-    ./s3kinetic.sh ~/uboot-linux ~/kineticd X86 SMR
+    ./s3kinetic.sh X86 /home/myhomedir/kineticd
+    
+    or
 
-In both cases, there will be two executable files name 'minio' and 's3kinetic.x86' will be generated
-and stored in directory './bin'.
+    ./s3kinetic.sh X86 ~/kineticd
+
+There will be an executable 's3kinetic.x86' generated and stored in directory './bin'.
   
 ### ARM
 If this is the first time, do the following:
@@ -64,17 +65,16 @@ If this is the first time, do the following:
     - Go to the `albany-minio` folder and do the following:
        ./s3kinetic.sh ARG1 ARG2 ARG3 ARG4
 
-       ARG1 = uboot-linux directory
-       ARG2 = kineticd directory
-       ARG3 = ARM
-       ARG4 = LAMARRKV
+       ARG1 = ARM
+       ARG2 = LAMARRKV
+       ARG3 = uboot-linux directory
+       ARG4 = kineticd directory
 
        ex: My uboot-linux, kineticd are under /home/myhomedir/uboot-linux and /home/myhomedir/kineticd
 
-       ./s3kinetic.sh ~/uboot-linux ~/kineticd ARM LAMARRKV
+       ./s3kinetic.sh ARM LAMARRKV  ~/uboot-linux ~/kineticd
 
-There will be two executable files name 'minio' and 's3kinetic.arm' will be generated
-and stored in directory'./bin'.
+There will be an executable 's3kinetic.arm' generated and stored in directory'./bin'.
 
         Notes:
           After the first time, if there is no change in uboot or kineticd, quick way to compile is just typing:
