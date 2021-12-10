@@ -113,7 +113,7 @@ There will be an executable 's3kinetic.arm' generated and stored in directory'./
 
 - Start minio by typing:
 
-          ./s3kinetic.arm server kinetic:skinny:sdx kineticd --store_device=/dev/sda
+          ./s3kinetic.arm server kinetic:skinny:sda kineticd --store_device=/dev/sda
 
    to turn on  `TRACE`:
 
