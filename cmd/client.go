@@ -571,9 +571,7 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
         } else { // Don't know the size, allocate largest size
             bvalue = make([]byte, 5*1024*1024 + 2*4096)
         }
-        if (requestSize == -1) {
-            requestSize = objSize
-        } else if (requestSize >  objSize) {
+        if (requestSize == -1 || requestSize >  objSize) {
             requestSize = objSize
         }
         if (offset == 0 && requestSize == objSize) {
