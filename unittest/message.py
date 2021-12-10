@@ -33,7 +33,7 @@ class Message:
         return cls.NOT_EMPTY % (arg)
     
     @classmethod
-    def wrongSize(cls, arg):
+    def sizeMismatch(cls, arg):
         return cls.SIZE_MISMATCH % (arg)
 
     @classmethod
