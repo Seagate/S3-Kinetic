@@ -94,9 +94,9 @@ There will be an executable 's3kinetic.arm' generated and stored in directory'./
 
          ssh root@ip_address
 
-- Go to directory `/mnt/util`:
+- Go to directory `/mnt/util` (for kineticd version 09.xx.yy) or /kinetic/util (for kineticd version 10.xx.yy):
 
-         cd /mnt/util
+         cd /mnt/util      or cd /kinetic/util
 
 - Kill the running kineticd:
 
@@ -113,11 +113,11 @@ There will be an executable 's3kinetic.arm' generated and stored in directory'./
 
 - Start minio by typing:
 
-          ./s3kinetic.arm server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
+          ./s3kinetic.arm server kinetic:skinny:sdx kineticd --store_device=/dev/sda
 
    to turn on  `TRACE`:
 
-         ./s3kinetic.arm --trace server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
+         ./s3kinetic.arm --trace server kinetic:skinny:sdx kineticd --store_device=/dev/sda
 
 - Wait till these messages appear:
 
@@ -137,6 +137,7 @@ There will be an executable 's3kinetic.arm' generated and stored in directory'./
           .NET:       https://docs.min.io/docs/dotnet-client-quickstart-guide
           Detected default credentials 'minioadmin:minioadmin', please change the credentials immediately using 'MINIO_ACCESS_KEY' and 'MINIO_SECRET_KEY'
 
+Before trying any command, make sure the date/time of the client is the same as the server.
 It is ready to accept commands.
 If those messages are not shown, using interactive python to do instant_secure_erase, then restart 'minio'.
             
@@ -145,7 +146,7 @@ Make sure there is a spare disk drive available. Ex /dev/sdb
 
 Type the following line:
 
-          ./s3kinetic.X86 server kinetic:skinny:sdx kineticd --store_device=/dev/sdxn
+          sudo ./s3kinetic.X86 server kinetic:skinny:sdx kineticd --store_device=/dev/sdxn
 
 Notes: sdxn is a partition number. Ex: /dev/sdb1 
        Under X86, a partition can be used for storage instead of the whole drive.            

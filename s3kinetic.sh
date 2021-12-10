@@ -21,19 +21,19 @@ then
 		sudo rm -r x86_package_install
 		./x86_package_installation.sh
 	fi
-        cmake -DPRODUCT=X86
+	cmake -DPRODUCT=X86
 	make
 	./cplibx86.sh $albanydir/lib
 	cd $albanydir
 	make -f Makefile.x86
 else
-    	echo "ARM"
+	echo "ARM"
 	cd $4
 	git clean -xdf
 	source $3/envsetup.sh
-    	cmake -DPRODUCT="$2"
-    	make
-    	./cplibarm.sh $albanydir/lib
-    	cd $albanydir
-    	make -f Makefile.arm
+	cmake -DPRODUCT="$2"
+	make
+	./cplibarm.sh $albanydir/lib
+	cd $albanydir
+	make -f Makefile.arm
 fi
