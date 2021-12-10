@@ -54,7 +54,7 @@ Otherwise use the following command (assuming that the current directory is alba
 
     ./s3kinetic.sh X86 ~/kineticd
 
-There will be an executable 's3kinetic.x86' generated and stored in directory './bin'.
+There will be an executable 's3kinetic.X86' generated and stored in directory './bin'.
   
 ### ARM
 If this is the first time, do the following:
@@ -140,15 +140,15 @@ There will be an executable 's3kinetic.arm' generated and stored in directory'./
 It is ready to accept commands.
 If those messages are not shown, using interactive python to do instant_secure_erase, then restart 'minio'.
             
-### Under x86:
+### Under X86:
 Make sure there is a spare disk drive available. Ex /dev/sdb
 
 Type the following line:
 
-          ./s3kinetic.x86 server kinetic:skinny:sdx kineticd --store_device=/dev/sdxn
+          ./s3kinetic.X86 server kinetic:skinny:sdx kineticd --store_device=/dev/sdxn
 
 Notes: sdxn is a partition number. Ex: /dev/sdb1 
-under x86, a partition can be used for storage instead of the whole drive.            
+       Under X86, a partition can be used for storage instead of the whole drive.            
 
 To initialize the drive (ISE), the ISE command under directory ~/albany-minio/pkg/kinetic_client/ can be used to ISE the drive (or using ISE.py in shenzi, or under interactive python)
 
