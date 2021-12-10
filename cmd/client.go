@@ -110,32 +110,32 @@ func (c *Client) Read(value []byte) (int, error) {
             if (requestSize == 0) {
                 break
             }
-		if i == *(c.NextPartNumber) {
-			key := partKeyPrefix + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
-                        partReqSize := int64(requestSize)
-                        if (int64(requestSize) > part.Size) {
-                            partReqSize = part.Size
-                        }
-			cvalue, size, err := c.CGet(key, int(part.Size), c.Opts, c.DataOffset, int(partReqSize))
-			if err != nil {
-				c.ReleaseConn(c.Idx)
-				return 0, err
-			}
-			if cvalue != nil {
-				value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-				copy(value, value1[0:size])
-				requestSize -= int(size)
-				if i ==  len(fsMeta.Parts) -1 {
-					*(c.NextPartNumber) = 0
-				 c.ReleaseConn(c.Idx)
-				} else {
-				        *(c.NextPartNumber)++
-				}
-                                c.ReleaseConn(c.Idx)
-				return int(size), err
-			}
-		}
-	}
+            if i == *(c.NextPartNumber) {
+                key := partKeyPrefix + "." +  fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
+                partReqSize := int64(requestSize)
+                if (int64(requestSize) > part.Size) {
+                    partReqSize = part.Size
+                }
+                cvalue, size, err := c.CGet(key, int(part.Size), c.Opts, c.DataOffset, int(partReqSize))
+                if err != nil {
+                    c.ReleaseConn(c.Idx)
+                    return 0, err
+                }
+                if cvalue != nil {
+                    value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+                    copy(value, value1[0:size])
+                    requestSize -= int(size)
+                    if i ==  len(fsMeta.Parts) -1 {
+                        *(c.NextPartNumber) = 0
+                        c.ReleaseConn(c.Idx)
+                    } else {
+                        *(c.NextPartNumber)++
+                    }
+                    c.ReleaseConn(c.Idx)
+                    return int(size), err
+                }
+            }
+        }
         c.ReleaseConn(c.Idx)
 	return 0, err
 }
