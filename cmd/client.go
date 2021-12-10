@@ -124,7 +124,7 @@ func (c *Client) Read(value []byte) (int, error) {
 			if cvalue != nil {
 				value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 				copy(value, value1[0:size])
-                                requestSize -= int(size)
+				requestSize -= int(size)
 				if i ==  len(fsMeta.Parts) -1 {
 					*(c.NextPartNumber) = 0
 				 c.ReleaseConn(c.Idx)
