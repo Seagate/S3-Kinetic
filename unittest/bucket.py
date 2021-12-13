@@ -83,9 +83,9 @@ class Bucket:
             args = ['put', obj.fullFileName(), f'{self.fullName()}/{newName}']
 
         if obj.mustBeInMultiPart():
-            args.insert(1, 'multipart_chunk_size_mb=5')
-
-        result =bt.executeS3cmd(args)
+            args.insert(1, '--multipart-chunk-size-mb=5')
+        result = bt.executeS3cmd(args)
+        assert(result.returncode == xcodes.EX_OK)
         obj.setBucket(self)
 
     def remove(self):

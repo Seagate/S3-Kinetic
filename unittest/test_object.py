@@ -139,7 +139,6 @@ class TestObject(bt.BaseTest):
         self.assertTrue(os.path.exists(f'{bt.DOWNLOAD_DIR}/{obj.name()}'),
             msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR))
 
-    @unittest.skip
     def test_get_multipart(self):
         bucket = b.Bucket(1)
         bucket.make()
@@ -152,7 +151,7 @@ class TestObject(bt.BaseTest):
         fpath = f'{bt.DOWNLOAD_DIR}/{obj.name()}'
         self.assertTrue(os.path.exists(fpath),
             msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR)) 
-        self.assertEqual(bt._16MB, os.path.getsize(fpath), msg=msg.Message.mismatchSize(fpath))
+        self.assertEqual(o.Size._16MB, os.path.getsize(fpath), msg=msg.Message.sizeMismatch(fpath))
 
     @unittest.skip
     def test_get_multi(self):
@@ -225,7 +224,7 @@ class TestObject(bt.BaseTest):
         self.assertFalse(bucket.doesContain(obj.name()),
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
-    def test_delete_all_recursively(self):
+    def test_delete_all_recursive(self):
         """Recursively delete all objects from a bucket."""
         bucket = b.Bucket(1)
         bucket.make()
@@ -238,9 +237,10 @@ class TestObject(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         self.assertTrue(bucket.isEmpty(), msg=msg.Message.notEmpty(bucket.fullName()))
 
-    def test_remove_all_recursively(self):
+    def test_remove_all_recursive(self):
         """Recursively remove (the same as delete) all objects from a bucket."""
         bucket = b.Bucket(1)
+        bucket.make()
         obj1 = o.Object(o.Size._1KB)
         bucket.put(obj1)
         obj2 = o.Object(o.Size._16MB)
