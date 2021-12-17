@@ -723,13 +723,17 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
 // CopyObject - copy object source object to destination object.
 // if source object and destination object are same we only
 // update metadata.
-func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string, srcInfo ObjectInfo, srcOpts, dstOpts ObjectOptions) (oi ObjectInfo, e error) {
+func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
+    dstBucket, dstObject string, srcInfo ObjectInfo, srcOpts,
+    dstOpts ObjectOptions) (objInfo ObjectInfo, err error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("srcBuc = %s, srcObj = %s, dstBuc = %s, dstObj = %s",
+        srcBucket, srcObject, dstBucket, dstObject))
         cpSrcDstSame := isStringEqual(pathJoin(srcBucket, srcObject), pathJoin(dstBucket, dstObject))
         if !cpSrcDstSame {
                 objectDWLock := ko.NewNSLock(ctx, dstBucket, dstObject)
-                if err := objectDWLock.GetLock(globalObjectTimeout); err != nil {
-                        return oi, err
+                if err = objectDWLock.GetLock(globalObjectTimeout); err != nil {
+                        return objInfo, err
                 }
                 defer objectDWLock.Unlock()
         }
@@ -738,10 +742,9 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
                 atomic.AddInt64(&ko.activeIOCount, -1)
         }()
 
-        if _, err := ko.statBucketDir(ctx, srcBucket); err != nil {
-                return oi, toObjectErr(err, srcBucket)
+        if _, err = ko.statBucketDir(ctx, srcBucket); err != nil {
+                return objInfo, toObjectErr(err, srcBucket)
         }
-
 
 	if cpSrcDstSame && srcInfo.metadataOnly {
                 key := srcBucket + SlashSeparator + srcObject
@@ -775,7 +778,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
 	                        // For any error to read fsMeta, set default ETag and proceed.
 	                        fsMeta = ko.defaultFsJSON(srcObject)
 		                kineticMutex.Unlock()
-	                        return oi, toObjectErr(err, srcBucket, srcObject)
+	                        return objInfo, toObjectErr(err, srcBucket, srcObject)
 			}
 		}
         key = dstBucket + SlashSeparator + dstObject
@@ -799,15 +802,22 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
                 kineticMutex.Unlock()
                 return fsMeta.KVInfoToObjectInfo(srcBucket, srcObject, fi), nil
 	} // End of IF cpSrcDstSame && srcInfo.metadataOnly
-        if err := checkPutObjectArgs(ctx, dstBucket, dstObject, ko, srcInfo.PutObjReader.Size()); err != nil {
+        if err = checkPutObjectArgs(ctx, dstBucket, dstObject, ko, srcInfo.PutObjReader.Size()); err != nil {
                 return ObjectInfo{}, err
         }
-        objInfo, err := ko.putObject(ctx, dstBucket, dstObject, srcInfo.PutObjReader, ObjectOptions{ServerSideEncryption: dstOpts.ServerSideEncryption, UserDefined: srcInfo.UserDefined})
+        if (len(srcInfo.Parts) == 0) {
+            objInfo, err = ko.putObject(ctx, dstBucket, dstObject, srcInfo.PutObjReader,
+                                ObjectOptions{ServerSideEncryption: dstOpts.ServerSideEncryption,
+                                        UserDefined: srcInfo.UserDefined})
+        } else {
+            objInfo, err = ko.putMultipartObject(ctx, srcInfo, dstBucket, dstObject)
+        }
         if err != nil {
-                return oi, toObjectErr(err, dstBucket, dstObject)
+                return objInfo, toObjectErr(err, dstBucket, dstObject)
         }
         return objInfo, nil
 }
+
 
 //THAI:
 func (ko *KineticObjects) GetObjectNInfo(ctx context.Context, bucket, object string, rs *HTTPRangeSpec, h http.Header, lockType LockType, opts ObjectOptions) (gr *GetObjectReader, err error) {
@@ -1218,10 +1228,9 @@ func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object s
 // putObject - wrapper for PutObject
 func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
         defer common.KUntrace(common.KTrace("Enter"))
+        common.KTrace(fmt.Sprintf("bucket = %s, obj = %s", bucket, object))
 	//log.Println(" putObject ", object)
 	data := r.Reader
-
-	var err error
 
 	// Validate if bucket name is valid and exists.
 	// Kinetic Get bucket to check if it exists.
@@ -1236,7 +1245,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	}
         kineticMutex.Lock()
         kc := GetKineticConnection()
-        _, _, err = kc.CGetMeta(key, kopts)
+        _, _, err := kc.CGetMeta(key, kopts)
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
 	if err != nil && err != errKineticNotFound {
@@ -1294,7 +1303,6 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	} else {
 		return ObjectInfo{}, errInvalidArgument
 	}
-    common.KTrace(fmt.Sprintf("blockSizeV1 = %d, bufSize = %d, data Size: %d", blockSizeV1, bufSize, data.Size()))
         key = bucket + "/" + object
         objVer, _ := ko.currentVersion(key)
         nxtVer := ko.newVersion(objVer)
