@@ -132,7 +132,7 @@ class TestObject(bt.BaseTest):
         bucket.make()
         obj = o.Object(o.Size._1KB)
         bucket.put(obj)
-        args = ['get', obj.fullName(), bt.DOWNLOAD_DIR]
+        args = ['get', '--force', obj.fullName(), bt.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded
@@ -144,7 +144,7 @@ class TestObject(bt.BaseTest):
         bucket.make()
         obj = o.Object(o.Size._16MB)
         bucket.put(obj)
-        args = ['get', obj.fullName(), bt.DOWNLOAD_DIR]
+        args = ['get', '--force', obj.fullName(), bt.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
@@ -153,7 +153,6 @@ class TestObject(bt.BaseTest):
             msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR)) 
         self.assertEqual(o.Size._16MB, os.path.getsize(fpath), msg=msg.Message.sizeMismatch(fpath))
 
-    @unittest.skip
     def test_get_multi(self):
         """Get multiple objects from a bucket."""
         bucket = b.Bucket(1)
@@ -162,7 +161,7 @@ class TestObject(bt.BaseTest):
         largeObj = o.Object(o.Size._16MB)
         bucket.put(smallObj)
         bucket.put(largeObj)
-        args = ['get', smallObj.fullName(), largeObj.fullName(), bt.DOWNLOAD_DIR]
+        args = ['get', '--force', smallObj.fullName(), largeObj.fullName(), bt.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
@@ -171,12 +170,12 @@ class TestObject(bt.BaseTest):
             msg=msg.Message.notFound(smallObj.name(), bt.DOWNLOAD_DIR))
         fpathLarge = f'{bt.DOWNLOAD_DIR}/{largeObj.name()}'
         self.assertTrue(os.path.exists(fpathLarge),
-            msg=msg.Message.notFound(largObj.name(), bt.DOWNLOAD_DIR))
+            msg=msg.Message.notFound(largeObj.name(), bt.DOWNLOAD_DIR))
 
-        self.assertEqual(bt._1KB, os.path.getsize(fpathSmall),
-            msg=msg.Message.mismatchSize(fpathSmall))
-        self.assertEqual(bt._16MB, os.path.getsize(fpathLarge),
-            msg=msg.Message.mismatchSize(fpathLarge))
+        self.assertEqual(o.Size._1KB, os.path.getsize(fpathSmall),
+            msg=msg.Message.sizeMismatch(fpathSmall))
+        self.assertEqual(o.Size._16MB, os.path.getsize(fpathLarge),
+            msg=msg.Message.sizeMismatch(fpathLarge))
 
     def test_delete(self):
         bucket = b.Bucket(1)
@@ -189,7 +188,6 @@ class TestObject(bt.BaseTest):
         self.assertFalse(bucket.doesContain(obj.name()),
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
-    @unittest.skip
     def test_delete_multipart(self):
         bucket = b.Bucket(1)
         bucket.make()
@@ -212,7 +210,6 @@ class TestObject(bt.BaseTest):
         self.assertFalse(bucket.doesContain(obj.name()),
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
-    @unittest.skip
     def test_remove_multipart(self):
         bucket = b.Bucket(1)
         bucket.make()
@@ -265,7 +262,6 @@ class TestObject(bt.BaseTest):
         self.assertTrue(destBucket.doesContain(obj.name()),
             msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
 
-    @unittest.skip
     def test_copy_multipart_between_buckets(self):
         """Copy a multipart object from a bucket to another."""
         srcBucket = b.Bucket(1)
