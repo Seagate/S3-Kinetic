@@ -591,7 +591,13 @@ func (ko *KineticObjects) AbortMultipartUpload(ctx context.Context, bucket, obje
     return err
 }
 
-func (ko *KineticObjects) putMultipartObject(ctx context.Context, srcInfo ObjectInfo,
+/*
+// Description:
+//  An object/file can be optionally decomposed into smaller parts for storing. We call that
+//  decomposed object a multipart object because it has multiple parts. This method copies a
+//  multipart object from a source bucket to a destination bucket.
+*/
+func (ko *KineticObjects) copyMultipartObject(ctx context.Context, srcInfo ObjectInfo,
     dstBucket string, dstObj string) (objInfo ObjectInfo, err error) {
     defer common.KUntrace(common.KTrace("Enter"))
     // Make up common variables

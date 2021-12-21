@@ -808,7 +808,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
                                 ObjectOptions{ServerSideEncryption: dstOpts.ServerSideEncryption,
                                         UserDefined: srcInfo.UserDefined})
         } else {
-            objInfo, err = ko.putMultipartObject(ctx, srcInfo, dstBucket, dstObject)
+            objInfo, err = ko.copyMultipartObject(ctx, srcInfo, dstBucket, dstObject)
         }
         if err != nil {
                 return objInfo, toObjectErr(err, dstBucket, dstObject)
