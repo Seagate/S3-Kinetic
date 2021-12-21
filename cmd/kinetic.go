@@ -727,8 +727,6 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
     dstBucket, dstObject string, srcInfo ObjectInfo, srcOpts,
     dstOpts ObjectOptions) (objInfo ObjectInfo, err error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("srcBuc = %s, srcObj = %s, dstBuc = %s, dstObj = %s",
-        srcBucket, srcObject, dstBucket, dstObject))
         cpSrcDstSame := isStringEqual(pathJoin(srcBucket, srcObject), pathJoin(dstBucket, dstObject))
         if !cpSrcDstSame {
                 objectDWLock := ko.NewNSLock(ctx, dstBucket, dstObject)
@@ -1228,8 +1226,6 @@ func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object s
 // putObject - wrapper for PutObject
 func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        common.KTrace(fmt.Sprintf("bucket = %s, obj = %s", bucket, object))
-	//log.Println(" putObject ", object)
 	data := r.Reader
 
 	// Validate if bucket name is valid and exists.

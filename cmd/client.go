@@ -87,7 +87,6 @@ func (c *Client) Read(value []byte) (int, error) {
         C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
-        common.KTrace(fmt.Sprintf("fsMeta = %+v", fsMeta))
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
@@ -97,12 +96,9 @@ func (c *Client) Read(value []byte) (int, error) {
             }
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-                common.KTrace(fmt.Sprintf("Key = %s, ObjSize = %d, RequestSize = %d, size = %d",
-                    c.Key, objSize, len(value), size))
-	        copy(value, value1[0:size]) //len(value)])
+	        copy(value, value1[0:size])
                 c.ReleaseConn(c.Idx)
                 return int(size), err
-                //return int(len(value)), err
             }
             c.ReleaseConn(c.Idx)
 	    return 0, err
@@ -110,9 +106,7 @@ func (c *Client) Read(value []byte) (int, error) {
 
         partKeyPrefix := string(c.Key) + "." + fsMeta.Meta["version"]
 
-        common.KTrace(fmt.Sprintf("# of Parts = %d", len(fsMeta.Parts)))
 	for i, part := range  fsMeta.Parts {
-            common.KTrace(fmt.Sprintf("Part # = %d", i))
             if (requestSize == 0) {
                 break
             }
@@ -556,28 +550,9 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 	return c.CGet(key, -1, acmd, 0, -1)  // -1 to indicate it doesn't know the size
 }
 
-func (c *Client)GetMeta(key string, option Opts)(fsMetaV1, error) {
-    var meta fsMetaV1
-    cvalue, size, err := c.CGetMeta(key, option)
-    if err == nil {
-        if (cvalue != nil) {
-            data := (*[1 << 12 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-            meta := fsMetaV1{}
-            err = json.Unmarshal(data[:size], &meta)
-            C.free(unsafe.Pointer(cvalue))
-        }
-    } else {
-        //TODO: don't need to reset err?
-        err = errFileNotFound
-    }
-    return meta, err
-}
-
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("key = %s, objSize = %d, offset = %d, reqSize = %d",
-        key, objSize, offset, requestSize))
     var psv C._CPrimaryStoreValue
     psv.version = C.CString(string(acmd.NewVersion))
     psv.tag = C.CString(string(acmd.Tag))
