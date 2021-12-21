@@ -68,11 +68,8 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        common.KTrace(fmt.Sprintf("Key = %s, RequestSize = %d", c.Key, len(value)))
         requestSize := len(value)
-	//runtime.GC()
 	debug.FreeOSMemory()
-	//PrintMemUsage()
 	fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
@@ -574,8 +571,6 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
         if (requestSize == -1 || requestSize >  objSize) {
             requestSize = objSize
         }
-        common.KTrace(fmt.Sprintf("key = %s, objSize = %d, offset = %d, reqSize = %d",
-            key, objSize, offset, requestSize))
         if (offset == 0 && requestSize == objSize) {
             cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
                       (*C.int)(unsafe.Pointer(&dataSize)),
