@@ -68,6 +68,7 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
+        common.KTrace(fmt.Sprintf("Key = %s, RequestSize = %d", c.Key, len(value)))
         requestSize := len(value)
 	//runtime.GC()
 	debug.FreeOSMemory()
@@ -86,6 +87,7 @@ func (c *Client) Read(value []byte) (int, error) {
         C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
+        common.KTrace(fmt.Sprintf("fsMeta = %+v", fsMeta))
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
@@ -95,7 +97,9 @@ func (c *Client) Read(value []byte) (int, error) {
             }
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-	        copy(value, value1[0:len(value)])
+                common.KTrace(fmt.Sprintf("Key = %s, ObjSize = %d, RequestSize = %d, size = %d",
+                    c.Key, objSize, len(value), size))
+	        copy(value, value1[0:size]) //len(value)])
                 c.ReleaseConn(c.Idx)
                 return int(size), err
                 //return int(len(value)), err
@@ -572,6 +576,8 @@ func (c *Client)GetMeta(key string, option Opts)(fsMetaV1, error) {
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("key = %s, objSize = %d, offset = %d, reqSize = %d",
+        key, objSize, offset, requestSize))
     var psv C._CPrimaryStoreValue
     psv.version = C.CString(string(acmd.NewVersion))
     psv.tag = C.CString(string(acmd.Tag))
@@ -593,6 +599,8 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
         if (requestSize == -1 || requestSize >  objSize) {
             requestSize = objSize
         }
+        common.KTrace(fmt.Sprintf("key = %s, objSize = %d, offset = %d, reqSize = %d",
+            key, objSize, offset, requestSize))
         if (offset == 0 && requestSize == objSize) {
             cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
                       (*C.int)(unsafe.Pointer(&dataSize)),

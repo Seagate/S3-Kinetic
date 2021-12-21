@@ -607,7 +607,7 @@ func (ko *KineticObjects) putMultipartObject(ctx context.Context, srcInfo Object
     common.KTrace(fmt.Sprintf("srcInfo: %+v", srcInfo))
     for i, part := range srcInfo.Parts {
         // Make part key
-        dstPartKey := dstBucket + "/" + dstObj + "." + dstObjNxtVers + "." +
+        dstPartKey := dstObjKey + "." + dstObjNxtVers + "." +
                         ko.encodePartFile(part.Number, part.ETag, part.Size)
         common.KTrace(fmt.Sprintf("Part key: %s", dstPartKey))
         // Populate meta data
