@@ -590,3 +590,95 @@ func (ko *KineticObjects) AbortMultipartUpload(ctx context.Context, bucket, obje
     err := ko.deleteParts(objKey, nxtVer)
     return err
 }
+
+/*
+// Description:
+//  An object/file can be optionally decomposed into smaller parts for storing. We call that
+//  decomposed object a multipart object because it has multiple parts. This method copies a
+//  multipart object from a source bucket to a destination bucket.
+*/
+func (ko *KineticObjects) copyMultipartObject(ctx context.Context, srcInfo ObjectInfo,
+    dstBucket string, dstObj string) (objInfo ObjectInfo, err error) {
+    defer common.KUntrace(common.KTrace("Enter"))
+    // Make up common variables
+    dstObjKey := ko.makeKey(dstBucket, dstObj)
+    dstObjVers, _ := ko.currentVersion(dstObjKey)
+    dstObjNxtVers := ko.newVersion(dstObjVers)
+    dstOpt := ko.option()
+    objMeta := newFSMetaV1()
+    objMeta.Parts = make([]ObjectPartInfo, len(srcInfo.Parts))
+    // Copy object parts first
+    for i, part := range srcInfo.Parts {
+        // Make part key
+        dstPartKey := dstObjKey + "." + dstObjNxtVers + "." +
+                        ko.encodePartFile(part.Number, part.ETag, part.Size)
+        // Populate meta data
+        metaMap := make(map[string]string)
+        meta := newFSMetaV1()
+        meta.Meta = metaMap
+        meta.Meta["etag"] = part.ETag
+        meta.Meta["size"] = strconv.FormatInt(part.Size, 10)
+        meta.Meta["hidden"] = "1"
+        meta.KoInfo = KOInfo{Name: dstObj, Size: part.Size, CreatedTime: time.Now()}
+        bytes, _ := json.Marshal(meta)
+        metaBuf := allocateValBuf(len(bytes))
+        copy(metaBuf, bytes)
+        // Read source object part into buffer
+        valBuf := allocateValBuf(int(part.Size))
+        _, err = readToBuffer(srcInfo.PutObjReader, valBuf)
+        // Put the source object part into destination
+        kineticMutex.Lock()
+        kc := GetKineticConnection()
+        _, err = kc.CPut(dstPartKey, metaBuf, len(metaBuf), valBuf, int(part.Size), dstOpt)
+        ReleaseConnection(kc.Idx)
+        kineticMutex.Unlock()
+        if (err != nil) {
+            break
+        }
+        objMeta.Parts[i] = ObjectPartInfo {
+            Number:     part.Number,
+            ETag:       part.ETag,
+            Size:       part.Size,
+            ActualSize: part.Size,
+        }
+    }
+    if (err != nil) {
+        // Error.  Delete all new object parts
+        ko.deleteParts(dstObjKey, dstObjNxtVers)
+        return objInfo, err
+    }
+    // Populate meta data for the new multipart object
+    metaMap := make(map[string]string)
+    objMeta.Meta = metaMap
+    objMeta.Meta["version"] = dstObjNxtVers
+    objMeta.Meta["etag"] = srcInfo.ETag
+    objMeta.Meta["size"] = strconv.FormatInt(srcInfo.Size, 10)
+    objMeta.Meta[ReservedMetadataPrefix+"actual-size"] = strconv.FormatInt(srcInfo.Size, 10)
+    objMeta.KoInfo = KOInfo{Name: dstObj, Size: 0, CreatedTime: time.Now()}
+    bytes, _ := json.Marshal(objMeta)
+    metaBuf := allocateValBuf(len(bytes))
+    copy(metaBuf, bytes)
+    // Multipart object has no value
+    valBuf := allocateValBuf(0)
+    // Put the multipart object into destination
+    kineticMutex.Lock()
+    kc := GetKineticConnection()
+    _, err = kc.CPut(dstObjKey, metaBuf, len(metaBuf), valBuf, 0, dstOpt)
+    ReleaseConnection(kc.Idx)
+    kineticMutex.Unlock()
+    if (err == nil) {
+        // Finally, succeeded. Delete previous object parts
+        ko.deleteParts(dstObjKey, dstObjVers)
+        kineticInfo := KVInfo {
+            name:    dstObj,
+            size:    srcInfo.Size,
+            modTime: time.Now(),
+        }
+        objInfo = objMeta.ToObjectKVInfo(dstBucket, dstObj, kineticInfo)
+    } else {
+        // Finally, failed. Delete new object parts
+        ko.deleteParts(dstObjKey, dstObjNxtVers)
+    }
+
+    return objInfo, err
+}

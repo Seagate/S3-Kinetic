@@ -69,9 +69,7 @@ type Client struct {
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
         requestSize := len(value)
-	//runtime.GC()
 	debug.FreeOSMemory()
-	//PrintMemUsage()
 	fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
@@ -95,10 +93,9 @@ func (c *Client) Read(value []byte) (int, error) {
             }
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-	        copy(value, value1[0:len(value)])
+	        copy(value, value1[0:size])
                 c.ReleaseConn(c.Idx)
                 return int(size), err
-                //return int(len(value)), err
             }
             c.ReleaseConn(c.Idx)
 	    return 0, err
@@ -550,21 +547,21 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 	return c.CGet(key, -1, acmd, 0, -1)  // -1 to indicate it doesn't know the size
 }
 
-
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-        var psv C._CPrimaryStoreValue
-        psv.version = C.CString(string(acmd.NewVersion))
-        psv.tag = C.CString(string(acmd.Tag))
-        psv.algorithm = C.int(acmd.Algorithm)
-        cKey := C.CString(key)
-	var dataSize int
-	var status int
-	var cvalue *C.char
-	var bvalue []byte
+    var psv C._CPrimaryStoreValue
+    psv.version = C.CString(string(acmd.NewVersion))
+    psv.tag = C.CString(string(acmd.Tag))
+    psv.algorithm = C.int(acmd.Algorithm)
+    cKey := C.CString(key)
+    var dataSize int
+    var status int
+    var cvalue *C.char
+    var bvalue []byte
     if acmd.MetaDataOnly {
-        cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&dataSize)), (*C.int)(unsafe.Pointer(&status)))
+        cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&dataSize)),
+                        (*C.int)(unsafe.Pointer(&status)))
     } else {
         if (objSize > 0) {
             bvalue = make([]byte, objSize + 1024)  // Add 1024 for meta data
@@ -585,12 +582,12 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
                       (*C.int)(unsafe.Pointer(&status)))
         }
     }
-	var err error = nil
-	if status != 0 || cvalue == nil {
+    var err error = nil
+    if status != 0 || cvalue == nil {
         common.KTrace(fmt.Sprintf("failed, status = %d", status))
-		err =  errKineticNotFound
-	}
-        return cvalue, uint32(dataSize), err
+        err =  errKineticNotFound
+    }
+    return cvalue, uint32(dataSize), err
 }
 
 
