@@ -7,6 +7,19 @@ VERSION ?= $(shell git describe --tags)
 TAG ?= "minio/minio:$(VERSION)"
 BUILD_LDFLAGS := '$(LDFLAGS)'
 all: build
+# Adding @() to any bash command removes the echo
+	@( \
+	if [ ! -f "minio" ]; \
+	then \
+		echo === New executable minio was not created ===; \
+	fi)
+	@( \
+	if [ -f "minio" ]; \
+	then \
+		[ ! -d "./bin" ] && mkdir ./bin; \
+		mv minio ./bin/s3kinetic.arm; \
+		echo === New executable minio was created in ./bin directory ===; \
+	fi)
 
 checks:
 	@echo "Checking dependencies"

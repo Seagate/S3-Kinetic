@@ -24,50 +24,83 @@ This program uses the frontend of MinIO to send/receive S3 objects and, as the b
 
 2. Checkout MinIO-Kinetic: 
 
-         git clone ssh://git@lco-esd-cm01.colo.seagate.com:7999/in/albany-minio.git
+      git clone ssh://git@lco-esd-cm01.colo.seagate.com:7999/in/albany-minio.git
 
 ---
 
-## Compilation
+## Compilation:
 
 The steps to compile MinIO (s3kinetic.x.y) depends on the target architecture. 
-
-### x86
-It is enough to type the following command in the main folder (`albany-minio`):
-
-         make -f Makefile.x86
-
-### ARM
-Assuming that the following directories are under user's home directory:
+assuming that the following directories are under user's home directory:
    - albany-minio
    - uboot-linux (this is uboot for ARM)
+   - kineticd
 
+### X86
+If the directory "./lib" has X86 libraries (after compiling using method b below),
+it is enough to type the following command in the main folder (`albany-minio`) if there is no change
+in kineticd:
+
+    make -f Makefile.x86
+	
+Otherwise use the following command (assuming that the current directory is albany-minio):
+         
+    ./s3kinetic.sh ARG1 ARG2
+	   
+    ARG1 = X86
+    ARG2 = kineticd directory
+
+    ex: My kineticd is under /home/myhomedir/kineticd
+
+    ./s3kinetic.sh X86 /home/myhomedir/kineticd
+    
+    or
+
+    ./s3kinetic.sh X86 ~/kineticd
+
+There will be an executable 's3kinetic.X86' generated and stored in directory './bin'.
+  
+### ARM
 If this is the first time, do the following:
-   - go to `uboot-linux` directory and call this command:
+    - Go to `uboot-linux` directory and call this command:
 
-         ./build_embedded_image.sh -t ramdef
+       ./build_embedded_image.sh -t ramdef
 
-Go to the `albany-minio` folder and do the following:
+    - Go to the `albany-minio` folder and do the following:
+       ./s3kinetic.sh ARG1 ARG2 ARG3 ARG4
 
-         make -f Makefile.arm
+       ARG1 = ARM
+       ARG2 = LAMARRKV
+       ARG3 = uboot-linux directory
+       ARG4 = kineticd directory
 
+       ex: My uboot-linux, kineticd are under /home/myhomedir/uboot-linux and /home/myhomedir/kineticd
+
+       ./s3kinetic.sh ARM LAMARRKV  ~/uboot-linux ~/kineticd
+
+There will be an executable 's3kinetic.arm' generated and stored in directory'./bin'.
+
+        Notes:
+          After the first time, if there is no change in uboot or kineticd, quick way to compile is just typing:
+                make -f Makefile.arm
+        
 ---
 
-## Running MinIO or s3kinetic.X.Y:
+## Running s3kinetic.arm:
 
 ### Under LAMARRKV or Interposer ARM:
 
-- Copy minio or s3kinetic.X.Y (ARM version) from the `bin` folder to the Lamarrkvdrive under directory `/mnt/util`:
+- Copy s3kinetic.arm from the `bin` folder to the Lamarrkvdrive under directory `/mnt/util`:
 
-         scp minio (or s3kinetic.X.Y) root@ip_address:/mnt/util/
+         scp ./bin/s3kinetic.arm root@ip_address:/mnt/util/
 
 - ssh into Lamarrkv drive. If you encounter any issues, please, read the section `Conecting to a Serial Port` from [Kinetic Notes]( https://seagatetechnology.sharepoint.com/%3Ab%3A/r/teams/dataflowsoftware/Shared%20Documents/Projects/Kinetic/KineticInteractions_Includes_stepsforfw_update_locationof_slod.pdf?csf=1&web=1&e=eNloKP).
 
          ssh root@ip_address
 
-- Go to directory `/mnt/util`:
+- Go to directory `/mnt/util` (for kineticd version 09.xx.yy) or /kinetic/util (for kineticd version 10.xx.yy):
 
-         cd /mnt/util
+         cd /mnt/util      or cd /kinetic/util
 
 - Kill the running kineticd:
 
@@ -84,11 +117,11 @@ Go to the `albany-minio` folder and do the following:
 
 - Start minio by typing:
 
-          ./minio server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
+          ./s3kinetic.arm server kinetic:skinny:sda kineticd --store_device=/dev/sda
 
    to turn on  `TRACE`:
 
-         ./minio --trace server kinetic:skinny:sdx kineticd --store_device=/dev/sdx
+         ./s3kinetic.arm --trace server kinetic:skinny:sdx kineticd --store_device=/dev/sda
 
 - Wait till these messages appear:
 
@@ -108,18 +141,19 @@ Go to the `albany-minio` folder and do the following:
           .NET:       https://docs.min.io/docs/dotnet-client-quickstart-guide
           Detected default credentials 'minioadmin:minioadmin', please change the credentials immediately using 'MINIO_ACCESS_KEY' and 'MINIO_SECRET_KEY'
 
+Before trying any command, make sure the date/time of the client is the same as the server.
 It is ready to accept commands.
 If those messages are not shown, using interactive python to do instant_secure_erase, then restart 'minio'.
             
-### Under x86:
+### Under X86:
 Make sure there is a spare disk drive available. Ex /dev/sdb
 
 Type the following line:
 
-          ./minio server kinetic:skinny:sdx kineticd --store_device=/dev/sdxn
+          sudo ./s3kinetic.X86 server kinetic:skinny:sdx kineticd --store_device=/dev/sdxn
 
 Notes: sdxn is a partition number. Ex: /dev/sdb1 
-under x86, a partition can be used for storage instead of the whole drive.            
+       Under X86, a partition can be used for storage instead of the whole drive.            
 
 To initialize the drive (ISE), the ISE command under directory ~/albany-minio/pkg/kinetic_client/ can be used to ISE the drive (or using ISE.py in shenzi, or under interactive python)
 
@@ -185,11 +219,11 @@ There is s3-benchmark test.
 
 ---
 
-## Running MinIO (or s4kinetic.x.y) with file system (ext4 or xfs)
+## Running MinIO with file system (ext4 or xfs)
 
 This command will allow users to run minio on a storage filesystem such as ext4 or xfs or other file systems:
 
-         ./minio (or s3kinetic.x.y) server ./datadir
+         ./minio server ./datadir
 
 where `datadir` is a data directory. This directory can be aregular directory or a directory that is mounted to a storagepartition.
 
