@@ -38,7 +38,7 @@ def getFileName(size):
     return fname
 
 class InFileFactory:
-    """Class that creates input file"""
+    """Class that creates input files"""
     
     DAT_DIR = './test-dat'
     DEV_IN_FILE = '/dev/urandom'
@@ -54,7 +54,6 @@ class InFileFactory:
         Arguments
         --------
         dataFileTuple : tuple, format = (size, fname, blockSize, blockCount)
-
         """
 
         name  = dataFileTuple[1]
