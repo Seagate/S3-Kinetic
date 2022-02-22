@@ -31,7 +31,6 @@ class CmdOperator(threading.Thread):
         Type of operation, ex. PUT, GET, DEL, ...
     __n    : int
         Number of operations to perform.  Default to 1
-
     """
 
     def __init__(self, name, aType, n = 1):

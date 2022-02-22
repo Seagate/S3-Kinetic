@@ -33,17 +33,10 @@ def executeS3cmd(args, stdin=None):
 
 class BaseTest(unittest.TestCase):
     """Base class for test classes."""
-    '''
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    '''
+
     @classmethod
     def setUpClass(cls):
-        """Do class setup
-
-        Create all input files
-
-        """
+        """Do class setup: Create all input files"""
 
         fileFactory = ff.InFileFactory()
         fileFactory.makeAll()
