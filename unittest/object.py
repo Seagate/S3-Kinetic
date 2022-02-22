@@ -1,16 +1,5 @@
 import base_test as bt
-
-_1KB_FN = "_1KB.bin"
-_1MB_FN = "_1MB.bin"
-_5MB_FN = "_5MB.bin"
-_16MB_FN = "_16MB.bin"
-
-class Size:
-    """Sizes of objects/files."""
-    _1KB = 1024
-    _1MB = 1024*_1KB
-    _5MB = 5*_1MB
-    _16MB = 16*_1MB
+import in_file_factory as ff
 
 class Object:
     """A class used to represent object in a bucket or file on disk."""
@@ -26,21 +15,11 @@ class Object:
             Exception
                 If size is not valid.
         """
-        self.__size = size
+        fname = ff.getFileName(size)
         if suffix != "":
             suffix = f'_{suffix}'
-        if size == Size._1KB:
-            self.__name = _1KB_FN + suffix 
-        elif size == Size._1MB:
-            self.__name = _1MB_FN + suffix
-        elif size == Size._5MB:
-            self.__name = _5MB_FN + suffix
-        elif size == Size._16MB:
-            self.__name = _16MB_FN + suffix
-        else:
-            raise Exception(f'Invalid file name {name}.' + \
-                             ' Choices: Size._1KB, Size._1MB, Size._16MB')
-
+        self.__name = fname + suffix 
+        self.__size = size
         self.__fullFileName = f'{bt.DAT_DIR}/{self.__name}'
         self.__bucket = None
 
@@ -69,4 +48,4 @@ class Object:
         
     def mustBeInMultiPart(self):
         """Return boolean to indicate if this object must be chunked for put operation."""
-        return (self.__size > Size._5MB)
+        return (self.__size > ff.Size._5MB)

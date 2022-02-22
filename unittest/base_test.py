@@ -12,6 +12,7 @@ if PATH_TO_S3CMD not in sys.path:
 
 #local imports
 import bucket as b
+import in_file_factory as ff
 import object as o
 
 # Constants
@@ -38,15 +39,14 @@ class BaseTest(unittest.TestCase):
     '''
     @classmethod
     def setUpClass(cls):
-        cls.removeAllTestBuckets()
-        # create a clean testsuite output directory
-        if os.path.isdir(DAT_DIR):
-            shutil.rmtree(DAT_DIR)
+        """Do class setup
 
-        os.mkdir(DAT_DIR)
-        # create a 1M file in the testsuite directory
-        obj = o.Object(o.Size._1MB)
-        os.system(f'dd if={IN_FILE} of={obj.fullFileName()} bs=1M count=1 > /dev/null 2>&1')
+        Create all input files
+
+        """
+
+        fileFactory = ff.InFileFactory()
+        fileFactory.makeAll()
 
     @classmethod
     def removeAllTestBuckets(cls):

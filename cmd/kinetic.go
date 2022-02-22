@@ -61,7 +61,7 @@ import (
     "github.com/minio/minio/pkg/event"
 )
 
-var numberOfKinConns int = 2 
+var numberOfKinConns int = 100
 var maxQueue int = 100
 
 type KConnsPool struct {

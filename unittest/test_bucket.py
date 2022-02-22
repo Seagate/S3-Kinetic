@@ -10,6 +10,7 @@ import S3.ExitCodes as xcodes
 
 # local imports
 import bucket as b
+import in_file_factory as ff
 import object as o
 import message as msg
 
@@ -75,7 +76,7 @@ class TestBucket(bt.BaseTest):
         bucket = b.Bucket(1)
         bucket.make()
         # put an object to the bucket
-        obj = o.Object(o.Size._1MB)
+        obj = o.Object(ff.Size._1MB)
         bucket.put(obj)
         args = ['la', bucket.fullName()]
         result = self.execute(args)
@@ -88,15 +89,15 @@ class TestBucket(bt.BaseTest):
         bucket = b.Bucket(1)
         bucket.make()
         # put an object to the bucket
-        obj1 = o.Object(o.Size._1MB)
-        obj2 = o.Object(o.Size._1MB)
+        obj1 = o.Object(ff.Size._1MB)
+        obj2 = o.Object(ff.Size._1MB)
         bucket.put(obj1, f'{obj1.name()}_1')
         bucket.put(obj2, f'{obj2.name()}_2')
         # disk usage
         args = ['du', bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        self.assertNotEqual(result.stdout.find(str(2*o.Size._1MB)), -1, msg=msg.Message.wrongDiskUsage())
+        self.assertNotEqual(result.stdout.find(str(2*ff.Size._1MB)), -1, msg=msg.Message.wrongDiskUsage())
 
     def test_remove_single_empty(self):
         # make a bucket
@@ -128,7 +129,7 @@ class TestBucket(bt.BaseTest):
         bucket = b.Bucket(1)
         bucket.make()
         # put an object to the bucket
-        obj = o.Object(o.Size._1MB)
+        obj = o.Object(ff.Size._1MB)
         bucket.put(obj)
         # remove the bucket
         args = ['rb', '--recursive', bucket.fullName()]
@@ -144,8 +145,8 @@ class TestBucket(bt.BaseTest):
         bucket1.make()
         bucket2.make()
         # put an object to the buckets
-        obj1 = o.Object(o.Size._1MB)
-        obj2 = o.Object(o.Size._1MB)
+        obj1 = o.Object(ff.Size._1MB)
+        obj2 = o.Object(ff.Size._1MB)
         bucket1.put(obj1)
         bucket2.put(obj2)
         # remove those 2 buckets
