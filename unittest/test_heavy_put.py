@@ -15,9 +15,6 @@ class TestHeavyPut(bt.BaseTest):
     NUM_THREADS = 5 #25 
     NUM_PUTS = 5 #50
     
-    def tearDown(self):
-        pass
-
     def test_heavy_put(self):
         """Execute heavy load test"""
 
