@@ -16,18 +16,7 @@ class Type(Enum):
 
     @classmethod
     def isValid(cls, aType):
-        """Validate operation type
-
-        Arguments
-        ---------
-        aType : Type
-            Type of the operation
-
-        Returns
-        ------
-        True if aType valid, False otherwise.
-
-        """
+        """Validate operation type (PUT, GET, DEL)"""
 
         return (aType == cls.PUT or aType == cls.GET or aType == cls.DEL)
 

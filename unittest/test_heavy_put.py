@@ -10,14 +10,7 @@ import cmd_operator as co
 import in_file_factory as ff 
 
 class TestHeavyPut(bt.BaseTest):
-    """Test S3-Kinetic with heavy load
-    
-    Class Attributes
-    ----------------
-    NUM_THREAD : int, default = 100
-    NUM_PUTS   : int, default = 50
-
-    """
+    """Test S3-Kinetic with heavy puts"""
 
     NUM_THREADS = 5 #25 
     NUM_PUTS = 5 #50
