@@ -55,10 +55,6 @@ class InFileFactory:
         --------
         dataFileTuple : tuple, format = (size, fname, blockSize, blockCount)
 
-        Raises
-        -----
-        TODO
-
         """
 
         name  = dataFileTuple[1]
