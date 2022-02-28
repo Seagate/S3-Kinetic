@@ -22,7 +22,7 @@ class Type(Enum):
 
 
 class CmdOperator(threading.Thread):
-    """A thread to repeatatively execute an S3cmd
+    """A thread to repetitively execute an S3cmd
 
     Attributes:
     __name : string

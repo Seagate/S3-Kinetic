@@ -13,7 +13,6 @@ if PATH_TO_S3CMD not in sys.path:
 #local imports
 import bucket as b
 import in_file_factory as ff
-import object as o
 
 # Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
