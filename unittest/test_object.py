@@ -53,7 +53,7 @@ class TestObject(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
 
-        # assert object is can be found in bucket and is renamed
+        # assert object can be found in bucket and is renamed
         self.assertTrue(bucket.doesContain(objNewName),
                         msg=msg.Message.notFound(objNewName,
                         bucket.fullName()))
@@ -154,7 +154,7 @@ class TestObject(bt.BaseTest):
         self.assertFalse(bucket.doesContain(objOldName),
                          msg="Object not renamed")
 
-    def test_get_multipart_wd(self):
+    def test_get_wd_multipart(self):
         """ Download a multipart object to the working directory """
         bucket = b.Bucket(1)
         bucket.make()
