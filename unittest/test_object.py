@@ -19,7 +19,7 @@ import object as o
 import S3.ExitCodes as xcodes
 
 class TestObject(bt.BaseTest):
-    """Test s3cmd APIs related to objects.""" 
+    """Test s3cmd APIs related to objects."""
 
     @classmethod
     def setUpClass(self):
@@ -45,18 +45,20 @@ class TestObject(bt.BaseTest):
         bucket = b.Bucket(1)
         bucket.make()
         obj = o.Object(o.Size._1KB)
+        objNewName = "test.bin"
+        objOldName = obj.name()
 
         # call command "put <OBJECT> s3://bucket/test.bin"
         args = ['put', obj.fullFileName(), bucket.fullName() + "/test.bin"]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
 
-        # assert object is renamed and can be found in bucket
-        self.assertTrue(bucket.doesContain("test.bin"),
-                        msg=msg.Message.notFound("test.bin",
+        # assert object is can be found in bucket and is renamed
+        self.assertTrue(bucket.doesContain(objNewName),
+                        msg=msg.Message.notFound(objNewName,
                         bucket.fullName()))
-        self.assertFalse(bucket.doesContain(obj.fullFileName()),
-                         msg="Object not renamed")
+        self.assertFalse(bucket.doesContain(objOldName),
+                         msg="Object put but not renamed")
 
     def test_get_wd(self):
         """ Download an object to the current working directory """
@@ -130,6 +132,131 @@ class TestObject(bt.BaseTest):
         self.assertFalse(destBucket.doesContain(obj.name()),
                          msg="Object moved but not renamed")
 
+    def test_put_rename_multipart(self):
+        """ Put a multipart object to a bucket, while also renaming it """
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._16MB)
+        objOldName = obj.name()
+        objNewName = "test.bin"
+
+        # call command "put --multipart ... <OBJECT> s3://<BUCKET>/test.bin"
+        args = ['put', '--multipart-chunk-size-mb=5', obj.fullFileName(),
+                bucket.fullName() + "/test.bin"]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # verify the file was stored and renamed
+        obj.setBucket(bucket)
+        self.assertTrue(bucket.doesContain(objNewName),
+                        msg=msg.Message.notFound(obj.name(),
+                        bucket.fullName()))
+        self.assertFalse(bucket.doesContain(objOldName),
+                         msg="Object not renamed")
+
+    def test_get_multipart_wd(self):
+        """ Download a multipart object to the working directory """
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._16MB)
+        bucket.put(obj)
+
+        # execute command "get --force s3://<BUCKET>/<MULTIPART_OBJECT>"
+        args = ['get', '--force', obj.fullName()]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # verify the object was downloaded to working dir + size is correct
+        self.assertTrue(os.path.exists(obj.name()),
+                        msg=msg.Message.notFound(obj.name(), os.getcwd()))
+        self.assertEqual(o.Size._16MB, os.path.getsize(obj.name()),
+                         msg=msg.Message.sizeMismatch(os.getcwd()))
+
+        # TODO: add file comparison assertion(s)
+
+        # clean up
+        if(os.path.exists(obj.name())):
+            os.remove(obj.name())
+
+    def test_get_wd_rename_multipart(self):
+        """ Download a multipart object to the working directory, while
+            specifying a new name for the downloaded obejct  """
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._16MB)
+        bucket.put(obj)
+        objNewName = "test.bin"
+        objOldName = obj.name()
+
+        # execute command "get --force s3://<BUCKET>/<OBJECT> <OBJECT_RENAMED>"
+        args = ['get', '--force', obj.fullName(), objNewName]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # assert object was downloaded to working directory and renamed
+        self.assertTrue(os.path.exists(objNewName),
+                        msg=msg.Message.notFound(objNewName, os.getcwd()))
+        self.assertFalse(os.path.exists(objOldName),
+                         msg="Object downloaded but not renamed")
+
+        # TODO: add file comparison assertion(s)
+
+        # clean up by deleting downloaded object
+        if(os.path.exists(objNewName)):
+            os.remove(objNewName)
+
+    def test_rename_multipart(self):
+        """ Rename a multipart object (without moving it to another bucket)"""
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(o.Size._16MB)
+        bucket.put(obj)
+        objNewName = "test.bin"
+        objOldName = obj.name()
+
+        # call command "mv s3://bucket/<OBJECT> s3://bucket/test.bin"
+        args = ['mv', obj.fullName(), bucket.fullName() + "/test.bin"]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # assert that object is renamed and old name no longer present
+        self.assertTrue(bucket.doesContain(objNewName),
+                        msg=msg.Message.notInDest(objNewName,
+                        bucket.fullName()))
+        self.assertFalse(bucket.doesContain(objOldName),
+                         msg=msg.Message.inSource(objOldName,
+                         bucket.fullName()))
+
+    def test_move_rename_multipart(self):
+        """ Move a multipart object from one bucket to another,
+            while also renaming it  """
+        srcBucket = b.Bucket(1)
+        srcBucket.make()
+        destBucket = b.Bucket(2)
+        destBucket.make()
+        obj = o.Object(o.Size._16MB)
+        srcBucket.put(obj)
+        objNewName = "test.bin"
+        objOldName = obj.name()
+
+        # call command "mv s3://srcBucket/<OBJECT> s3://destBucket/test.bin"
+        args = ['mv', obj.fullName(), destBucket.fullName() + "/test.bin"]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # assert that object is renamed and only present in destination bucket
+        self.assertTrue(destBucket.doesContain(objNewName),
+                        msg=msg.Message.notInDest(objNewName,
+                        destBucket.fullName()))
+        self.assertFalse(srcBucket.doesContain(objNewName),
+                         msg=msg.Message.inSource(objNewName,
+                         srcBucket.fullName()))
+        # assert that object's old name is not present in either bucket
+        self.assertFalse(srcBucket.doesContain(objOldName),
+                         msg=msg.Message.inSource(objOldName,
+                         srcBucket.fullName()))
+        self.assertFalse(destBucket.doesContain(obj.name()),
+                         msg="Object moved but not renamed")
 
     def test_put(self):
         bucket = b.Bucket(1)
@@ -216,7 +343,7 @@ class TestObject(bt.BaseTest):
         files = os.listdir(bt.DAT_DIR)
         for f in files:
             self.assertNotEqual(result.stdout.find(f), -1,
-                msg=msg.Message.notFound(f, bt.DAT_DIR)) 
+                msg=msg.Message.notFound(f, bt.DAT_DIR))
 
     def test_get(self):
         bucket = b.Bucket(1)
@@ -241,7 +368,7 @@ class TestObject(bt.BaseTest):
         # verify the object was downloaded and its size is right
         fpath = f'{bt.DOWNLOAD_DIR}/{obj.name()}'
         self.assertTrue(os.path.exists(fpath),
-            msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR)) 
+            msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR))
         self.assertEqual(o.Size._16MB, os.path.getsize(fpath), msg=msg.Message.sizeMismatch(fpath))
 
     def test_get_multi(self):
