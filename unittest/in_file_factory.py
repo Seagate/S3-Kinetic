@@ -23,11 +23,6 @@ def getRandFileSize():
 
     return list(DATA_FILES)[random.randint(0, len(DATA_FILES) - 1)]
 
-def getRandFileName():
-    """Randomly get an input file name:  _1KB.bin, _1MB.bin, _5MB,..."""
-    
-    return list(DATA_FILES.values())[random.randint(0, len(DATA_FILES) - 1)][1]
-
 def getFileName(size):
     """Get file name given file size"""
 
