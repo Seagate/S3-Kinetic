@@ -1499,7 +1499,7 @@ func (c *Client) GetSignOnMessage() error {
 
 func (c *Client) Flush() error {
     var status C.int
-    status = C.Flush(false)
+    status = C.Flush()
     return toKineticError(KineticError(int(status)))
 }
 
