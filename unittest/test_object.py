@@ -19,7 +19,40 @@ import object as o
 import S3.ExitCodes as xcodes
 
 class TestObject(bt.BaseTest):
-    """Test s3cmd APIs related to objects."""
+    """Test s3cmd APIs related to objects.
+
+       This class contains several test functions which
+       verify object-related s3cmd operations, including:
+
+        * Putting object(s) into a bucket
+        * Getting (downloading) object(s) from a bucket
+        * Moving object(s) between different buckets
+        * Deleting object(s)
+        * Renaming object(s)
+
+       The tests within this class aim to cover all possible
+       combinations of the operations listed above, on both
+       simple and larger (multipart) objects.
+
+       Each test function does the following:
+
+        1. Create temporary bucket(s) and object(s) and arrange them
+           according to the test's preconditions.
+             Ex: test_put() begins by creating one bucket and one object
+
+        2. Execute a single s3cmd command.
+             Ex: test_put() executes "s3cmd put <OBJECT> s3://<BUCKET>"
+
+        3. Perform one or more assertions according to expected
+           postconditions.
+             Ex: test_put() asserts that <OBJECT> exists in <BUCKET>
+
+        4. Delete all buckets/objects created in step 1.
+             Note: This step does not directly appear in the test
+                   functions in this file; it is an inherited method
+                   (tearDown) which is automatically called after
+                   every test function executes.
+    """
 
     @classmethod
     def setUpClass(self):
