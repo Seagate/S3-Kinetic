@@ -61,7 +61,7 @@ import (
     "github.com/minio/minio/pkg/event"
 )
 
-var numberOfKinConns int = 100
+var numberOfKinConns int = 100  // Maximum allowable connections in Kineticd
 var maxQueue int = 100
 
 type KConnsPool struct {
