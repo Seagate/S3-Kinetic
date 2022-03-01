@@ -1496,3 +1496,10 @@ func (c *Client) GetSignOnMessage() error {
 	//log.Println(" Identity ", identity, " HMAC ", khmac)
 	return err
 }
+
+func (c *Client) Flush() error {
+    var status C.int
+    status = C.Flush(false)
+    return toKineticError(KineticError(int(status)))
+}
+

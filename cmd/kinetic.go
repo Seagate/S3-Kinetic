@@ -342,6 +342,10 @@ func (ko *KineticObjects) NewNSLock(ctx context.Context, bucket string, objects 
 }
 
 func (ko *KineticObjects) Shutdown(ctx context.Context) error {
+        kineticMutex.Lock()
+        kc := GetKineticConnection()
+        kc.Flush()
+        ReleaseConnection(kc.Idx)
 	return nil
 }
 
