@@ -11,12 +11,10 @@ class Size:
     _32MB = 32*_1MB
 
 # Dictionary stores information to create input file with dd command: size, name , blockSize, blockCount
-DATA_FILES = {Size._1KB:(Size._1KB, '_1KB.bin', '1K', 1),
-              Size._1MB:(Size._1MB, '_1MB.bin', '1M', 1),
-              Size._5MB:(Size._5MB, '_5MB.bin', '1M', 5),
-              Size._6MB:(Size._6MB, '_6MB.bin', '1M', 6),
-              Size._16MB:(Size._16MB, '_16MB.bin', '1M', 16),
-              Size._32MB:(Size._32MB, '_32MB.bin', '1M', 32)}
+# Format: ((blockSize, numberOfBlocks), ....)
+DATA_SIZE = (('1KB', 1), ('1MB', 1), ('1MB', 5), ('1MB', 6), ('1MB', 16), ('1MB', 32))
+
+DATA_FILES = {}
 
 def getRandFileSize():
     """Randomly get an input file size:  1KB, 1MB, 5MB, 6MB, 16MB, 32MB"""
@@ -28,7 +26,7 @@ def getFileName(size):
 
     fileTuple = DATA_FILES.get(size)
     if fileTuple == None:
-        raise(f'Invalid file size: {size}')
+        raise Exception(f'Invalid file size: {size}')
     fname = fileTuple[1]
     return fname
 
@@ -37,6 +35,23 @@ class InFileFactory:
     
     DAT_DIR = './test-dat'
     DEV_IN_FILE = '/dev/urandom'
+
+    def __init__(self):
+        if len(DATA_FILES) > 0:
+            # DATA_FILES dictionary was populated
+            return
+
+        for sizes in DATA_SIZE:
+            [unit, blockSize, numBlocks] = [sizes[0][-2:], int(sizes[0][:-2]), sizes[1]]
+            sizeName = blockSize * numBlocks
+            if unit == 'KB':
+                size = numBlocks * blockSize * (1 << 10)
+            elif unit == 'MB':
+                size = numBlocks * blockSize * (1 << 20)
+            else:
+                raise Exception('Invalid unit: {unit}')
+
+            DATA_FILES[size] = (size, f'_{sizeName}{unit}.bin', f'{blockSize}{unit}', numBlocks)
 
     def makeAll(self):
         """Make all input files"""
