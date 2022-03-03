@@ -347,7 +347,7 @@ func (ko *KineticObjects) Shutdown(ctx context.Context) error {
         kc.Flush()
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
-	return nil
+        return nil
 }
 
 func (ko *KineticObjects) StorageInfo(ctx context.Context, _ bool) StorageInfo {
