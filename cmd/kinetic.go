@@ -346,6 +346,7 @@ func (ko *KineticObjects) Shutdown(ctx context.Context) error {
         kc := GetKineticConnection()
         kc.Flush()
         ReleaseConnection(kc.Idx)
+        kineticMutex.Unlock()
 	return nil
 }
 
