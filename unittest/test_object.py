@@ -32,6 +32,96 @@ class TestObject(bt.BaseTest):
 
         os.mkdir(bt.DOWNLOAD_DIR)
 
+    def test_put_rename(self):
+        """ Put an object to a bucket, while renaming the object """
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(ff.Size._1KB)
+
+        # call command "put <OBJECT> s3://bucket/test.bin"
+        args = ['put', obj.fullFileName(), bucket.fullName() + "/test.bin"]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # assert object is renamed and can be found in bucket
+        self.assertTrue(bucket.doesContain("test.bin"),
+                        msg=msg.Message.notFound("test.bin",
+                        bucket.fullName()))
+        self.assertFalse(bucket.doesContain(obj.fullFileName()),
+                         msg="Object not renamed")
+
+    def test_get_wd(self):
+        """ Download an object to the current working directory """
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(ff.Size._1KB)
+        bucket.put(obj)
+
+        # call command "get --force s3://bucket/<OBJECT>"
+        args = ['get', '--force', obj.fullName()]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # assert object is present in working directory, delete for cleanup
+        self.assertTrue(os.path.exists(obj.name()),
+                        msg=msg.Message.notFound(obj.name(), os.getcwd()))
+        if(os.path.exists(obj.name())):
+            os.remove(obj.name())
+
+    def test_get_wd_rename(self):
+        """ Download an object to the current working directory
+            while renaming the downloaded copy """
+        bucket = b.Bucket(1)
+        bucket.make()
+        obj = o.Object(ff.Size._1KB)
+        bucket.put(obj)
+        objNewName = "test.bin"
+        objOldName = obj.name()
+
+        # call command "get --force s3://bucket/<OBJECT> test.bin"
+        args = ['get', '--force', obj.fullName(), objNewName]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # assert object was downloaded to working directory and renamed
+        self.assertTrue(os.path.exists(objNewName),
+                        msg=msg.Message.notFound(objNewName, os.getcwd()))
+        self.assertFalse(os.path.exists(objOldName),
+                         msg="Object downloaded but not renamed")
+        # clean up by deleting downloaded object
+        if(os.path.exists(objNewName)):
+            os.remove(objNewName)
+
+    def test_move_rename(self):
+        """Move object from one bucket to another, while also renaming it."""
+        srcBucket = b.Bucket(1)
+        srcBucket.make()
+        destBucket = b.Bucket(2)
+        destBucket.make()
+        obj = o.Object(ff.Size._1KB)
+        srcBucket.put(obj)
+        objNewName = "test.bin"
+        objOldName = obj.name()
+
+        # call command "mv s3://srcBucket/<OBJECT> s3://destBucket/test.bin"
+        args = ['mv', obj.fullName(), destBucket.fullName() + "/test.bin"]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # assert that object is renamed and only present in destination bucket
+        self.assertTrue(destBucket.doesContain(objNewName),
+                        msg=msg.Message.notInDest(objNewName,
+                        destBucket.fullName()))
+        self.assertFalse(srcBucket.doesContain(objNewName),
+                         msg=msg.Message.inSource(objNewName,
+                         srcBucket.fullName()))
+        # assert that object's old name is not present in either bucket
+        self.assertFalse(srcBucket.doesContain(objOldName),
+                         msg=msg.Message.inSource(objOldName,
+                         srcBucket.fullName()))
+        self.assertFalse(destBucket.doesContain(obj.name()),
+                         msg="Object moved but not renamed")
+
     def test_put(self):
         bucket = b.Bucket(1)
         bucket.make()
@@ -41,8 +131,8 @@ class TestObject(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the file was stored
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
-            bucket.fullName())) 
-        
+            bucket.fullName()))
+
     def test_put_stdin(self):
         """Put an object into a bucket by reading the object from stdin."""
         bucket = b.Bucket(1)
@@ -57,7 +147,7 @@ class TestObject(bt.BaseTest):
         # verify the file was stored
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
-        
+
     def test_put_multipart(self):
         bucket = b.Bucket(1)
         bucket.make()
@@ -100,7 +190,7 @@ class TestObject(bt.BaseTest):
             bucket.fullName()))
         self.assertTrue(bucket.doesContain(obj2.name()), msg=msg.Message.notFound(obj2.name(),
             bucket.fullName()))
-        
+
     @unittest.skip
     def test_put_recursive(self):
         """Recursively put all objects in a file directory."""
