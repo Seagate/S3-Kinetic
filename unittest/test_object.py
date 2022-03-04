@@ -82,7 +82,8 @@ class TestObject(bt.BaseTest):
         objOldName = obj.name()
 
         # call command "put <OBJECT> s3://bucket/test.bin"
-        args = ['put', obj.fullFileName(), bucket.fullName() + "/test.bin"]
+        args = ['put', obj.fullFileName(),
+                 bucket.fullName() + "/" + objNewName]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
 
@@ -175,7 +176,7 @@ class TestObject(bt.BaseTest):
 
         # call command "put --multipart ... <OBJECT> s3://<BUCKET>/test.bin"
         args = ['put', '--multipart-chunk-size-mb=5', obj.fullFileName(),
-                bucket.fullName() + "/test.bin"]
+                bucket.fullName() + "/" + objNewName]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
 
