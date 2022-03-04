@@ -44,6 +44,7 @@ int Delete(int64_t user_id, char* key, char* current_version,  _Bool sync, uint6
 
 void GetKeyRange(int64_t user_id, char* startKey, char* endKey, bool startKeyInclusive, bool endKeyInclusive, uint32_t maxReturned,
                  bool reverse, char* results, int* size);
+int Flush();
 
 #ifdef __cplusplus
 }

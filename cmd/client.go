@@ -1496,3 +1496,11 @@ func (c *Client) GetSignOnMessage() error {
 	//log.Println(" Identity ", identity, " HMAC ", khmac)
 	return err
 }
+
+func (c *Client) Flush() error {
+    defer common.KUntrace(common.KTrace("Enter"))
+    var status C.int
+    status = C.Flush()
+    return toKineticError(KineticError(int(status)))
+}
+
