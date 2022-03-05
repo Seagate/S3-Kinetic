@@ -1,6 +1,4 @@
 import getpass
-import os
-import shutil
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import sys
@@ -17,8 +15,7 @@ import in_file_factory as ff
 # Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
 DOWNLOAD_DIR = 'test-download'
-DAT_DIR = 'test-dat'
-IN_FILE = '/dev/urandom'
+#IN_FILE = '/dev/urandom'
 PYTHON = 'python'  # s3cmd does not work with python3
 S3 = 's3://'
 S3CMD = f'{PATH_TO_S3CMD}/s3cmd'

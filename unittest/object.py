@@ -1,4 +1,3 @@
-import base_test as bt
 import in_file_factory as ff
 
 class Object:
@@ -20,7 +19,7 @@ class Object:
             suffix = f'_{suffix}'
         self.__name = fname + suffix 
         self.__size = size
-        self.__fullFileName = f'{bt.DAT_DIR}/{self.__name}'
+        self.__fullFileName = f'{ff.DAT_DIR}/{self.__name}'
         self.__bucket = None
 
     def name(self):

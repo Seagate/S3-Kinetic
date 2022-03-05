@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 
 class Size:
     """Sizes of objects/files."""
@@ -13,7 +14,7 @@ class Size:
 # Dictionary stores information to create input file with dd command: size, name , blockSize, blockCount
 # Format: ((blockSize, numberOfBlocks), ....)
 DATA_SIZE = (('1KB', 1), ('1MB', 1), ('1MB', 5), ('1MB', 6), ('1MB', 16), ('1MB', 32))
-
+DAT_DIR = './test-dat'
 DATA_FILES = {}
 
 def getRandFileSize():
@@ -33,7 +34,6 @@ def getFileName(size):
 class InFileFactory:
     """Class that creates input files"""
     
-    DAT_DIR = './test-dat'
     DEV_IN_FILE = '/dev/urandom'
 
     def __init__(self):
@@ -51,10 +51,15 @@ class InFileFactory:
             else:
                 raise Exception('Invalid unit: {unit}')
 
-            DATA_FILES[size] = (size, f'_{sizeName}{unit}.bin', f'{blockSize}{unit}', numBlocks)
+            DATA_FILES[size] = (size, f'_{sizeName}{unit}.bin', f'{blockSize}{unit[0]}', numBlocks)
 
     def makeAll(self):
         """Make all input files"""
+
+        # create a clean upload data directory
+        if os.path.isdir(DAT_DIR):
+            shutil.rmtree(DAT_DIR)
+        os.mkdir(DAT_DIR)
 
         for fileTuple in DATA_FILES.values():
            self.__make(fileTuple) 
@@ -69,5 +74,5 @@ class InFileFactory:
         name  = dataFileTuple[1]
         blockSize = dataFileTuple[2]
         count = dataFileTuple[3]
-        fullFileName = f'{self.DAT_DIR}/{name}'
+        fullFileName = f'{DAT_DIR}/{name}'
         os.system(f'dd if={self.DEV_IN_FILE} of={fullFileName} bs={blockSize} count={count} > /dev/null 2>&1')
