@@ -15,7 +15,6 @@ import in_file_factory as ff
 # Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
 DOWNLOAD_DIR = 'test-download'
-#IN_FILE = '/dev/urandom'
 PYTHON = 'python'  # s3cmd does not work with python3
 S3 = 's3://'
 S3CMD = f'{PATH_TO_S3CMD}/s3cmd'
