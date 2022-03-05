@@ -9,8 +9,8 @@ import S3.ExitCodes as xcodes
 # local imports
 import bucket as b
 import in_file_factory as ff
-import object as o
 import message as msg
+import object as o
 
 class TestBucket(bt.BaseTest):
     '''

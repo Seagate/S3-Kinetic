@@ -9,7 +9,7 @@ if bt.PATH_TO_S3CMD not in sys.path:
 import cmd_operator as co
 import in_file_factory as ff 
 
-class TestHeavyPut(bt.BaseTest):
+class TestHeavyPutDedicatedBucket(bt.BaseTest):
     """Test S3-Kinetic with heavy puts"""
 
     NUM_THREADS = 5 #25 
