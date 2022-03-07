@@ -13,6 +13,7 @@ import S3.ExitCodes as xcodes
 # local imports
 import base_test as bt
 import bucket as b
+import in_file_factory as ff
 import message as msg
 import object as o
 
@@ -57,27 +58,18 @@ class TestObject(bt.BaseTest):
     @classmethod
     def setUpClass(self):
         super().setUpClass()
-        # create a clean testsuite output directory
+
+        # create a clean testsuite download directory
         if os.path.isdir(bt.DOWNLOAD_DIR):
             shutil.rmtree(bt.DOWNLOAD_DIR)
 
         os.mkdir(bt.DOWNLOAD_DIR)
 
-        # create a small file in the testsuite data directory
-        obj = o.Object(o.Size._1KB)
-        os.system(f'dd if={bt.IN_FILE} of={obj.fullFileName()} bs=1K count=1 > /dev/null 2>&1')
-        # create a small file in the testsuite data directory
-        obj = o.Object(o.Size._1MB)
-        os.system(f'dd if={bt.IN_FILE} of={obj.fullFileName()} bs=1M count=1 > /dev/null 2>&1')
-        # create a 16M file in the testsuite data directory
-        obj = o.Object(o.Size._16MB)
-        os.system(f'dd if={bt.IN_FILE} of={obj.fullFileName()} bs=1M count=16 > /dev/null 2>&1')
-
     def test_put_rename(self):
         """ Put an object to a bucket, while renaming the object """
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         objNewName = "test.bin"
         objOldName = obj.name()
 
@@ -98,7 +90,7 @@ class TestObject(bt.BaseTest):
         """ Download an object to the current working directory """
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         bucket.put(obj)
 
         # call command "get --force s3://bucket/<OBJECT>"
@@ -117,7 +109,7 @@ class TestObject(bt.BaseTest):
             while renaming the downloaded copy """
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         bucket.put(obj)
         objNewName = "test.bin"
         objOldName = obj.name()
@@ -142,7 +134,7 @@ class TestObject(bt.BaseTest):
         srcBucket.make()
         destBucket = b.Bucket(2)
         destBucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         srcBucket.put(obj)
         objNewName = "test.bin"
         objOldName = obj.name()
@@ -170,7 +162,7 @@ class TestObject(bt.BaseTest):
         """ Put a multipart object to a bucket, while also renaming it """
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         objOldName = obj.name()
         objNewName = "test.bin"
 
@@ -192,7 +184,7 @@ class TestObject(bt.BaseTest):
         """ Download a multipart object to the working directory """
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         bucket.put(obj)
 
         # execute command "get --force s3://<BUCKET>/<MULTIPART_OBJECT>"
@@ -203,7 +195,7 @@ class TestObject(bt.BaseTest):
         # verify the object was downloaded to working dir + size is correct
         self.assertTrue(os.path.exists(obj.name()),
                         msg=msg.Message.notFound(obj.name(), os.getcwd()))
-        self.assertEqual(o.Size._16MB, os.path.getsize(obj.name()),
+        self.assertEqual(ff.Size._16MB, os.path.getsize(obj.name()),
                          msg=msg.Message.sizeMismatch(os.getcwd()))
 
         # TODO: add file comparison assertion(s)
@@ -217,7 +209,7 @@ class TestObject(bt.BaseTest):
             specifying a new name for the downloaded obejct  """
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         bucket.put(obj)
         objNewName = "test.bin"
         objOldName = obj.name()
@@ -243,7 +235,7 @@ class TestObject(bt.BaseTest):
         """ Rename a multipart object (without moving it to another bucket)"""
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         bucket.put(obj)
         objNewName = "test.bin"
         objOldName = obj.name()
@@ -268,7 +260,7 @@ class TestObject(bt.BaseTest):
         srcBucket.make()
         destBucket = b.Bucket(2)
         destBucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         srcBucket.put(obj)
         objNewName = "test.bin"
         objOldName = obj.name()
@@ -295,7 +287,7 @@ class TestObject(bt.BaseTest):
     def test_put(self):
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         args = ['put', obj.fullFileName(), bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
@@ -307,7 +299,7 @@ class TestObject(bt.BaseTest):
         """Put an object into a bucket by reading the object from stdin."""
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         objFullName = f'{bucket.fullName()}/{obj.name()}'
         f = open(obj.fullFileName(), 'r')
         args = ['put', '-', objFullName]
@@ -321,7 +313,7 @@ class TestObject(bt.BaseTest):
     def test_put_multipart(self):
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         args = ['put', '--multipart-chunk-size-mb=5', obj.fullFileName(), bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
@@ -334,7 +326,7 @@ class TestObject(bt.BaseTest):
         """Put a multipart object into a bucket by reading the object from stdin."""
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         objFullName = f'{bucket.fullName()}/{obj.name()}'
         f = open(obj.fullFileName(), 'r')
         args = ['put', '--multipart-chunk-size-mb=5', '-', objFullName]
@@ -348,8 +340,8 @@ class TestObject(bt.BaseTest):
     def test_put_multi(self):
         bucket = b.Bucket(1)
         bucket.make()
-        obj1 = o.Object(o.Size._1KB)
-        obj2 = o.Object(o.Size._1MB)
+        obj1 = o.Object(ff.Size._1KB)
+        obj2 = o.Object(ff.Size._1MB)
         args = ['put', obj1.fullFileName(), obj2.fullFileName(), bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
@@ -382,7 +374,7 @@ class TestObject(bt.BaseTest):
     def test_get(self):
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         bucket.put(obj)
         args = ['get', '--force', obj.fullName(), bt.DOWNLOAD_DIR]
         result = self.execute(args)
@@ -394,7 +386,7 @@ class TestObject(bt.BaseTest):
     def test_get_multipart(self):
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         bucket.put(obj)
         args = ['get', '--force', obj.fullName(), bt.DOWNLOAD_DIR]
         result = self.execute(args)
@@ -402,15 +394,15 @@ class TestObject(bt.BaseTest):
         # verify the object was downloaded and its size is right
         fpath = f'{bt.DOWNLOAD_DIR}/{obj.name()}'
         self.assertTrue(os.path.exists(fpath),
-            msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR))
-        self.assertEqual(o.Size._16MB, os.path.getsize(fpath), msg=msg.Message.sizeMismatch(fpath))
+        msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR)) 
+        self.assertEqual(ff.Size._16MB, os.path.getsize(fpath), msg=msg.Message.sizeMismatch(fpath))
 
     def test_get_multi(self):
         """Get multiple objects from a bucket."""
         bucket = b.Bucket(1)
         bucket.make()
-        smallObj = o.Object(o.Size._1KB)
-        largeObj = o.Object(o.Size._16MB)
+        smallObj = o.Object(ff.Size._1KB)
+        largeObj = o.Object(ff.Size._16MB)
         bucket.put(smallObj)
         bucket.put(largeObj)
         args = ['get', '--force', smallObj.fullName(), largeObj.fullName(), bt.DOWNLOAD_DIR]
@@ -424,15 +416,15 @@ class TestObject(bt.BaseTest):
         self.assertTrue(os.path.exists(fpathLarge),
             msg=msg.Message.notFound(largeObj.name(), bt.DOWNLOAD_DIR))
 
-        self.assertEqual(o.Size._1KB, os.path.getsize(fpathSmall),
+        self.assertEqual(ff.Size._1KB, os.path.getsize(fpathSmall),
             msg=msg.Message.sizeMismatch(fpathSmall))
-        self.assertEqual(o.Size._16MB, os.path.getsize(fpathLarge),
+        self.assertEqual(ff.Size._16MB, os.path.getsize(fpathLarge),
             msg=msg.Message.sizeMismatch(fpathLarge))
 
     def test_delete(self):
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         bucket.put(obj)
         args = ['del', obj.fullName()]
         result = self.execute(args)
@@ -443,7 +435,7 @@ class TestObject(bt.BaseTest):
     def test_delete_multipart(self):
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         bucket.put(obj)
         args = ['del', obj.fullName()]
         result = self.execute(args)
@@ -454,7 +446,7 @@ class TestObject(bt.BaseTest):
     def test_remove(self):
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         bucket.put(obj)
         args = ['rm', obj.fullName()]
         result = self.execute(args)
@@ -465,7 +457,7 @@ class TestObject(bt.BaseTest):
     def test_remove_multipart(self):
         bucket = b.Bucket(1)
         bucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         bucket.put(obj)
         args = ['rm', obj.fullName()]
         result = self.execute(args)
@@ -477,8 +469,8 @@ class TestObject(bt.BaseTest):
         """Recursively delete all objects from a bucket."""
         bucket = b.Bucket(1)
         bucket.make()
-        obj1 = o.Object(o.Size._1KB)
-        obj2 = o.Object(o.Size._16MB)
+        obj1 = o.Object(ff.Size._1KB)
+        obj2 = o.Object(ff.Size._16MB)
         bucket.put(obj1)
         bucket.put(obj2)
         args = ['del', '--recursive', '--force', bucket.fullName()]
@@ -490,9 +482,9 @@ class TestObject(bt.BaseTest):
         """Recursively remove (the same as delete) all objects from a bucket."""
         bucket = b.Bucket(1)
         bucket.make()
-        obj1 = o.Object(o.Size._1KB)
+        obj1 = o.Object(ff.Size._1KB)
         bucket.put(obj1)
-        obj2 = o.Object(o.Size._16MB)
+        obj2 = o.Object(ff.Size._16MB)
         bucket.put(obj2)
         args = ['rm', '--recursive', '--force', bucket.fullName()]
         result = self.execute(args)
@@ -505,7 +497,7 @@ class TestObject(bt.BaseTest):
         srcBucket.make()
         destBucket = b.Bucket(2)
         destBucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         srcBucket.put(obj)
         args = ['cp', obj.fullName(), destBucket.fullName()]
         result = self.execute(args)
@@ -520,7 +512,7 @@ class TestObject(bt.BaseTest):
         srcBucket.make()
         destBucket = b.Bucket(2)
         destBucket.make()
-        obj = o.Object(o.Size._16MB)
+        obj = o.Object(ff.Size._16MB)
         srcBucket.put(obj)
 
         args = ['cp', '--multipart-chunk-size-mb=5', obj.fullName(), destBucket.fullName()]
@@ -536,7 +528,7 @@ class TestObject(bt.BaseTest):
         srcBucket.make()
         destBucket = b.Bucket(2)
         destBucket.make()
-        obj = o.Object(o.Size._1KB)
+        obj = o.Object(ff.Size._1KB)
         srcBucket.put(obj)
 
         args = ['mv', obj.fullName(), destBucket.fullName()]
@@ -553,8 +545,8 @@ class TestObject(bt.BaseTest):
         srcBucket.make()
         destBucket = b.Bucket(2)
         destBucket.make()
-        obj1 = o.Object(o.Size._1KB)
-        obj2 = o.Object(o.Size._1MB)
+        obj1 = o.Object(ff.Size._1KB)
+        obj2 = o.Object(ff.Size._1MB)
         srcBucket.put(obj1)
         srcBucket.put(obj2)
 

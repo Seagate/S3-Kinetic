@@ -1,6 +1,4 @@
 import getpass
-import os
-import shutil
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import sys
@@ -12,13 +10,11 @@ if PATH_TO_S3CMD not in sys.path:
 
 #local imports
 import bucket as b
-import object as o
+import in_file_factory as ff
 
 # Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
 DOWNLOAD_DIR = 'test-download'
-DAT_DIR = 'test-dat'
-IN_FILE = '/dev/urandom'
 PYTHON = 'python'  # s3cmd does not work with python3
 S3 = 's3://'
 S3CMD = f'{PATH_TO_S3CMD}/s3cmd'
@@ -32,21 +28,13 @@ def executeS3cmd(args, stdin=None):
 
 class BaseTest(unittest.TestCase):
     """Base class for test classes."""
-    '''
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    '''
+
     @classmethod
     def setUpClass(cls):
-        cls.removeAllTestBuckets()
-        # create a clean testsuite output directory
-        if os.path.isdir(DAT_DIR):
-            shutil.rmtree(DAT_DIR)
+        """Do class setup: Create all input files"""
 
-        os.mkdir(DAT_DIR)
-        # create a 1M file in the testsuite directory
-        obj = o.Object(o.Size._1MB)
-        os.system(f'dd if={IN_FILE} of={obj.fullFileName()} bs=1M count=1 > /dev/null 2>&1')
+        fileFactory = ff.InFileFactory()
+        fileFactory.makeAll()
 
     @classmethod
     def removeAllTestBuckets(cls):
