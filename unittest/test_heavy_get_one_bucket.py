@@ -9,7 +9,7 @@ import in_file_factory as ff
 import object as o
 
 class TestHeavyGetOneBucket(bt.BaseTest):
-    """Test S3-Kinetic with heavy puts"""
+    """Test S3-Kinetic with heavy gets with one bucket"""
 
     NUM_THREADS = 1
     NUM_OPS = 10 
