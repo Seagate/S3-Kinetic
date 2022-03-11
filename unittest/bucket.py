@@ -96,6 +96,11 @@ class Bucket:
         result = bt.executeS3cmd(args)
         assert result.returncode == xcodes.EX_OK, result.stdout
 
+    def delete(self, obj):
+        args = ['del', obj.fullName()]
+        result = bt.executeS3cmd(args)
+        assert result.returncode == xcodes.EX_OK, result.stdout
+
     def remove(self):
         args = ['rb', '--recursive', self.fullName()]
         bt.executeS3cmd(args)

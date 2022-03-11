@@ -66,7 +66,15 @@ class CmdOperator(threading.Thread):
         return result
 
     def __del(self):
-        pass 
+        if len(self.__buckets) == 0:
+            return
+        # Get random bucket
+        bucket = self.__buckets[random.randint(0, len(self.__buckets) - 1)]
+        size = ff.getRandFileSize()
+        obj = o.Object(size)
+        obj.setBucket(bucket)
+        result = bucket.delete(obj)
+        return result
 
     def getError(self):
         return self.__error
