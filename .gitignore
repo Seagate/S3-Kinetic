@@ -34,3 +34,6 @@ bin
 *.pyc
 s3cmd/testsuite
 s3cmd/testsuite-out
+unittest/test-dat/
+unittest/test-download/
+
