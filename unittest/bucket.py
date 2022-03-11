@@ -88,6 +88,14 @@ class Bucket:
         assert(result.returncode == xcodes.EX_OK)
         obj.setBucket(self)
 
+    def get(self, obj, newName=None):
+        if newName == None:
+            args = ['get', '--force', obj.fullName(), bt.DOWNLOAD_DIR]
+        else:
+            args = ['get', '--force', obj.fullName(), os.path.join(bt.DOWNLOAD_DIR, newName)]
+        result = bt.executeS3cmd(args)
+        assert result.returncode == xcodes.EX_OK, result.stdout
+
     def remove(self):
         args = ['rb', '--recursive', self.fullName()]
         bt.executeS3cmd(args)

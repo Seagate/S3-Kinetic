@@ -1,5 +1,7 @@
 import getpass
+import os
 import subprocess
+import shutil
 from subprocess import Popen, PIPE, STDOUT
 import sys
 import unittest
@@ -25,6 +27,13 @@ def executeS3cmd(args, stdin=None):
     result = subprocess.run(args, stdin=stdin, stdout=PIPE, stderr=STDOUT, universal_newlines=True,
         close_fds=True)
     return result
+
+def makeDownloadDir():
+    # create a clean testsuite download directory
+    if os.path.isdir(DOWNLOAD_DIR):
+        shutil.rmtree(DOWNLOAD_DIR)
+
+    os.mkdir(DOWNLOAD_DIR)
 
 class BaseTest(unittest.TestCase):
     """Base class for test classes."""

@@ -1,5 +1,4 @@
 import os
-import shutil
 import sys
 import unittest
 
@@ -58,12 +57,7 @@ class TestObject(bt.BaseTest):
     @classmethod
     def setUpClass(self):
         super().setUpClass()
-
-        # create a clean testsuite download directory
-        if os.path.isdir(bt.DOWNLOAD_DIR):
-            shutil.rmtree(bt.DOWNLOAD_DIR)
-
-        os.mkdir(bt.DOWNLOAD_DIR)
+        bt.makeDownloadDir()
 
     def test_put_rename(self):
         """ Put an object to a bucket, while renaming the object """
