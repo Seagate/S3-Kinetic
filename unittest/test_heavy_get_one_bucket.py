@@ -28,7 +28,8 @@ class TestHeavyGetOneBucket(bt.BaseTest):
             self.__bucket.put(obj)
          
     def test_heavy_get(self):
-        """Execute heavy load test"""
+        """Execute heavy gets with one bucket"""
+
         bt.makeDownloadDir()
         operatorList = [] 
 
