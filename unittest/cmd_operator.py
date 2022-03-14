@@ -29,6 +29,11 @@ class CmdOperator(threading.Thread):
         Type of operation, ex. PUT, GET, DEL, ...
     __n    : int
         Number of operations to perform.  Default to 1
+    __buckets : list, default = []
+        A list of made buckets 
+    __error : AssertionError
+        Assertion error used to decide to stop command operator (thread)
+
     """
 
     stopAllOperators = False

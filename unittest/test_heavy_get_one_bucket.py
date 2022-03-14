@@ -15,7 +15,10 @@ class TestHeavyGetOneBucket(bt.BaseTest):
     NUM_OPS = 10 
     
     def setUp(self):
-        """setup data for the test"""
+        """Setup input files for the test.
+
+            Creates a collection of files with different sizes and puts all of them into one bucket
+        """
 
         # Create upload files       
         factory = ff.InFileFactory()
@@ -28,12 +31,17 @@ class TestHeavyGetOneBucket(bt.BaseTest):
             self.__bucket.put(obj)
          
     def test_heavy_get(self):
-        """Execute heavy gets with one bucket"""
+        """Execute heavy gets with one bucket
+
+            Launches a fixed number of threads (NUM_THREADS), each thread makes n PUT
+            operations in the given bucket. The test stops when all threads perform 
+            successfully or on the first error.
+        """
 
         bt.makeDownloadDir()
         operatorList = [] 
 
-        # Launch PUT threads
+        # Launch threads
         print(f'Starting {self.NUM_THREADS} GET threads, {self.NUM_OPS} GETs per thread...')
         bucketList = [self.__bucket]
         for i in range(0, self.NUM_THREADS):
