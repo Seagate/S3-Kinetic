@@ -38,7 +38,7 @@ class TestHeavyGetOneBucket(bt.BaseTest):
             successfully or on the first error.
         """
 
-        bt.makeDownloadDir()
+        ff.makeDownloadDir()
         operatorList = [] 
 
         # Launch threads

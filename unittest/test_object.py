@@ -57,7 +57,7 @@ class TestObject(bt.BaseTest):
     @classmethod
     def setUpClass(self):
         super().setUpClass()
-        bt.makeDownloadDir()
+        ff.makeDownloadDir()
 
     def test_put_rename(self):
         """ Put an object to a bucket, while renaming the object """
@@ -370,25 +370,25 @@ class TestObject(bt.BaseTest):
         bucket.make()
         obj = o.Object(ff.Size._1KB)
         bucket.put(obj)
-        args = ['get', '--force', obj.fullName(), bt.DOWNLOAD_DIR]
+        args = ['get', '--force', obj.fullName(), ff.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded
-        self.assertTrue(os.path.exists(f'{bt.DOWNLOAD_DIR}/{obj.name()}'),
-            msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR))
+        self.assertTrue(os.path.exists(f'{ff.DOWNLOAD_DIR}/{obj.name()}'),
+            msg=msg.Message.notFound(obj.name(), ff.DOWNLOAD_DIR))
 
     def test_get_multipart(self):
         bucket = b.Bucket(1)
         bucket.make()
         obj = o.Object(ff.Size._16MB)
         bucket.put(obj)
-        args = ['get', '--force', obj.fullName(), bt.DOWNLOAD_DIR]
+        args = ['get', '--force', obj.fullName(), ff.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
-        fpath = f'{bt.DOWNLOAD_DIR}/{obj.name()}'
+        fpath = f'{ff.DOWNLOAD_DIR}/{obj.name()}'
         self.assertTrue(os.path.exists(fpath),
-        msg=msg.Message.notFound(obj.name(), bt.DOWNLOAD_DIR)) 
+        msg=msg.Message.notFound(obj.name(), ff.DOWNLOAD_DIR)) 
         self.assertEqual(ff.Size._16MB, os.path.getsize(fpath), msg=msg.Message.sizeMismatch(fpath))
 
     def test_get_multi(self):
@@ -399,16 +399,16 @@ class TestObject(bt.BaseTest):
         largeObj = o.Object(ff.Size._16MB)
         bucket.put(smallObj)
         bucket.put(largeObj)
-        args = ['get', '--force', smallObj.fullName(), largeObj.fullName(), bt.DOWNLOAD_DIR]
+        args = ['get', '--force', smallObj.fullName(), largeObj.fullName(), ff.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify the object was downloaded and its size is right
-        fpathSmall = f'{bt.DOWNLOAD_DIR}/{smallObj.name()}'
+        fpathSmall = f'{ff.DOWNLOAD_DIR}/{smallObj.name()}'
         self.assertTrue(os.path.exists(fpathSmall),
-            msg=msg.Message.notFound(smallObj.name(), bt.DOWNLOAD_DIR))
-        fpathLarge = f'{bt.DOWNLOAD_DIR}/{largeObj.name()}'
+            msg=msg.Message.notFound(smallObj.name(), ff.DOWNLOAD_DIR))
+        fpathLarge = f'{ff.DOWNLOAD_DIR}/{largeObj.name()}'
         self.assertTrue(os.path.exists(fpathLarge),
-            msg=msg.Message.notFound(largeObj.name(), bt.DOWNLOAD_DIR))
+            msg=msg.Message.notFound(largeObj.name(), ff.DOWNLOAD_DIR))
 
         self.assertEqual(ff.Size._1KB, os.path.getsize(fpathSmall),
             msg=msg.Message.sizeMismatch(fpathSmall))

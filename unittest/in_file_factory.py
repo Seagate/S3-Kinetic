@@ -15,6 +15,7 @@ class Size:
 # Format: ((blockSize, numberOfBlocks), ....)
 DATA_SIZE = (('1KB', 1), ('1MB', 1), ('1MB', 5), ('1MB', 6), ('1MB', 16), ('1MB', 32))
 DAT_DIR = './test-dat'
+DOWNLOAD_DIR = 'test-download'
 DATA_FILES = {}
 
 def getRandFileSize():
@@ -30,6 +31,14 @@ def getFileName(size):
         raise Exception(f'Invalid file size: {size}')
     fname = fileTuple[1]
     return fname
+
+def makeDownloadDir():
+    # create a clean testsuite download directory
+    if os.path.isdir(DOWNLOAD_DIR):
+        shutil.rmtree(DOWNLOAD_DIR)
+
+    os.mkdir(DOWNLOAD_DIR)
+
 
 class InFileFactory:
     """Class that creates input files"""

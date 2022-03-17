@@ -9,6 +9,9 @@ if bt.PATH_TO_S3CMD not in sys.path:
 
 import S3.ExitCodes as xcodes
 
+# local import
+import in_file_factory as ff
+
 class Bucket:
     """A class used to represent bucket."""
 
@@ -90,9 +93,9 @@ class Bucket:
 
     def get(self, obj, newName=None):
         if newName == None:
-            args = ['get', '--force', obj.fullName(), bt.DOWNLOAD_DIR]
+            args = ['get', '--force', obj.fullName(), ff.DOWNLOAD_DIR]
         else:
-            args = ['get', '--force', obj.fullName(), os.path.join(bt.DOWNLOAD_DIR, newName)]
+            args = ['get', '--force', obj.fullName(), os.path.join(ff.DOWNLOAD_DIR, newName)]
         result = bt.executeS3cmd(args)
         assert result.returncode == xcodes.EX_OK, result.stdout
 

@@ -16,7 +16,6 @@ import in_file_factory as ff
 
 # Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
-DOWNLOAD_DIR = 'test-download'
 PYTHON = 'python'  # s3cmd does not work with python3
 S3 = 's3://'
 S3CMD = f'{PATH_TO_S3CMD}/s3cmd'
@@ -27,13 +26,6 @@ def executeS3cmd(args, stdin=None):
     result = subprocess.run(args, stdin=stdin, stdout=PIPE, stderr=STDOUT, universal_newlines=True,
         close_fds=True)
     return result
-
-def makeDownloadDir():
-    # create a clean testsuite download directory
-    if os.path.isdir(DOWNLOAD_DIR):
-        shutil.rmtree(DOWNLOAD_DIR)
-
-    os.mkdir(DOWNLOAD_DIR)
 
 class BaseTest(unittest.TestCase):
     """Base class for test classes."""
