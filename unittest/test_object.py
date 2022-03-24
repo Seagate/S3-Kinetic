@@ -11,7 +11,7 @@ import S3.ExitCodes as xcodes
 
 # local imports
 import base_test as bt
-import bucket as b
+import s3bucket
 import file_system
 import message as msg
 import s3object
@@ -61,7 +61,7 @@ class TestObject(bt.BaseTest):
 
     def test_put_rename(self):
         """ Put an object to a bucket, while renaming the object """
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         objNewName = "test.bin"
@@ -82,7 +82,7 @@ class TestObject(bt.BaseTest):
 
     def test_get_wd(self):
         """ Download an object to the current working directory """
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         bucket.put(obj)
@@ -101,7 +101,7 @@ class TestObject(bt.BaseTest):
     def test_get_wd_rename(self):
         """ Download an object to the current working directory
             while renaming the downloaded copy """
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         bucket.put(obj)
@@ -124,9 +124,9 @@ class TestObject(bt.BaseTest):
 
     def test_move_rename(self):
         """Move object from one bucket to another, while also renaming it."""
-        srcBucket = b.Bucket(1)
+        srcBucket = s3bucket.S3Bucket(1)
         srcBucket.make()
-        destBucket = b.Bucket(2)
+        destBucket = s3bucket.S3Bucket(2)
         destBucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         srcBucket.put(obj)
@@ -154,7 +154,7 @@ class TestObject(bt.BaseTest):
 
     def test_put_rename_multipart(self):
         """ Put a multipart object to a bucket, while also renaming it """
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         objOldName = obj.name()
@@ -176,7 +176,7 @@ class TestObject(bt.BaseTest):
 
     def test_get_wd_multipart(self):
         """ Download a multipart object to the working directory """
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         bucket.put(obj)
@@ -201,7 +201,7 @@ class TestObject(bt.BaseTest):
     def test_get_wd_rename_multipart(self):
         """ Download a multipart object to the working directory, while
             specifying a new name for the downloaded obejct  """
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         bucket.put(obj)
@@ -227,7 +227,7 @@ class TestObject(bt.BaseTest):
 
     def test_rename_multipart(self):
         """ Rename a multipart object (without moving it to another bucket)"""
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         bucket.put(obj)
@@ -250,9 +250,9 @@ class TestObject(bt.BaseTest):
     def test_move_rename_multipart(self):
         """ Move a multipart object from one bucket to another,
             while also renaming it  """
-        srcBucket = b.Bucket(1)
+        srcBucket = s3bucket.S3Bucket(1)
         srcBucket.make()
-        destBucket = b.Bucket(2)
+        destBucket = s3bucket.S3Bucket(2)
         destBucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         srcBucket.put(obj)
@@ -279,7 +279,7 @@ class TestObject(bt.BaseTest):
                          msg="Object moved but not renamed")
 
     def test_put(self):
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         args = ['put', obj.fullFileName(), bucket.fullName()]
@@ -291,7 +291,7 @@ class TestObject(bt.BaseTest):
 
     def test_put_stdin(self):
         """Put an object into a bucket by reading the object from stdin."""
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         objFullName = f'{bucket.fullName()}/{obj.name()}'
@@ -305,7 +305,7 @@ class TestObject(bt.BaseTest):
             bucket.fullName()))
 
     def test_put_multipart(self):
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         args = ['put', '--multipart-chunk-size-mb=5', obj.fullFileName(), bucket.fullName()]
@@ -318,7 +318,7 @@ class TestObject(bt.BaseTest):
 
     def test_put_multipart_stdin(self):
         """Put a multipart object into a bucket by reading the object from stdin."""
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         objFullName = f'{bucket.fullName()}/{obj.name()}'
@@ -332,7 +332,7 @@ class TestObject(bt.BaseTest):
             bucket.fullName()))
 
     def test_put_multi(self):
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj1 = s3object.S3Object(file_system.Size._1KB)
         obj2 = s3object.S3Object(file_system.Size._1MB)
@@ -350,7 +350,7 @@ class TestObject(bt.BaseTest):
     @unittest.skip
     def test_put_recursive(self):
         """Recursively put all objects in a file directory."""
-        bucket = b.Bucket("recursive")
+        bucket = s3bucket.S3Bucket("recursive")
         bucket.make()
         args =['put', '--recursive', '--multipart-chunk-size-mb=5', \
             bt.DAT_DIR, bucket.fullName()]
@@ -366,7 +366,7 @@ class TestObject(bt.BaseTest):
                 msg=msg.Message.notFound(f, bt.DAT_DIR))
 
     def test_get(self):
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         bucket.put(obj)
@@ -378,7 +378,7 @@ class TestObject(bt.BaseTest):
             msg=msg.Message.notFound(obj.name(), file_system.DOWNLOAD_DIR))
 
     def test_get_multipart(self):
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         bucket.put(obj)
@@ -393,7 +393,7 @@ class TestObject(bt.BaseTest):
 
     def test_get_multi(self):
         """Get multiple objects from a bucket."""
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         smallObj = s3object.S3Object(file_system.Size._1KB)
         largeObj = s3object.S3Object(file_system.Size._16MB)
@@ -416,7 +416,7 @@ class TestObject(bt.BaseTest):
             msg=msg.Message.sizeMismatch(fpathLarge))
 
     def test_delete(self):
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         bucket.put(obj)
@@ -427,7 +427,7 @@ class TestObject(bt.BaseTest):
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     def test_delete_multipart(self):
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         bucket.put(obj)
@@ -438,7 +438,7 @@ class TestObject(bt.BaseTest):
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     def test_remove(self):
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         bucket.put(obj)
@@ -449,7 +449,7 @@ class TestObject(bt.BaseTest):
             msg=msg.Message.found(obj.name(), bucket.fullName()))
 
     def test_remove_multipart(self):
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         bucket.put(obj)
@@ -461,7 +461,7 @@ class TestObject(bt.BaseTest):
 
     def test_delete_all_recursive(self):
         """Recursively delete all objects from a bucket."""
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj1 = s3object.S3Object(file_system.Size._1KB)
         obj2 = s3object.S3Object(file_system.Size._16MB)
@@ -474,7 +474,7 @@ class TestObject(bt.BaseTest):
 
     def test_remove_all_recursive(self):
         """Recursively remove (the same as delete) all objects from a bucket."""
-        bucket = b.Bucket(1)
+        bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj1 = s3object.S3Object(file_system.Size._1KB)
         bucket.put(obj1)
@@ -487,9 +487,9 @@ class TestObject(bt.BaseTest):
 
     def test_copy_between_buckets(self):
         """Copy an object from a bucket to another."""
-        srcBucket = b.Bucket(1)
+        srcBucket = s3bucket.S3Bucket(1)
         srcBucket.make()
-        destBucket = b.Bucket(2)
+        destBucket = s3bucket.S3Bucket(2)
         destBucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         srcBucket.put(obj)
@@ -502,9 +502,9 @@ class TestObject(bt.BaseTest):
 
     def test_copy_multipart_between_buckets(self):
         """Copy a multipart object from a bucket to another."""
-        srcBucket = b.Bucket(1)
+        srcBucket = s3bucket.S3Bucket(1)
         srcBucket.make()
-        destBucket = b.Bucket(2)
+        destBucket = s3bucket.S3Bucket(2)
         destBucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
         srcBucket.put(obj)
@@ -518,9 +518,9 @@ class TestObject(bt.BaseTest):
 
     def test_move(self):
         """Move an object from a bucket to another."""
-        srcBucket = b.Bucket(1)
+        srcBucket = s3bucket.S3Bucket(1)
         srcBucket.make()
-        destBucket = b.Bucket(2)
+        destBucket = s3bucket.S3Bucket(2)
         destBucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         srcBucket.put(obj)
@@ -535,9 +535,9 @@ class TestObject(bt.BaseTest):
 
     def test_move_multi(self):
         """Move multiple objects from a bucket to another."""
-        srcBucket = b.Bucket(1)
+        srcBucket = s3bucket.S3Bucket(1)
         srcBucket.make()
-        destBucket = b.Bucket(2)
+        destBucket = s3bucket.S3Bucket(2)
         destBucket.make()
         obj1 = s3object.S3Object(file_system.Size._1KB)
         obj2 = s3object.S3Object(file_system.Size._1MB)

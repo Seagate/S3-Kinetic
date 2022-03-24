@@ -3,7 +3,7 @@ import random
 import threading
 
 #Local imports
-import bucket as b
+import s3bucket
 import file_system
 import s3object
 
@@ -55,7 +55,7 @@ class CmdOperator(threading.Thread):
         """Put file with random size"""
 
         fileSize = file_system.getRandFileSize()
-        bucket = b.Bucket(self.getName())
+        bucket = s3bucket.S3Bucket(self.getName())
         obj = s3object.S3Object(fileSize)
         bucket.put(obj)
 
@@ -85,7 +85,7 @@ class CmdOperator(threading.Thread):
         elif self.__type == Type.DEL:
             exeOp = self.__del
 
-        bucket = b.Bucket(self.getName())
+        bucket = s3bucket.S3Bucket(self.getName())
         bucket.make(refresh=False)
         # Execute n operations
         while (not CmdOperator.stopAllOperators) and (self.__n == -1 or self.__n > 0):

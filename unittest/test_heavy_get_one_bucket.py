@@ -3,7 +3,7 @@ import unittest
 
 # local imports
 import base_test as bt
-import bucket as b
+import s3bucket
 import cmd_operator as co
 import file_system
 import s3object
@@ -24,7 +24,7 @@ class TestHeavyGetOneBucket(bt.BaseTest):
         fileCreator = file_system.InputFileCreator()
         fileCreator.makeAll()
         # Upload files to one bucket
-        self.__bucket = b.Bucket(1)
+        self.__bucket = s3bucket.S3Bucket(1)
         self.__bucket.make()
         for size in file_system.DATA_FILES.keys():
             obj = s3object.S3Object(size)

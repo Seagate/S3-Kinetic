@@ -12,7 +12,7 @@ import S3.ExitCodes as xcodes
 # local import
 import file_system
 
-class Bucket:
+class S3Bucket:
     """A class used to represent bucket."""
 
     def __init__(self, name, nameType='suffix'):

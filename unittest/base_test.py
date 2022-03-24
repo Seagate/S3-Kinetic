@@ -11,7 +11,7 @@ if PATH_TO_S3CMD not in sys.path:
     sys.path.append(PATH_TO_S3CMD) # required to see S3.ExitCodes
 
 #local imports
-import bucket as b
+import s3bucket
 import file_system
 
 # Constants
@@ -46,7 +46,7 @@ class BaseTest(unittest.TestCase):
             if not f.startswith(f'{S3}{BUCKET_PREFIX}'):
                 continue
             itemList = f.split('\n')
-            bucket = b.Bucket(itemList[0], nameType='full')
+            bucket = s3bucket.S3Bucket(itemList[0], nameType='full')
             bucket.remove()
 
     @classmethod
