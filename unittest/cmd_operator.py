@@ -4,7 +4,7 @@ import threading
 
 #Local imports
 import bucket as b
-import in_file_factory as ff
+import file_system
 import object as o
 
 class Type(Enum):
@@ -54,7 +54,7 @@ class CmdOperator(threading.Thread):
     def __put(self):
         """Put file with random size"""
 
-        fileSize = ff.getRandFileSize()
+        fileSize = file_system.getRandFileSize()
         bucket = b.Bucket(self.getName())
         obj = o.Object(fileSize)
         bucket.put(obj)
@@ -64,7 +64,7 @@ class CmdOperator(threading.Thread):
             return
         # Get random bucket
         bucket = self.__buckets[random.randint(0, len(self.__buckets) - 1)]
-        size = ff.getRandFileSize()
+        size = file_system.getRandFileSize()
         obj = o.Object(size)
         obj.setBucket(bucket)
         result = bucket.get(obj)

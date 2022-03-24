@@ -12,7 +12,7 @@ if PATH_TO_S3CMD not in sys.path:
 
 #local imports
 import bucket as b
-import in_file_factory as ff
+import file_system
 
 # Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
@@ -34,8 +34,8 @@ class BaseTest(unittest.TestCase):
     def setUpClass(cls):
         """Do class setup: Create all input files"""
 
-        fileFactory = ff.InFileFactory()
-        fileFactory.makeAll()
+        fileCreator = file_system.InputFileCreator()
+        fileCreator.makeAll()
 
     @classmethod
     def removeAllTestBuckets(cls):

@@ -5,7 +5,7 @@ import unittest
 import base_test as bt
 import bucket as b
 import cmd_operator as co
-import in_file_factory as ff 
+import file_system
 import object as o
 
 class TestHeavyGetOneBucket(bt.BaseTest):
@@ -21,12 +21,12 @@ class TestHeavyGetOneBucket(bt.BaseTest):
         """
 
         # Create upload files       
-        factory = ff.InFileFactory()
-        factory.makeAll()
+        fileCreator = file_system.InputFileCreator()
+        fileCreator.makeAll()
         # Upload files to one bucket
         self.__bucket = b.Bucket(1)
         self.__bucket.make()
-        for size in ff.DATA_FILES.keys():
+        for size in file_system.DATA_FILES.keys():
             obj = o.Object(size)
             self.__bucket.put(obj)
          
@@ -38,7 +38,7 @@ class TestHeavyGetOneBucket(bt.BaseTest):
             successfully or on the first error.
         """
 
-        ff.makeDownloadDir()
+        file_system.makeDownloadDir()
         operatorList = [] 
 
         # Launch threads
