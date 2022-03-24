@@ -1,6 +1,6 @@
 import file_system
 
-class Object:
+class S3Object:
     """A class used to represent object in a bucket or file on disk."""
 
     def __init__(self, size, suffix=""):

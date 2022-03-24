@@ -10,7 +10,7 @@ import S3.ExitCodes as xcodes
 import bucket as b
 import file_system
 import message as msg
-import object as o
+import s3object
 
 class TestBucket(bt.BaseTest):
     '''
@@ -74,7 +74,7 @@ class TestBucket(bt.BaseTest):
         bucket = b.Bucket(1)
         bucket.make()
         # put an object to the bucket
-        obj = o.Object(file_system.Size._1MB)
+        obj = s3object.S3Object(file_system.Size._1MB)
         bucket.put(obj)
         args = ['la', bucket.fullName()]
         result = self.execute(args)
@@ -87,8 +87,8 @@ class TestBucket(bt.BaseTest):
         bucket = b.Bucket(1)
         bucket.make()
         # put an object to the bucket
-        obj1 = o.Object(file_system.Size._1MB)
-        obj2 = o.Object(file_system.Size._1MB)
+        obj1 = s3object.S3Object(file_system.Size._1MB)
+        obj2 = s3object.S3Object(file_system.Size._1MB)
         bucket.put(obj1, f'{obj1.name()}_1')
         bucket.put(obj2, f'{obj2.name()}_2')
         # disk usage
@@ -127,7 +127,7 @@ class TestBucket(bt.BaseTest):
         bucket = b.Bucket(1)
         bucket.make()
         # put an object to the bucket
-        obj = o.Object(file_system.Size._1MB)
+        obj = s3object.S3Object(file_system.Size._1MB)
         bucket.put(obj)
         # remove the bucket
         args = ['rb', '--recursive', bucket.fullName()]
@@ -143,8 +143,8 @@ class TestBucket(bt.BaseTest):
         bucket1.make()
         bucket2.make()
         # put an object to the buckets
-        obj1 = o.Object(file_system.Size._1MB)
-        obj2 = o.Object(file_system.Size._1MB)
+        obj1 = s3object.S3Object(file_system.Size._1MB)
+        obj2 = s3object.S3Object(file_system.Size._1MB)
         bucket1.put(obj1)
         bucket2.put(obj2)
         # remove those 2 buckets

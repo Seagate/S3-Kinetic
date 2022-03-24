@@ -5,7 +5,7 @@ import threading
 #Local imports
 import bucket as b
 import file_system
-import object as o
+import s3object
 
 class Type(Enum):
     """Enumeration of operation types:  PUT, GET, DEL"""
@@ -56,7 +56,7 @@ class CmdOperator(threading.Thread):
 
         fileSize = file_system.getRandFileSize()
         bucket = b.Bucket(self.getName())
-        obj = o.Object(fileSize)
+        obj = s3object.S3Object(fileSize)
         bucket.put(obj)
 
     def __get(self):
@@ -65,7 +65,7 @@ class CmdOperator(threading.Thread):
         # Get random bucket
         bucket = self.__buckets[random.randint(0, len(self.__buckets) - 1)]
         size = file_system.getRandFileSize()
-        obj = o.Object(size)
+        obj = s3object.S3Object(size)
         obj.setBucket(bucket)
         result = bucket.get(obj)
         return result

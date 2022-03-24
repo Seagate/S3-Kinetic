@@ -6,7 +6,7 @@ import base_test as bt
 import bucket as b
 import cmd_operator as co
 import file_system
-import object as o
+import s3object
 
 class TestHeavyGetOneBucket(bt.BaseTest):
     """Test S3-Kinetic with heavy gets with one bucket"""
@@ -27,7 +27,7 @@ class TestHeavyGetOneBucket(bt.BaseTest):
         self.__bucket = b.Bucket(1)
         self.__bucket.make()
         for size in file_system.DATA_FILES.keys():
-            obj = o.Object(size)
+            obj = s3object.S3Object(size)
             self.__bucket.put(obj)
          
     def test_heavy_get(self):
