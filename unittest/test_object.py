@@ -11,9 +11,9 @@ import S3.ExitCodes as xcodes
 
 # local imports
 import base_test as bt
-import s3bucket
 import file_system
 import message as msg
+import s3bucket
 import s3object
 
 import S3.ExitCodes as xcodes

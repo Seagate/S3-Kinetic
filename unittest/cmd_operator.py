@@ -3,8 +3,8 @@ import random
 import threading
 
 #Local imports
-import s3bucket
 import file_system
+import s3bucket
 import s3object
 
 class Type(Enum):

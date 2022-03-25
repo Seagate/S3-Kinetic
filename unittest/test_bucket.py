@@ -7,9 +7,9 @@ if bt.PATH_TO_S3CMD not in sys.path:
 import S3.ExitCodes as xcodes
 
 # local imports
-import s3bucket
 import file_system
 import message as msg
+import s3bucket
 import s3object
 
 class TestBucket(bt.BaseTest):

@@ -3,9 +3,9 @@ import unittest
 
 # local imports
 import base_test as bt
-import s3bucket
 import cmd_operator as co
 import file_system
+import s3bucket
 import s3object
 
 class TestHeavyGetOneBucket(bt.BaseTest):
