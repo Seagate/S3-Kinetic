@@ -9,7 +9,10 @@ import s3bucket
 import s3object
 
 class TestHeavyGetOneBucket(bt.BaseTest):
-    """Test S3-Kinetic with heavy gets with one bucket"""
+    """Test S3-Kinetic with heavy gets with one bucket
+
+        This test generates many GET commands from many threads
+    """
 
     NUM_THREADS = 1
     NUM_OPS = 10 
