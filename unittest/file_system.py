@@ -30,15 +30,24 @@ def getFileName(size):
     if fileTuple == None:
         raise Exception(f'Invalid file size: {size}')
     fname = fileTuple[1]
+
     return fname
 
+def _makeDir(aDir):
+    if os.path.isdir(aDir):
+        shutil.rmtree(aDir)
+
+    os.mkdir(aDir)
+
 def makeDownloadDir():
-    # create a clean testsuite download directory
-    if os.path.isdir(DOWNLOAD_DIR):
-        shutil.rmtree(DOWNLOAD_DIR)
+    """Create a clean download directory"""
 
-    os.mkdir(DOWNLOAD_DIR)
+    _makeDir(DOWNLOAD_DIR)
 
+def makeDataDir():
+    """Create input data directory"""
+
+    _makeDir(DAT_DIR)
 
 class InputFileCreator:
     """Class that creates input files"""
@@ -66,9 +75,7 @@ class InputFileCreator:
         """Make all input files"""
 
         # create a clean upload data directory
-        if os.path.isdir(DAT_DIR):
-            shutil.rmtree(DAT_DIR)
-        os.mkdir(DAT_DIR)
+        _makeDir(DAT_DIR)
 
         for fileTuple in DATA_FILES.values():
            self.__make(fileTuple) 
