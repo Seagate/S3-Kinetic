@@ -14,7 +14,7 @@ class Size:
 # Dictionary stores information to create input file with dd command: size, name , blockSize, blockCount
 # Format: ((blockSize, numberOfBlocks), ....)
 DATA_SIZE = (('1KB', 1), ('1MB', 1), ('1MB', 5), ('1MB', 6), ('1MB', 16), ('1MB', 32))
-DAT_DIR = './test-dat'
+DAT_DIR = './test-data'
 DOWNLOAD_DIR = 'test-download'
 DATA_FILES = {}
 
