@@ -30,6 +30,9 @@ class Bucket:
         else:
             raise Exception(f'Invalid name type: {nameType}.  Choices: "suffix" and "full"')
 
+    #def __str__(self):
+    #    return f'bucket({self.__fullName})'
+
     def __strToList(self, aStr, sep=[' ', '\n']):
         """Convert a string a list of string given a list of separators"""
         if sep is None or len(sep) == 0:
@@ -85,21 +88,8 @@ class Bucket:
         if obj.mustBeInMultiPart():
             args.insert(1, '--multipart-chunk-size-mb=5')
         result = bt.executeS3cmd(args)
-        assert(result.returncode == xcodes.EX_OK)
+        assert result.returncode == xcodes.EX_OK, result.stdout
         obj.setBucket(self)
-
-    def get(self, obj, newName=None):
-        if newName == None:
-            args = ['get', '--force', obj.fullName(), bt.DOWNLOAD_DIR]
-        else:
-            args = ['get', '--force', obj.fullName(), os.path.join(bt.DOWNLOAD_DIR, newName)]
-        result = bt.executeS3cmd(args)
-        assert result.returncode == xcodes.EX_OK, result.stdout
-
-    def delete(self, obj):
-        args = ['del', obj.fullName()]
-        result = bt.executeS3cmd(args)
-        assert result.returncode == xcodes.EX_OK, result.stdout
 
     def remove(self):
         args = ['rb', '--recursive', self.fullName()]

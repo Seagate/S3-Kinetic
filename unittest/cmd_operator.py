@@ -42,10 +42,14 @@ class CmdOperator(threading.Thread):
         self.__n = n
         self.__buckets = []
         self.__error = None
+        self.__objFac = None
 
     def setBuckets(self, buckets):
         self.__buckets = buckets
-    
+
+    def setObjFactory(self, objFactory):
+        self.__objFactory
+
     def __put(self):
         """Put file with random size"""
 
@@ -62,18 +66,20 @@ class CmdOperator(threading.Thread):
         size = ff.getRandFileSize()
         obj = o.Object(size)
         obj.setBucket(bucket)
-        result = bucket.get(obj)
+        result = obj.get()
         return result
+
+    def setObjFactory(self, objFac):
+        self.__objFac = objFac
 
     def __del(self):
         if len(self.__buckets) == 0:
             return
         # Get random bucket
-        bucket = self.__buckets[random.randint(0, len(self.__buckets) - 1)]
-        size = ff.getRandFileSize()
-        obj = o.Object(size)
-        obj.setBucket(bucket)
-        result = bucket.delete(obj)
+        obj = self.__objFac.getObject()
+        result = None
+        if obj:
+            result = obj.delete()
         return result
 
     def getError(self):
@@ -88,8 +94,6 @@ class CmdOperator(threading.Thread):
         elif self.__type == Type.DEL:
             exeOp = self.__del
 
-        bucket = b.Bucket(self.getName())
-        bucket.make(refresh=False)
         # Execute n operations
         while (not CmdOperator.stopAllOperators) and (self.__n == -1 or self.__n > 0):
             try:
