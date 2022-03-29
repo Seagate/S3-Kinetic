@@ -19,7 +19,7 @@ class S3Object:
             suffix = f'_{suffix}'
         self.__name = fname + suffix 
         self.__size = size
-        self.__fullFileName = f'{file_system.DAT_DIR}/{self.__name}'
+        self.__fullFileName = f'{file_system.DATA_DIR}/{self.__name}'
         self.__bucket = None
 
     def name(self):

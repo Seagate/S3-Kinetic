@@ -14,7 +14,7 @@ class Size:
 # Dictionary stores information to create input file with dd command: size, name , blockSize, blockCount
 # Format: ((blockSize, numberOfBlocks), ....)
 DATA_SIZE = (('1KB', 1), ('1MB', 1), ('1MB', 5), ('1MB', 6), ('1MB', 16), ('1MB', 32))
-DAT_DIR = './test-data'
+DATA_DIR = './test-data'
 DOWNLOAD_DIR = 'test-download'
 DATA_FILES = {}
 
@@ -47,7 +47,7 @@ def makeDownloadDir():
 def makeDataDir():
     """Create input data directory"""
 
-    _makeDir(DAT_DIR)
+    _makeDir(DATA_DIR)
 
 class InputFileCreator:
     """Class that creates input files"""
@@ -75,7 +75,7 @@ class InputFileCreator:
         """Make all input files"""
 
         # create a clean upload data directory
-        _makeDir(DAT_DIR)
+        _makeDir(DATA_DIR)
 
         for fileTuple in DATA_FILES.values():
            self.__make(fileTuple) 
@@ -90,5 +90,5 @@ class InputFileCreator:
         name  = dataFileTuple[1]
         blockSize = dataFileTuple[2]
         count = dataFileTuple[3]
-        fullFileName = f'{DAT_DIR}/{name}'
+        fullFileName = f'{DATA_DIR}/{name}'
         os.system(f'dd if={self.DEV_IN_FILE} of={fullFileName} bs={blockSize} count={count} > /dev/null 2>&1')

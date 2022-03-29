@@ -353,17 +353,17 @@ class TestObject(bt.BaseTest):
         bucket = s3bucket.S3Bucket("recursive")
         bucket.make()
         args =['put', '--recursive', '--multipart-chunk-size-mb=5', \
-            bt.DAT_DIR, bucket.fullName()]
+            bt.DATA_DIR, bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         # verify all files were uploaded
         args = ['la', bucket]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        files = os.listdir(bt.DAT_DIR)
+        files = os.listdir(bt.DATA_DIR)
         for f in files:
             self.assertNotEqual(result.stdout.find(f), -1,
-                msg=msg.Message.notFound(f, bt.DAT_DIR))
+                msg=msg.Message.notFound(f, bt.DATA_DIR))
 
     def test_get(self):
         bucket = s3bucket.S3Bucket(1)
