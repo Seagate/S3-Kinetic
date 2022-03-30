@@ -2,11 +2,11 @@ import sys
 import unittest
 
 # local imports
-import base_test as bt
+import base_test
+import cmd_operator
 import s3bucket
-import cmd_operator as co
 
-class TestHeavyPutDedicatedBucket(bt.BaseTest):
+class TestHeavyPutDedicatedBucket(base_test.BaseTest):
     """Test S3-Kinetic with heavy puts"""
 
     NUM_THREADS = 5 #25 
@@ -19,7 +19,7 @@ class TestHeavyPutDedicatedBucket(bt.BaseTest):
         putters = [] 
         print(f'Starting {self.NUM_THREADS} PUT threads, {self.NUM_PUTS} PUTS per thread...')
         for i in range(0, self.NUM_THREADS):
-            putter = co.CmdOperator(f'thread-{i}', co.Type.PUT, self.NUM_PUTS)
+            putter = cmd_operator.CmdOperator(f'thread-{i}', cmd_operator.Type.PUT, self.NUM_PUTS)
             bucket = s3bucket.S3Bucket(putter.getName())
             bucket.make()
             putters.append(putter)

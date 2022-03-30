@@ -66,7 +66,6 @@ class S3Object:
         return (self.__size > file_system.Size._5MB)
 
     def delete(self):
-        #self.__bucket.delete(self)
         args = ['del', self.fullName()]
         result = bt.executeS3cmd(args)
         assert result.returncode == xcodes.EX_OK, result.stdout

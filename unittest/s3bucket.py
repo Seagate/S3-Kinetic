@@ -33,9 +33,6 @@ class S3Bucket:
         else:
             raise Exception(f'Invalid name type: {nameType}.  Choices: "suffix" and "full"')
 
-    #def __str__(self):
-    #    return f'bucket({self.__fullName})'
-
     def __strToList(self, aStr, sep=[' ', '\n']):
         """Convert a string a list of string given a list of separators"""
         if sep is None or len(sep) == 0:
