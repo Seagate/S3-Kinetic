@@ -7,7 +7,7 @@ if bt.PATH_TO_S3CMD not in sys.path:
 
 # local imports
 import cmd_operator as co
-import in_file_factory as ff 
+import file_system
 
 class TestHeavyPutDedicatedBucket(bt.BaseTest):
     """Test S3-Kinetic with heavy puts"""

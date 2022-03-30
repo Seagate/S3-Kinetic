@@ -9,7 +9,10 @@ if bt.PATH_TO_S3CMD not in sys.path:
 
 import S3.ExitCodes as xcodes
 
-class Bucket:
+# local import
+import file_system
+
+class S3Bucket:
     """A class used to represent bucket."""
 
     def __init__(self, name, nameType='suffix'):
@@ -87,6 +90,14 @@ class Bucket:
         result = bt.executeS3cmd(args)
         assert(result.returncode == xcodes.EX_OK)
         obj.setBucket(self)
+
+    def get(self, obj, newName=None):
+        if newName == None:
+            args = ['get', '--force', obj.fullName(), file_system.DOWNLOAD_DIR]
+        else:
+            args = ['get', '--force', obj.fullName(), os.path.join(file_system.DOWNLOAD_DIR, newName)]
+        result = bt.executeS3cmd(args)
+        assert result.returncode == xcodes.EX_OK, result.stdout
 
     def remove(self):
         args = ['rb', '--recursive', self.fullName()]
