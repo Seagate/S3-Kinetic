@@ -1,7 +1,7 @@
 import getpass
 import os
-import subprocess
 import shutil
+import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import sys
 import unittest
@@ -11,12 +11,11 @@ if PATH_TO_S3CMD not in sys.path:
     sys.path.append(PATH_TO_S3CMD) # required to see S3.ExitCodes
 
 #local imports
-import bucket as b
-import in_file_factory as ff
+import s3bucket
+import file_system
 
 # Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
-DOWNLOAD_DIR = 'test-download'
 PYTHON = 'python'  # s3cmd does not work with python3
 S3 = 's3://'
 S3CMD = f'{PATH_TO_S3CMD}/s3cmd'
@@ -28,13 +27,6 @@ def executeS3cmd(args, stdin=None):
         close_fds=True)
     return result
 
-def makeDownloadDir():
-    # create a clean testsuite download directory
-    if os.path.isdir(DOWNLOAD_DIR):
-        shutil.rmtree(DOWNLOAD_DIR)
-
-    os.mkdir(DOWNLOAD_DIR)
-
 class BaseTest(unittest.TestCase):
     """Base class for test classes."""
 
@@ -42,8 +34,8 @@ class BaseTest(unittest.TestCase):
     def setUpClass(cls):
         """Do class setup: Create all input files"""
 
-        fileFactory = ff.InFileFactory()
-        fileFactory.makeAll()
+        fileCreator = file_system.InputFileCreator()
+        fileCreator.makeAll()
 
     @classmethod
     def removeAllTestBuckets(cls):
@@ -54,7 +46,7 @@ class BaseTest(unittest.TestCase):
             if not f.startswith(f'{S3}{BUCKET_PREFIX}'):
                 continue
             itemList = f.split('\n')
-            bucket = b.Bucket(itemList[0], nameType='full')
+            bucket = s3bucket.S3Bucket(itemList[0], nameType='full')
             bucket.remove()
 
     @classmethod

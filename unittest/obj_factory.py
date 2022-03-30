@@ -1,9 +1,9 @@
 import random
 import threading
 
-import bucket as b
-import in_file_factory as ff
-import object as o
+import file_system
+import s3bucket
+import s3object
 
 class ObjFactory:
     def __init__(self, buckets):
@@ -16,10 +16,10 @@ class ObjFactory:
         # upload files with sequential names into one bucket.  Filenames use zero index.
         count = numObjs
         while count > 0:
-            for size in ff.DATA_FILES.keys():
+            for size in file_system.DATA_FILES.keys():
                 count -= 1
                 if count >= 0:
-                    obj = o.Object(size)
+                    obj = s3object.S3Object(size)
                     bucket = random.choice(self.__buckets)
                     bucket.put(obj, newName=f'obj-{count}')
                 else:
@@ -38,8 +38,8 @@ class ObjFactory:
         finally:
             self.__mutex.release()
 
-        bucket = b.Bucket(random.choice(self.__buckets).fullName(), nameType='full')
-        obj = o.Object()
+        bucket = s3bucket.S3Bucket(random.choice(self.__buckets).fullName(), nameType='full')
+        obj = s3object.S3Object()
         objName = f'obj-{objIdx}'
         obj.setName(objName)
         obj.setBucket(bucket)

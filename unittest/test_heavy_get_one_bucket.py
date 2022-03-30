@@ -3,36 +3,48 @@ import unittest
 
 # local imports
 import base_test as bt
-import bucket as b
 import cmd_operator as co
-import in_file_factory as ff 
-import object as o
+import file_system
+import s3bucket
+import s3object
 
 class TestHeavyGetOneBucket(bt.BaseTest):
-    """Test S3-Kinetic with heavy puts"""
+    """Test S3-Kinetic with heavy gets with one bucket
+
+        This test generates many GET commands from many threads
+    """
 
     NUM_THREADS = 1
     NUM_OPS = 10 
     
     def setUp(self):
-        """setup data for the test"""
+        """Setup input files for the test.
+
+            Creates a collection of files with different sizes and puts all of them into one bucket
+        """
 
         # Create upload files       
-        factory = ff.InFileFactory()
-        factory.makeAll()
+        fileCreator = file_system.InputFileCreator()
+        fileCreator.makeAll()
         # Upload files to one bucket
-        self.__bucket = b.Bucket(1)
+        self.__bucket = s3bucket.S3Bucket(1)
         self.__bucket.make()
-        for size in ff.DATA_FILES.keys():
-            obj = o.Object(size)
+        for size in file_system.DATA_FILES.keys():
+            obj = s3object.S3Object(size)
             self.__bucket.put(obj)
          
     def test_heavy_get(self):
-        """Execute heavy load test"""
-        bt.makeDownloadDir()
+        """Execute heavy gets with one bucket
+
+            Launches a fixed number of threads (NUM_THREADS), each thread makes n PUT
+            operations in the given bucket. The test stops when all threads perform 
+            successfully or on the first error.
+        """
+
+        file_system.makeDownloadDir()
         operatorList = [] 
 
-        # Launch PUT threads
+        # Launch threads
         print(f'Starting {self.NUM_THREADS} GET threads, {self.NUM_OPS} GETs per thread...')
         bucketList = [self.__bucket]
         for i in range(0, self.NUM_THREADS):

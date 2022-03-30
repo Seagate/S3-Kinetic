@@ -1,14 +1,10 @@
 import sys
 import unittest
 
-import base_test as bt # require base_test to see PATH_TO_S3CMD
-if bt.PATH_TO_S3CMD not in sys.path:
-    sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
-
 # local imports
-import bucket as b
+import base_test as bt
+import s3bucket
 import cmd_operator as co
-import in_file_factory as ff 
 
 class TestHeavyPutDedicatedBucket(bt.BaseTest):
     """Test S3-Kinetic with heavy puts"""
@@ -24,7 +20,7 @@ class TestHeavyPutDedicatedBucket(bt.BaseTest):
         print(f'Starting {self.NUM_THREADS} PUT threads, {self.NUM_PUTS} PUTS per thread...')
         for i in range(0, self.NUM_THREADS):
             putter = co.CmdOperator(f'thread-{i}', co.Type.PUT, self.NUM_PUTS)
-            bucket = b.Bucket(putter.getName())
+            bucket = s3bucket.S3Bucket(putter.getName())
             bucket.make()
             putters.append(putter)
             putter.start()

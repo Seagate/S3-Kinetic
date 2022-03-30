@@ -3,9 +3,9 @@ import random
 import threading
 
 #Local imports
-import bucket as b
-import in_file_factory as ff
-import object as o
+import file_system
+import s3bucket
+import s3object
 
 class Type(Enum):
     """Enumeration of operation types:  PUT, GET, DEL"""
@@ -29,6 +29,11 @@ class CmdOperator(threading.Thread):
         Type of operation, ex. PUT, GET, DEL, ...
     __n    : int
         Number of operations to perform.  Default to 1
+    __buckets : list, default = []
+        A list of made buckets 
+    __error : AssertionError
+        Assertion error used to decide to stop command operator (thread)
+
     """
 
     stopAllOperators = False
@@ -53,9 +58,9 @@ class CmdOperator(threading.Thread):
     def __put(self):
         """Put file with random size"""
 
-        fileSize = ff.getRandFileSize()
-        bucket = b.Bucket(self.getName())
-        obj = o.Object(fileSize)
+        fileSize = file_system.getRandFileSize()
+        bucket = s3bucket.S3Bucket(self.getName())
+        obj = s3object.S3Object(fileSize)
         bucket.put(obj)
 
     def __get(self):
@@ -63,8 +68,8 @@ class CmdOperator(threading.Thread):
             return
         # Get random bucket
         bucket = self.__buckets[random.randint(0, len(self.__buckets) - 1)]
-        size = ff.getRandFileSize()
-        obj = o.Object(size)
+        size = file_system.getRandFileSize()
+        obj = s3object.S3Object(size)
         obj.setBucket(bucket)
         result = obj.get()
         return result

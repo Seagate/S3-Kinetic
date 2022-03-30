@@ -9,7 +9,10 @@ if bt.PATH_TO_S3CMD not in sys.path:
 
 import S3.ExitCodes as xcodes
 
-class Bucket:
+# local import
+import file_system
+
+class S3Bucket:
     """A class used to represent bucket."""
 
     def __init__(self, name, nameType='suffix'):

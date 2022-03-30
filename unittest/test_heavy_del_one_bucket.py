@@ -4,11 +4,10 @@ import unittest
 
 # local imports
 import base_test as bt
-import bucket as b
 import cmd_operator as co
-#import file_system
-import object as o
+#import s3object
 import obj_factory as of
+import s3bucket
 
 class TestHeavyDelOneBucket(bt.BaseTest):
     """Test S3-Kinetic with heavy deletes with one bucket"""
@@ -24,7 +23,7 @@ class TestHeavyDelOneBucket(bt.BaseTest):
         self.__mutex = threading.Lock()
 
         # Create objects
-        self.__bucket = b.Bucket(1)
+        self.__bucket = s3bucket.S3Bucket(1)
         self.__bucket.make()
         self.__objFac = of.ObjFactory([self.__bucket])
         self.__objFac.makeAll(self.NUM_OPS*self.NUM_THREADS)
