@@ -47,13 +47,10 @@ class CmdOperator(threading.Thread):
         self.__n = n
         self.__buckets = []
         self.__error = None
-        self.__objFac = None
+        self.__objectProducer = None
 
     def setBuckets(self, buckets):
         self.__buckets = buckets
-
-    def setObjFactory(self, objFactory):
-        self.__objFactory
 
     def __put(self):
         """Put file with random size"""
@@ -74,14 +71,14 @@ class CmdOperator(threading.Thread):
         result = obj.get()
         return result
 
-    def setObjFactory(self, objFac):
-        self.__objFac = objFac
+    def setObjectProducer(self, objectProducer):
+        self.__objectProducer = objectProducer
 
     def __del(self):
         if len(self.__buckets) == 0:
             return
         # Get random bucket
-        obj = self.__objFac.getObject()
+        obj = self.__objectProducer.getObject()
         result = None
         if obj:
             result = obj.delete()

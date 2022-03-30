@@ -1,11 +1,21 @@
 import random
 import threading
 
+# local imports
 import file_system
 import s3bucket
 import s3object
 
-class ObjFactory:
+class ObjectProducer:
+    """Class to produce s3objects
+
+    Attributes:
+        __numObjs : int, default 0
+        __nxtObjIdx : int, default 0
+        __mutex : mutex
+        __buckets : list of s3buckets
+    """
+
     def __init__(self, buckets):
         self.__numObjs = 0
         self.__nxtObjIdx = 0
@@ -13,21 +23,24 @@ class ObjFactory:
         self.__buckets = buckets
 
     def makeAll(self, numObjs):
-        # upload files with sequential names into one bucket.  Filenames use zero index.
+        """make s3objects with random different sizes"""
+
         count = numObjs
         while count > 0:
             for size in file_system.DATA_FILES.keys():
                 count -= 1
                 if count >= 0:
                     obj = s3object.S3Object(size)
-                    bucket = random.choice(self.__buckets)
-                    bucket.put(obj, newName=f'obj-{count}')
+                    bucket = random.choice(self.__buckets) # randomly pick a bucket
+                    bucket.put(obj, newName=f'obj-{count}') # new s3object name is obj-#
                 else:
                     break
         self.__numObjs = numObjs
         self.__nxtObjIdx = 0
 
     def getObject(self):   
+        """get an s3object"""
+ 
         if self.__numObjs <= 0:
             return None
 

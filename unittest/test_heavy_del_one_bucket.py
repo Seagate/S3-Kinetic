@@ -6,30 +6,32 @@ import unittest
 import base_test as bt
 import cmd_operator as co
 #import s3object
-import obj_factory as of
+import object_producer
 import s3bucket
 
 class TestHeavyDelOneBucket(bt.BaseTest):
-    """Test S3-Kinetic with heavy deletes with one bucket"""
+    """Test S3-Kinetic by having many threads to deletes s3objects from only ONE bucket"""
 
     NUM_THREADS = 5
     NUM_OPS = 10 
     NUM_SUFFIX = 10
 
     def setUp(self):
-        """setup data for the test"""
+        """Setup data for the test
 
-        #self.__nxtName = None 
+        This method creates multiple objects within only one bucket.
+        """
+
         self.__mutex = threading.Lock()
 
-        # Create objects
+        # Create a bucket and its objects
         self.__bucket = s3bucket.S3Bucket(1)
         self.__bucket.make()
-        self.__objFac = of.ObjFactory([self.__bucket])
-        self.__objFac.makeAll(self.NUM_OPS*self.NUM_THREADS)
+        self.__objectProducer = object_producer.ObjectProducer([self.__bucket])
+        self.__objectProducer.makeAll(self.NUM_OPS*self.NUM_THREADS)
         
     def test_heavy_del(self):
-        """Execute heavy load deletes with one bucket test"""
+        """Parallel delete all created objects within a bucket"""
 
         operatorList = [] 
 
@@ -37,9 +39,10 @@ class TestHeavyDelOneBucket(bt.BaseTest):
         print(f'Starting {self.NUM_THREADS} DELETE threads, {self.NUM_OPS} DELETEs per thread...')
         bucketList = [self.__bucket]
         for i in range(0, self.NUM_THREADS):
-            operator = co.CmdOperator(f'thread-{i}', co.Type.DEL, self.NUM_OPS)
+            name = f'thread-{i}'
+            operator = co.CmdOperator(name, co.Type.DEL, self.NUM_OPS)
             operator.setBuckets(bucketList)
-            operator.setObjFactory(self.__objFac)
+            operator.setObjectProducer(self.__objectProducer)
             operatorList.append(operator)
             operator.start()
 
