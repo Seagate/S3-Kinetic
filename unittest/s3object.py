@@ -66,11 +66,15 @@ class S3Object:
         return (self.__size > file_system.Size._5MB)
 
     def delete(self):
+        """Delete this object from dbase"""
+
         args = ['del', self.fullName()]
         result = bt.executeS3cmd(args)
         assert result.returncode == xcodes.EX_OK, result.stdout
 
     def get(self, newName=None):
+        """Get/download this object from dbase """
+
         if newName == None:
             args = ['get', '--force', self.fullName(), file_system.DOWNLOAD_DIR]
         else:
