@@ -38,13 +38,13 @@ class CmdOperator(threading.Thread):
 
     stopAllOperators = False
 
-    def __init__(self, name, aType, n = 1):
+    def __init__(self, name, aType, numOperations = 1):
         threading.Thread.__init__(self)
         self.setName(name)
         if not Type.isValid(aType): 
             raise("Invalid function type: %d" % (aType))
         self.__type = aType 
-        self.__numOperations = n
+        self.__numOperations = numOperations 
         self.__buckets = []
         self.__error = None
         self.__objectProducer = None
