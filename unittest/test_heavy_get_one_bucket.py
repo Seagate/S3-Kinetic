@@ -24,8 +24,8 @@ class TestHeavyGetOneBucket(bt.BaseTest):
         """
 
         # Create upload files       
-        fileCreator = file_system.InputFileCreator()
-        fileCreator.makeAll()
+        fileProducer = file_system.FileProducer()
+        fileProducer.makeAll()
         # Upload files to one bucket
         self.__bucket = s3bucket.S3Bucket(1)
         self.__bucket.make()
