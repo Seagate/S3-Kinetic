@@ -71,6 +71,7 @@ class S3Object:
         args = ['del', self.fullName()]
         result = bt.executeS3cmd(args)
         assert result.returncode == xcodes.EX_OK, result.stdout
+        return result
 
     def get(self, newName=None):
         """Get/download this object from dbase """
@@ -81,4 +82,4 @@ class S3Object:
             args = ['get', '--force', self.fullName(), os.path.join(file_system.DOWNLOAD_DIR, newName)]
         result = bt.executeS3cmd(args)
         assert result.returncode == xcodes.EX_OK, result.stdout
-        return (self.__size > file_system.Size._5MB)
+        return result

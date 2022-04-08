@@ -5,12 +5,11 @@ import unittest
 # local imports
 import base_test as bt
 import cmd_operator as co
-#import s3object
 import object_producer
 import s3bucket
 
 class TestHeavyDelOneBucket(bt.BaseTest):
-    """Test S3-Kinetic by having many threads to deletes s3objects from only ONE bucket"""
+    """Test S3-Kinetic by having many threads to delete s3objects from only ONE bucket"""
 
     NUM_THREADS = 5
     NUM_OPS = 10 
