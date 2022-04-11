@@ -39,7 +39,13 @@ class ObjectProducer:
         self.__nxtObjIdx = 0
 
     def getObject(self):   
-        """get an s3object"""
+        """get an s3object
+
+        Sequentially get an s3 object fron one bucket
+
+        TODO: Currently, there is only one bucket in the bucket list.  Need to modify
+        this method to work propertly with multiple buckets.
+        """
  
         if self.__numObjs <= 0:
             return None
