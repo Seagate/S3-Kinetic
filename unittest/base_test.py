@@ -1,7 +1,7 @@
 import getpass
 import os
-import subprocess
 import shutil
+import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import sys
 import unittest
@@ -11,8 +11,8 @@ if PATH_TO_S3CMD not in sys.path:
     sys.path.append(PATH_TO_S3CMD) # required to see S3.ExitCodes
 
 #local imports
-import s3bucket
 import file_system
+import s3bucket
 
 # Constants
 BUCKET_PREFIX = f'{getpass.getuser().lower()}-s3cmd-unittest-'
@@ -34,8 +34,8 @@ class BaseTest(unittest.TestCase):
     def setUpClass(cls):
         """Do class setup: Create all input files"""
 
-        fileCreator = file_system.InputFileCreator()
-        fileCreator.makeAll()
+        fileProducer = file_system.FileProducer()
+        fileProducer.makeAll()
 
     @classmethod
     def removeAllTestBuckets(cls):

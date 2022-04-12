@@ -1,9 +1,17 @@
+import sys
+
+import base_test as bt
+
+if bt.PATH_TO_S3CMD not in sys.path:
+    sys.path.append(bt.PATH_TO_S3CMD) # required to see S3.ExitCodes
+
 import file_system
+import S3.ExitCodes as xcodes
 
 class S3Object:
     """A class used to represent object in a bucket or file on disk."""
 
-    def __init__(self, size, suffix=""):
+    def __init__(self, size=None):
         """Initialize this object.
 
         Parameters:
@@ -14,17 +22,25 @@ class S3Object:
             Exception
                 If size is not valid.
         """
-        fname = file_system.getFileName(size)
-        if suffix != "":
-            suffix = f'_{suffix}'
-        self.__name = fname + suffix 
-        self.__size = size
-        self.__fullFileName = f'{file_system.DATA_DIR}/{self.__name}'
-        self.__bucket = None
+
+        if size == None:
+            self.__name = None
+            self.__fullFileName = None
+            self.__size = None
+            self.__bucket = None
+        else:
+            fname = file_system.getFileName(size)
+            self.__name = fname
+            self.__size = size
+            self.__fullFileName = f'{file_system.DATA_DIR}/{self.__name}'
+            self.__bucket = None
 
     def name(self):
         """Return name without bucket name of this object."""
         return self.__name
+
+    def setName(self, name):
+        self.__name = name
 
     def fullFileName(self):
         """Return full file path name of this object."""
@@ -48,3 +64,22 @@ class S3Object:
     def mustBeInMultiPart(self):
         """Return boolean to indicate if this object must be chunked for put operation."""
         return (self.__size > file_system.Size._5MB)
+
+    def delete(self):
+        """Delete this object from dbase"""
+
+        args = ['del', self.fullName()]
+        result = bt.executeS3cmd(args)
+        assert result.returncode == xcodes.EX_OK, result.stdout
+        return result
+
+    def get(self, newName=None):
+        """Get/download this object from dbase """
+
+        if newName == None:
+            args = ['get', '--force', self.fullName(), file_system.DOWNLOAD_DIR]
+        else:
+            args = ['get', '--force', self.fullName(), os.path.join(file_system.DOWNLOAD_DIR, newName)]
+        result = bt.executeS3cmd(args)
+        assert result.returncode == xcodes.EX_OK, result.stdout
+        return result

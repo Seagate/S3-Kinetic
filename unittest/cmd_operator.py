@@ -27,7 +27,7 @@ class CmdOperator(threading.Thread):
     Attributes:
     __type : Type
         Type of operation, ex. PUT, GET, DEL, ...
-    __n    : int
+    __numOperations    : int
         Number of operations to perform.  Default to 1
     __buckets : list, default = []
         A list of made buckets 
@@ -38,19 +38,20 @@ class CmdOperator(threading.Thread):
 
     stopAllOperators = False
 
-    def __init__(self, name, aType, n = 1):
+    def __init__(self, name, aType, numOperations = 1):
         threading.Thread.__init__(self)
         self.setName(name)
         if not Type.isValid(aType): 
             raise("Invalid function type: %d" % (aType))
         self.__type = aType 
-        self.__n = n
+        self.__numOperations = numOperations 
         self.__buckets = []
         self.__error = None
+        self.__objectProducer = None
 
     def setBuckets(self, buckets):
         self.__buckets = buckets
-    
+
     def __put(self):
         """Put file with random size"""
 
@@ -67,11 +68,21 @@ class CmdOperator(threading.Thread):
         size = file_system.getRandFileSize()
         obj = s3object.S3Object(size)
         obj.setBucket(bucket)
-        result = bucket.get(obj)
+        result = obj.get()
         return result
 
+    def setObjectProducer(self, objectProducer):
+        self.__objectProducer = objectProducer
+
     def __del(self):
-        pass 
+        if len(self.__buckets) == 0:
+            return
+        # Get random bucket
+        obj = self.__objectProducer.getObject()
+        result = None
+        if obj:
+            result = obj.delete()
+        return result
 
     def getError(self):
         return self.__error
@@ -85,14 +96,12 @@ class CmdOperator(threading.Thread):
         elif self.__type == Type.DEL:
             exeOp = self.__del
 
-        bucket = s3bucket.S3Bucket(self.getName())
-        bucket.make(refresh=False)
         # Execute n operations
-        while (not CmdOperator.stopAllOperators) and (self.__n == -1 or self.__n > 0):
+        while (not CmdOperator.stopAllOperators) and (self.__numOperations == -1 or self.__numOperations > 0):
             try:
                 exeOp()
-                if self.__n > 0:
-                    self.__n -= 1
+                if self.__numOperations > 0:
+                    self.__numOperations -= 1
             except AssertionError as err:
                 self.__error = err
                 CmdOperator.stopAllOperators = True

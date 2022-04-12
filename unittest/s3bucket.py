@@ -88,16 +88,8 @@ class S3Bucket:
         if obj.mustBeInMultiPart():
             args.insert(1, '--multipart-chunk-size-mb=5')
         result = bt.executeS3cmd(args)
-        assert(result.returncode == xcodes.EX_OK)
-        obj.setBucket(self)
-
-    def get(self, obj, newName=None):
-        if newName == None:
-            args = ['get', '--force', obj.fullName(), file_system.DOWNLOAD_DIR]
-        else:
-            args = ['get', '--force', obj.fullName(), os.path.join(file_system.DOWNLOAD_DIR, newName)]
-        result = bt.executeS3cmd(args)
         assert result.returncode == xcodes.EX_OK, result.stdout
+        obj.setBucket(self)
 
     def remove(self):
         args = ['rb', '--recursive', self.fullName()]

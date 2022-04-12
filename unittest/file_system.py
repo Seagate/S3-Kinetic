@@ -49,7 +49,7 @@ def makeDataDir():
 
     _makeDir(DATA_DIR)
 
-class InputFileCreator:
+class FileProducer:
     """Class that creates input files"""
     
     DEV_IN_FILE = '/dev/urandom'
