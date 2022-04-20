@@ -74,7 +74,6 @@ func (c *Client) Read(value []byte) (int, error) {
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
                 err = errFileNotFound
-                c.ReleaseConn(c.Idx)
                 return 0, err
         }
         if (cvalue != nil) {
@@ -88,16 +87,13 @@ func (c *Client) Read(value []byte) (int, error) {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
             if err != nil {
-                c.ReleaseConn(c.Idx)
                 return 0, err
             }
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        copy(value, value1[0:size])
-                c.ReleaseConn(c.Idx)
                 return int(size), err
             }
-            c.ReleaseConn(c.Idx)
 	    return 0, err
         }
 
@@ -115,7 +111,6 @@ func (c *Client) Read(value []byte) (int, error) {
                 }
                 cvalue, size, err := c.CGet(key, int(part.Size), c.Opts, c.DataOffset, int(partReqSize))
                 if err != nil {
-                    c.ReleaseConn(c.Idx)
                     return 0, err
                 }
                 if cvalue != nil {
@@ -124,16 +119,13 @@ func (c *Client) Read(value []byte) (int, error) {
                     requestSize -= int(size)
                     if i ==  len(fsMeta.Parts) -1 {
                         *(c.NextPartNumber) = 0
-                        c.ReleaseConn(c.Idx)
                     } else {
                         *(c.NextPartNumber)++
                     }
-                    c.ReleaseConn(c.Idx)
                     return int(size), err
                 }
             }
         }
-        c.ReleaseConn(c.Idx)
 	return 0, err
 }
 
