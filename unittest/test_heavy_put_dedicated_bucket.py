@@ -9,8 +9,8 @@ import s3bucket
 class TestHeavyPutDedicatedBucket(base_test.BaseTest):
     """Test S3-Kinetic with heavy puts"""
 
-    NUM_THREADS = 5 #25 
-    NUM_PUTS = 5 #50
+    NUM_THREADS = 90
+    NUM_PUTS = 50
     
     def test_heavy_put(self):
         """Execute heavy load test"""
