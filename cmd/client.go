@@ -70,7 +70,6 @@ func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
         defer debug.FreeOSMemory()
         requestSize := len(value)
-	//debug.FreeOSMemory()
 	fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
@@ -87,13 +86,14 @@ func (c *Client) Read(value []byte) (int, error) {
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
-            //defer debug.FreeOSMemory()  // Cause no progress.  Don't know why
+            //defer debug.FreeOSMemory()  // INVESTIGATE: Cause no progress.
             if err != nil {
                 return 0, err
             }
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        copy(value, value1[0:size])
+                //debug.FreeOSMemory()  // INVESTIGATE: Cause no progress.
                 return int(size), err
             }
 	    return 0, err

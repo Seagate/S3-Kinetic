@@ -11,9 +11,8 @@ import s3bucket
 class TestHeavyDelOneBucket(bt.BaseTest):
     """Test S3-Kinetic by having many threads to delete s3objects from only ONE bucket"""
 
-    NUM_THREADS = 5
-    NUM_OPS = 10 
-    NUM_SUFFIX = 10
+    NUM_THREADS = 100
+    NUM_OPS = 50
 
     def setUp(self):
         """Setup data for the test

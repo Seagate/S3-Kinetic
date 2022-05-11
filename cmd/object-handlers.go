@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
     "fmt"
+        "runtime/debug"
 
 	"github.com/gorilla/mux"
 	miniogo "github.com/minio/minio-go/v6"
@@ -413,6 +414,7 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(http.StatusPartialContent)
 	}
 	buf := make([]byte, objInfo.Size + 1)  // Plus 1 for zero size file
+        defer debug.FreeOSMemory()  // Must have this line
 	if _, err = io.CopyBuffer(httpWriter, gr, buf); err != nil {
 		// Write object content to response body
 		//if _, err = io.Copy(httpWriter, gr); err != nil {
