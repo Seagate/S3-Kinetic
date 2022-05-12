@@ -42,6 +42,7 @@ import (
 	"github.com/minio/minio/pkg/madmin"
 	xnet "github.com/minio/minio/pkg/net"
 	"github.com/minio/minio/pkg/quick"
+	"github.com/minio/minio/common"
 )
 
 // DO NOT EDIT following message template, please open a github issue to discuss instead.
@@ -2479,6 +2480,7 @@ func migrateConfigToMinioSys(objAPI ObjectLayer) (err error) {
 
 // Migrates '.minio.sys/config.json' to v33.
 func migrateMinioSysConfig(objAPI ObjectLayer) error {
+        defer common.KUntrace(common.KTrace("Enter"))
 	// Construct path to config.json for the given bucket.
 	configFile := path.Join(minioConfigPrefix, minioConfigFile)
 	fmt.Println(" CONFIG FILE ", configFile)
@@ -2519,7 +2521,9 @@ func migrateMinioSysConfig(objAPI ObjectLayer) error {
 }
 
 func checkConfigVersion(objAPI ObjectLayer, configFile string, version string) (bool, []byte, error) {
+        defer common.KUntrace(common.KTrace("Enter"))
 	data, err := readConfig(context.Background(), objAPI, configFile)
+        common.KTrace(fmt.Sprintf("cfg: %s, data: %s", configFile, string(data)))
 	if err != nil {
 		return false, nil, err
 	}

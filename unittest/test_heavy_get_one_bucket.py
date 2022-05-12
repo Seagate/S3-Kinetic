@@ -14,7 +14,7 @@ class TestHeavyGetOneBucket(bt.BaseTest):
         This test generates many GET commands from many threads
     """
 
-    NUM_THREADS = 100
+    NUM_THREADS = 100 
     NUM_OPS = 100
     
     def setUp(self):
@@ -64,7 +64,7 @@ class TestHeavyGetOneBucket(bt.BaseTest):
             # check for error
             if error == None:
                 error = operator.getError()
-                if error is not None:
+                if error != None:
                     print(f'Error: {error}')
 
         print(f'All threads complete')
