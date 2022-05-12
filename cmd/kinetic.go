@@ -566,7 +566,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
         var bucketInfos []BucketInfo
         var value []byte
         var lastKey []byte 
-        defer debug.FreeOSMemory() // potential infinite
+        defer debug.FreeOSMemory()
 	for true {
         	kineticMutex.Lock()
 		kc := GetKineticConnection()
@@ -574,7 +574,6 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
         	ReleaseConnection(kc.Idx)
         	kineticMutex.Unlock()
 		if err != nil {
-			//debug.FreeOSMemory()
 			return nil, err
 		}
 		for _, key := range keys {
@@ -582,7 +581,6 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			if string(key[:7]) == "bucket." && (string(key[:8]) != "bucket..") {
 				cvalue, size, err := kc.CGetMeta(string(key), kopts)
                 if err != nil {
-                    //debug.FreeOSMemory()
                     return nil, err
                 }
 				if (cvalue != nil) {
@@ -606,7 +604,6 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			startKey = string(lastKey)
 			endKey = ""
 		}
-		// debug.FreeOSMemory() // cause infinite
 	}
         return bucketInfos, nil
 }
@@ -792,9 +789,6 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
                 fsMeta.Meta = srcInfo.UserDefined
                 fsMeta.Meta["etag"] = srcInfo.ETag
         fsMeta.Meta["size"] =  strconv.FormatInt(fsMeta.KoInfo.Size, 10)
-	        //bytes, _ := json.Marshal(&fsMeta)
-	        //buf := allocateValBuf(len(bytes))
-		//copy(buf, bytes)
 
 	        kc = GetKineticConnection()
                 // get file size.
@@ -1320,13 +1314,13 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         bytes, _ := json.Marshal(&fsMeta)
         buf := allocateValBuf(len(bytes))
         defer C.free(unsafe.Pointer(&buf[0]))
-	goBuf := allocateValBuf(int(bufSize))
+        goBuf := allocateValBuf(int(bufSize))
         copy(buf, bytes)
 	//Read data to buf
 	_, err = readToBuffer(r, goBuf)
 	if err != nil {
-                C.free(unsafe.Pointer(&goBuf[0]))
-		return ObjectInfo{}, err
+            C.free(unsafe.Pointer(&goBuf[0]))
+            return ObjectInfo{}, err
 	}
 	//wg.Add(1)
 	//go func() {
@@ -1334,9 +1328,9 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         kc = GetKineticConnection()
 	_, err = kc.CPut(key, buf, int(len(bytes)), goBuf, int(bufSize), kopts)
 	if err != nil {
-                C.free(unsafe.Pointer(&goBuf[0]))
-                ReleaseConnection(kc.Idx)
-		return ObjectInfo{}, err
+            C.free(unsafe.Pointer(&goBuf[0]))
+            ReleaseConnection(kc.Idx)
+            return ObjectInfo{}, err
 	}
         ReleaseConnection(kc.Idx)
 	objectInfo := ObjectInfo{
@@ -1735,7 +1729,6 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
 	    if err != nil {
-                    //debug.FreeOSMemory()
 		    return err
 	    }
 
@@ -1745,7 +1738,6 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 		    if prefix == string(key[len(bucket)+1:len(bucket)+1+len(prefix)]) {
 			    objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len(bucket)+1):]))
 			    if err != nil {
-		                    //debug.FreeOSMemory()
 				    return err
 			    }
                 if !objInfo.Hidden {
@@ -1779,7 +1771,6 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 		    endKey = ""
 	    }
     }
-        //debug.FreeOSMemory()
 	return nil
 }
 
@@ -2001,7 +1992,6 @@ func (ko *KineticObjects) deleteParts(objKey, version string) error {
     kineticMutex.Lock()
     kc := GetKineticConnection()
     objKeys, err := kc.CGetKeyRange(startKey, endKey, true, false, 800, false, ko.option())
-    //debug.FreeOSMemory()
     ReleaseConnection(kc.Idx)
     kineticMutex.Unlock()
     if err == nil {
@@ -2018,7 +2008,6 @@ func (ko *KineticObjects) deleteParts(objKey, version string) error {
             if err == nil {
                 err = ko.deleteKeys(metaKeys)
             }
-            //debug.FreeOSMemory()
         }
     }
     return err

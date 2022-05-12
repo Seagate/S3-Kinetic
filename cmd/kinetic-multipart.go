@@ -507,7 +507,6 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     kineticMutex.Lock()
     kc = GetKineticConnection()
     cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1) // -1 to indicate it doesn't know the size
-    //debug.FreeOSMemory()  // New line, cause error with unittest codes
     if err == nil {
         // Remove the temporary metaJSONFile
         kc.Delete(key, kopts)

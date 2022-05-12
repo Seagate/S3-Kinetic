@@ -57,8 +57,6 @@ func deleteConfig(ctx context.Context, objAPI ObjectLayer, configFile string) er
 }
 
 func saveConfig(ctx context.Context, objAPI ObjectLayer, configFile string, data []byte) error {
-    defer common.KUntrace(common.KTrace("Enter"))
-    common.KTrace(fmt.Sprintf("cfg: %s, data: %s", configFile, string(data)))
 	hashReader, err := hash.NewReader(bytes.NewReader(data), int64(len(data)), "", getSHA256Hash(data), int64(len(data)), globalCLIContext.StrictS3Compat)
 	if err != nil {
 		return err

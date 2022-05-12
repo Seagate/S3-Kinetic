@@ -56,11 +56,8 @@ class TestHeavyGetOneBucket(bt.BaseTest):
         # Wait for all PUT threads complete
         print(f'Waiting for completion.  Be patient...')
         error = None
-        remainThreads = self.NUM_THREADS
         for operator in operatorList:
             operator.join()
-            remainThreads -= 1
-            print(f'Num remain threads = {remainThreads}')
             # check for error
             if error == None:
                 error = operator.getError()

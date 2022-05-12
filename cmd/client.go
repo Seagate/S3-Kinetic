@@ -70,7 +70,7 @@ func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
         defer debug.FreeOSMemory()
         requestSize := len(value)
-	fsMeta := fsMetaV1{}
+        fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
                 err = errFileNotFound
@@ -86,14 +86,13 @@ func (c *Client) Read(value []byte) (int, error) {
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
-            defer debug.FreeOSMemory()  // From stash, Cause no progress.  Don't know why
+            defer debug.FreeOSMemory()
             if err != nil {
                 return 0, err
             }
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        copy(value, value1[0:size])
-                //debug.FreeOSMemory()  // INVESTIGATE: Cause no progress.
                 return int(size), err
             }
 	    return 0, err
@@ -569,27 +568,9 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
             requestSize = objSize
         }
         if (offset == 0 && requestSize == objSize) {
-/*
-            log.Printf("&bvalue = %p, bvalue = %p, &bValue[0] = %p", &bvalue, bvalue, &bvalue[0])
-            usGPtr1 := unsafe.Pointer(&bvalue)
-            usGPtr2:= unsafe.Pointer(&bvalue[0])
-            if usGPtr1 != usGPtr2 {
-                log.Printf("usGPtr1 = %p, usGPtr2 = %p", usGPtr1, usGPtr2)
-                panic(">>>>>>>>>>>>>> Different Address: 1 <> 2")
-            }
-*/
-            //cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
             cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
                       (*C.int)(unsafe.Pointer(&dataSize)),
                       (*C.int)(unsafe.Pointer(&status)))
-            /*
-            usCPtr := unsafe.Pointer(cvalue)
-            usGPtr := unsafe.Pointer(&bvalue[0])
-            if false { //true { //usCPtr != usGPtr {
-                log.Printf("===== usCPtr = %p, usGPtr = %p", usCPtr, usGPtr)
-                //panic(">>>>>>>>>>>>>> Different Address")
-            }
-            */
         } else {
             cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
                       (C.int)(offset), (C.int)(requestSize),
