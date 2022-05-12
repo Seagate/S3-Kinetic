@@ -170,7 +170,7 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
         _, err := readToBuffer(r, goBuf)
         if err != nil {
 		//log.Println("READ ERROR")
-                C.free(unsafe.Pointer(&goBuf))
+                C.free(unsafe.Pointer(&goBuf[0]))
                 return pi, err
         }
         kopts := Opts{
@@ -203,20 +203,14 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
         fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
 	// metadata file
         bytes, _ := json.Marshal(fsMeta)
-        //buf := allocateValBuf(len(bytes))
-        
-        metaLen := len(bytes)
-        cbuf := C.allocMem(C.int(metaLen))
-        defer C.deallocMem((*C.char)(unsafe.Pointer(cbuf)))
-        buf := (*[1<<16]byte)(unsafe.Pointer(cbuf))[:metaLen:metaLen]
-        
+        buf := allocateValBuf(len(bytes))
+        defer C.free(unsafe.Pointer(&buf[0]))
         copy(buf, bytes)
 	kineticMutex.Lock()
 	kc := GetKineticConnection()
-    _, err = kc.CPut(key, buf, len(bytes), goBuf, int(bufSize), kopts)
+        _, err = kc.CPut(key, buf, len(bytes), goBuf, int(bufSize), kopts)
 	if err != nil {
-                C.free(unsafe.Pointer(&buf))
-                C.free(unsafe.Pointer(&goBuf))
+                C.free(unsafe.Pointer(&goBuf[0]))
 		ReleaseConnection(kc.Idx)
 	        kineticMutex.Unlock()
 		return pi, err
@@ -544,13 +538,8 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     fsMeta.Meta[ReservedMetadataPrefix+"actual-size"] = strconv.FormatInt(objectActualSize, 10)
     key = bucket + "/" + object
     bytes, _ := json.Marshal(&fsMeta)
-    //metaValue := allocateValBuf(len(bytes))
-        
-        metaLen := len(bytes) //buf)
-        cbuf := C.allocMem(C.int(metaLen))
-        defer C.deallocMem((*C.char)(unsafe.Pointer(cbuf)))
-        metaValue := (*[1<<16]byte)(unsafe.Pointer(cbuf))[:metaLen:metaLen]
-        
+    metaValue := allocateValBuf(len(bytes))
+    defer C.free(unsafe.Pointer(&metaValue[0]))
     copy(metaValue, bytes)
     val := allocateValBuf(0)
     kc = GetKineticConnection()
@@ -637,13 +626,8 @@ func (ko *KineticObjects) copyMultipartObject(ctx context.Context, srcInfo Objec
         meta.Meta["hidden"] = "1"
         meta.KoInfo = KOInfo{Name: dstObj, Size: part.Size, CreatedTime: time.Now()}
         bytes, _ := json.Marshal(meta)
-        
-        metaLen := len(bytes)
-        cbuf := C.allocMem(C.int(metaLen))
-        defer C.deallocMem((*C.char)(unsafe.Pointer(cbuf)))
-        metaBuf := (*[1<<16]byte)(unsafe.Pointer(cbuf))[:metaLen:metaLen]
-        
-        //metaBuf := allocateValBuf(len(bytes))
+        metaBuf := allocateValBuf(len(bytes))
+        defer C.free(unsafe.Pointer(&metaBuf[0]))
         copy(metaBuf, bytes)
         // Read source object part into buffer
         valBuf := allocateValBuf(int(part.Size))
@@ -678,13 +662,8 @@ func (ko *KineticObjects) copyMultipartObject(ctx context.Context, srcInfo Objec
     objMeta.Meta[ReservedMetadataPrefix+"actual-size"] = strconv.FormatInt(srcInfo.Size, 10)
     objMeta.KoInfo = KOInfo{Name: dstObj, Size: 0, CreatedTime: time.Now()}
     bytes, _ := json.Marshal(objMeta)
-    //metaBuf := allocateValBuf(len(bytes))
-        
-        metaLen := len(bytes)
-        cbuf := C.allocMem(C.int(metaLen))
-        defer C.deallocMem((*C.char)(unsafe.Pointer(cbuf)))
-        metaBuf := (*[1<<16]byte)(unsafe.Pointer(cbuf))[:metaLen:metaLen]
-        
+    metaBuf := allocateValBuf(len(bytes))
+    defer C.free(unsafe.Pointer(&metaBuf[0]))
     copy(metaBuf, bytes)
     // Multipart object has no value
     valBuf := allocateValBuf(0)
