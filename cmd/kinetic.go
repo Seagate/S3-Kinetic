@@ -785,12 +785,6 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
 	                        return objInfo, toObjectErr(err, srcBucket, srcObject)
 			}
 		}
-        key = dstBucket + SlashSeparator + dstObject
-                fsMeta.Meta = srcInfo.UserDefined
-                fsMeta.Meta["etag"] = srcInfo.ETag
-        fsMeta.Meta["size"] =  strconv.FormatInt(fsMeta.KoInfo.Size, 10)
-
-	        kc = GetKineticConnection()
                 // get file size.
 	        fi := &KVInfo{
 			name:    fsMeta.KoInfo.Name,
@@ -799,7 +793,6 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
 		}
 
                 // Return the new object info.
-	        ReleaseConnection(kc.Idx)
                 kineticMutex.Unlock()
                 return fsMeta.KVInfoToObjectInfo(srcBucket, srcObject, fi), nil
 	} // End of IF cpSrcDstSame && srcInfo.metadataOnly
