@@ -210,9 +210,9 @@ func (fs *KineticObjects) PutObjectPart(ctx context.Context, bucket, object, upl
 	kc := GetKineticConnection()
 	_, err = kc.CPut(key, buf, len(bytes), goBuf, int(bufSize), kopts)
 	if err != nil {
-                C.free(unsafe.Pointer(&goBuf[0]))
+		C.free(unsafe.Pointer(&goBuf[0]))
 		ReleaseConnection(kc.Idx)
-	        kineticMutex.Unlock()
+		kineticMutex.Unlock()
 		return pi, err
 	}
         ReleaseConnection(kc.Idx)
