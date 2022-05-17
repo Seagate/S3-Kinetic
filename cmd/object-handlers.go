@@ -414,7 +414,7 @@ func (api objectAPIHandlers) GetObjectHandler(w http.ResponseWriter, r *http.Req
 		w.WriteHeader(http.StatusPartialContent)
 	}
 	buf := make([]byte, objInfo.Size + 1)  // Plus 1 for zero size file
-        defer debug.FreeOSMemory()  // Must have this line to release "buf" when finish
+	defer debug.FreeOSMemory()  // Must have this line to release "buf" when finish
 	if _, err = io.CopyBuffer(httpWriter, gr, buf); err != nil {
 		// Write object content to response body
 		//if _, err = io.Copy(httpWriter, gr); err != nil {

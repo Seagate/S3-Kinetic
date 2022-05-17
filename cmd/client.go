@@ -86,7 +86,6 @@ func (c *Client) Read(value []byte) (int, error) {
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
-            defer debug.FreeOSMemory()
             if err != nil {
                 return 0, err
             }
@@ -123,7 +122,6 @@ func (c *Client) Read(value []byte) (int, error) {
                     } else {
                         *(c.NextPartNumber)++
                     }
-                    debug.FreeOSMemory()
                     return int(size), err
                 }
             }
@@ -1370,7 +1368,7 @@ func (c *Client) GetMessage(message *kinetic_proto.Message) (uint32, error) {
 	}
 	//log.Println(" MESSAGE SIZE ", messageSize)
 	buff := make([]byte, messageSize)
-        defer debug.FreeOSMemory()
+	defer debug.FreeOSMemory()
 	err = Read(c.socket, buff, messageSize)
 	if err != nil {
 		//log.Println(" FAILED TO GET MESSAGE")
@@ -1431,7 +1429,7 @@ func (c *Client) GetSignOnMessage() error {
 	}
 	message := make([]byte, messageSize)
 	value := make([]byte, valueSize)
-        defer debug.FreeOSMemory()
+	defer debug.FreeOSMemory()
 
 	err = Read(c.socket, message, messageSize)
 	if err != nil {

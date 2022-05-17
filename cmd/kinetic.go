@@ -284,7 +284,7 @@ func initKineticMeta(kc *Client) error {
 	    enc.Encode(bucketInfo)
             gbuf2 := allocateValBuf(buf2.Len())
             copy(gbuf2, buf2.Bytes())
-	    _, err = kc.CPut(bucketKey, gbuf2, buf2.Len(), value, 0, kopts)
+            _, err = kc.CPut(bucketKey, gbuf2, buf2.Len(), value, 0, kopts)
             C.free(unsafe.Pointer(&gbuf2[0]))
         }
 
@@ -471,8 +471,8 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
         cvalue, _, err := kc.CGetMeta(key, kopts)
         ReleaseConnection(kc.Idx)
 	if err == nil {
-            C.free(unsafe.Pointer(cvalue))
-	        kineticMutex.Unlock()
+		C.free(unsafe.Pointer(cvalue))
+		kineticMutex.Unlock()
 		return  toObjectErr(errVolumeExists, bucket)
 	}
 	bucketKey := "bucket." + bucket
@@ -482,9 +482,9 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
-        gbuf := allocateValBuf(buf.Len())
-        defer C.free(unsafe.Pointer(&gbuf[0]))
-        copy(gbuf, buf.Bytes())
+	gbuf := allocateValBuf(buf.Len())
+	defer C.free(unsafe.Pointer(&gbuf[0]))
+	copy(gbuf, buf.Bytes())
 	value := allocateValBuf(0)
     kc = GetKineticConnection()
     kc.CPut(bucketKey, gbuf, buf.Len(), value, 0, kopts)
