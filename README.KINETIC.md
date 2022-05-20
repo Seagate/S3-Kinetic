@@ -37,52 +37,42 @@ assuming that the following directories are under user's home directory:
    - kineticd
 
 ### X86
-If the directory "./lib" has X86 libraries (after compiling using method b below),
+If the directory "./lib" has x86 libraries (after compiling using method below),
 it is enough to type the following command in the main folder (`albany-minio`) if there is no change
 in kineticd:
 
-    make -f Makefile.x86
+    make x86
 	
 Otherwise use the following command (assuming that the current directory is albany-minio):
-         
-    ./s3kinetic.sh ARG1 ARG2
-	   
-    ARG1 = X86
-    ARG2 = kineticd directory
 
-    ex: My kineticd is under /home/myhomedir/kineticd
+    make clean x86
 
-    ./s3kinetic.sh X86 /home/myhomedir/kineticd
-    
-    or
+All the kineticd libraries will be automatically copied from the kineticd folder in the parent folder. 
+You could also specify a different folder from where the libraries should be copied:
 
-    ./s3kinetic.sh X86 ~/kineticd
+    ./cp_kinetic_libs.sh -a x86 -d <kineticd folder>
+    make x86
 
-There will be an executable 's3kinetic.X86' generated and stored in directory './bin'.
+There will be an executable 's3kinetic.x86' generated and stored in directory './bin'.
   
 ### ARM
-If this is the first time, do the following:
-    - Go to `uboot-linux` directory and call this command:
+If the directory "./lib" has ARM libraries (after compiling using method below),
+it is enough to type the following command in the main folder (`albany-minio`) if there is no change
+in kineticd:
 
-       ./build_embedded_image.sh -t ramdef
+    make arm
+	
+Otherwise use the following command (assuming that the current directory is albany-minio):
 
-    - Go to the `albany-minio` folder and do the following:
-       ./s3kinetic.sh ARG1 ARG2 ARG3 ARG4
+    make clean arm
 
-       ARG1 = ARM
-       ARG2 = LAMARRKV
-       ARG3 = uboot-linux directory
-       ARG4 = kineticd directory
+All the kineticd libraries will be automatically copied from the kineticd folder in the parent folder. 
+You could also specify a different folder from where the libraries should be copied:
 
-       ex: My uboot-linux, kineticd are under /home/myhomedir/uboot-linux and /home/myhomedir/kineticd
+    ./cp_kinetic_libs.sh -a arm -d <kineticd folder>
+    make arm
 
-       ./s3kinetic.sh ARM LAMARRKV  ~/uboot-linux ~/kineticd
-
-There will be an executable 's3kinetic.arm' generated and stored in directory'./bin'.
-
-        Notes:
-          After the first time, if there is no change in uboot or kineticd, quick way to compile is just typing:
-                make -f Makefile.arm
+There will be an executable 's3kinetic.arm' generated and stored in directory './bin'.
         
 ---
 
