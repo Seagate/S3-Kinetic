@@ -22,7 +22,7 @@ set_x86:
 
 set_arm:
 	$(eval architecture := arm)
-	$(eval extra_flags: := env GOOS=linux GOARCH=arm GOARM=7)
+	$(eval extra_flags := env GOOS=linux GOARCH=arm GOARM=7)
 	$(shell ./goarmenv.sh)
 
 target: build
