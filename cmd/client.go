@@ -68,13 +68,12 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
+        defer debug.FreeOSMemory()
         requestSize := len(value)
-	debug.FreeOSMemory()
-	fsMeta := fsMetaV1{}
+        fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
                 err = errFileNotFound
-                c.ReleaseConn(c.Idx)
                 return 0, err
         }
         if (cvalue != nil) {
@@ -88,16 +87,13 @@ func (c *Client) Read(value []byte) (int, error) {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
             if err != nil {
-                c.ReleaseConn(c.Idx)
                 return 0, err
             }
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        copy(value, value1[0:size])
-                c.ReleaseConn(c.Idx)
                 return int(size), err
             }
-            c.ReleaseConn(c.Idx)
 	    return 0, err
         }
 
@@ -115,7 +111,6 @@ func (c *Client) Read(value []byte) (int, error) {
                 }
                 cvalue, size, err := c.CGet(key, int(part.Size), c.Opts, c.DataOffset, int(partReqSize))
                 if err != nil {
-                    c.ReleaseConn(c.Idx)
                     return 0, err
                 }
                 if cvalue != nil {
@@ -124,16 +119,14 @@ func (c *Client) Read(value []byte) (int, error) {
                     requestSize -= int(size)
                     if i ==  len(fsMeta.Parts) -1 {
                         *(c.NextPartNumber) = 0
-                        c.ReleaseConn(c.Idx)
                     } else {
                         *(c.NextPartNumber)++
                     }
-                    c.ReleaseConn(c.Idx)
                     return int(size), err
                 }
             }
+            debug.FreeOSMemory()
         }
-        c.ReleaseConn(c.Idx)
 	return 0, err
 }
 
@@ -550,6 +543,7 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    defer debug.FreeOSMemory()
     var psv C._CPrimaryStoreValue
     psv.version = C.CString(string(acmd.NewVersion))
     psv.tag = C.CString(string(acmd.Tag))
@@ -1374,6 +1368,7 @@ func (c *Client) GetMessage(message *kinetic_proto.Message) (uint32, error) {
 	}
 	//log.Println(" MESSAGE SIZE ", messageSize)
 	buff := make([]byte, messageSize)
+	defer debug.FreeOSMemory()
 	err = Read(c.socket, buff, messageSize)
 	if err != nil {
 		//log.Println(" FAILED TO GET MESSAGE")
@@ -1434,6 +1429,7 @@ func (c *Client) GetSignOnMessage() error {
 	}
 	message := make([]byte, messageSize)
 	value := make([]byte, valueSize)
+	defer debug.FreeOSMemory()
 
 	err = Read(c.socket, message, messageSize)
 	if err != nil {
