@@ -37,40 +37,34 @@ assuming that the following directories are under user's home directory:
    - kineticd
 
 ### X86
-If the directory "./lib" has x86 libraries (after compiling using method below),
-it is enough to type the following command in the main folder (`albany-minio`) if there is no change
-in kineticd:
-
-    make x86
-	
-Otherwise use the following command (assuming that the current directory is albany-minio):
+This project depends on kinetic. Please, build the kinetic project for x86 first.
+After that, just type the following command in the main folder (`albany-minio`):
 
     make clean x86
 
-All the kineticd libraries will be automatically copied from the kineticd folder in the parent folder. 
-You could also specify a different folder from where the libraries should be copied:
+This command will copy the kinetic libraries automatically and build S3-kinetic project.
 
+If you want to manually specify the kinetic folder from where to copy the libraries, follow these steps:
+    make clean
     ./cp_kinetic_libs.sh -a x86 -d <kineticd folder>
     make x86
+
 
 There will be an executable 's3kinetic.x86' generated and stored in directory './bin'.
   
 ### ARM
-If the directory "./lib" has ARM libraries (after compiling using method below),
-it is enough to type the following command in the main folder (`albany-minio`) if there is no change
-in kineticd:
-
-    make arm
-	
-Otherwise use the following command (assuming that the current directory is albany-minio):
+This project depends on kinetic. Please, build the kinetic project for x86 first.
+After that, just type the following command in the main folder (`albany-minio`):
 
     make clean arm
 
-All the kineticd libraries will be automatically copied from the kineticd folder in the parent folder. 
-You could also specify a different folder from where the libraries should be copied:
+This command will copy the kinetic libraries automatically and build S3-kinetic project. 
 
+If you want to manually specify the kinetic folder from where to copy the libraries, follow these steps:
+    make clean
     ./cp_kinetic_libs.sh -a arm -d <kineticd folder>
     make arm
+
 
 There will be an executable 's3kinetic.arm' generated and stored in directory './bin'.
         
