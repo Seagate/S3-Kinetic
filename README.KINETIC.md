@@ -53,7 +53,7 @@ If you want to manually specify the kinetic folder from where to copy the librar
 There will be an executable 's3kinetic.x86' generated and stored in directory './bin'.
   
 ### ARM
-This project depends on kinetic. Please, build the kinetic project for x86 first.
+This project depends on kinetic. Please, build the kinetic project for ARM first.
 After that, just type the following command in the main folder (`albany-minio`):
 
     make clean arm
