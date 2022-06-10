@@ -102,7 +102,7 @@ class CmdOperator(threading.Thread):
                 exeOp()
                 if self.__numOperations > 0:
                     self.__numOperations -= 1
-                if self.__numOperations % 20 == 0:
+                if self.__numOperations % 10 == 0:
                     print('Name: %s, # remaining operations = %d'% (self.getName(), self.__numOperations))
             except AssertionError as err:
                 self.__error = err
