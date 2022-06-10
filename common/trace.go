@@ -51,7 +51,7 @@ func KUntrace(unused string) {
     function, file, line, _ := runtime.Caller(1)
     funcName := runtime.FuncForPC(function).Name()
     funcName = removePackageName(funcName)
-    log.Printf("%s:%d:%s:%d: Exit", file, line, funcName, unix.Gettid())
+    log.Printf("%s:%d:%s: Exit", file, line, funcName)
     }
 }
 
