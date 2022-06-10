@@ -1,7 +1,6 @@
 package common
 
 import (
-    "golang.org/x/sys/unix"
     "log"
     "runtime"
     "strings"
@@ -42,8 +41,7 @@ func KTrace(msg string) string {
     function, file, line, _ := runtime.Caller(1)
     funcName := runtime.FuncForPC(function).Name()
     funcName = removePackageName(funcName)
-    //log.Printf("%s:%d:%s:%d: %s", file, line, funcName, C.threadID(), msg)
-    log.Printf("%s:%d:%s:%d: %s", file, line, funcName, unix.Gettid(), msg)
+    log.Printf("%s:%d:%s:%d: %s", file, line, funcName, C.threadID(), msg)
     }
     return ""
 }
