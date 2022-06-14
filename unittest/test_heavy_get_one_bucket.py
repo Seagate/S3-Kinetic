@@ -14,8 +14,8 @@ class TestHeavyGetOneBucket(bt.BaseTest):
         This test generates many GET commands from many threads
     """
 
-    NUM_THREADS = 80 
-    NUM_OPS = 50
+    NUM_THREADS = 100
+    NUM_OPS = 200
     
     def setUp(self):
         """Setup input files for the test.
