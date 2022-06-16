@@ -48,7 +48,7 @@ libs:
 	@( \
 	if [ -d "lib" ]; \
 	then \
-		echo "Found libraries from the kinetic project in ./lib folder: skipping library copy step"
+		echo "Found libraries from the kinetic project in ./lib folder: skipping library copy step"; \
 	else \
 		echo "Copying libraries from kineticd"; \
 		./cp_kinetic_libs.sh -a $(architecture); \
