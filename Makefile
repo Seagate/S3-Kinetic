@@ -1,13 +1,32 @@
 PWD := $(shell pwd)
-$(shell ./goarmenv.sh)
 GOPATH := $(shell go env GOPATH)
 LDFLAGS := $(shell go run buildscripts/gen-ldflags.go)
+
+GOARCH := $(shell go env GOARCH)
+GOOS := $(shell go env GOOS)
 
 VERSION ?= $(shell git describe --tags)
 TAG ?= "minio/minio:$(VERSION)"
 BUILD_LDFLAGS := '$(LDFLAGS)'
-all: build
-# Adding @() to any bash command removes the echo
+
+all:
+	@( echo "Target must be specified: x86 or arm" ; 	exit 1)
+
+x86: set_x86 target
+
+arm: set_arm target
+
+set_x86:
+	$(eval architecture := x86)
+	$(shell ./gox86env.sh)
+
+set_arm:
+	$(eval architecture := arm)
+	$(eval extra_flags := env GOOS=linux GOARCH=arm GOARM=7)
+	$(shell ./goarmenv.sh)
+
+target: build
+	# Adding @() to any bash command removes the echo
 	@( \
 	if [ ! -f "minio" ]; \
 	then \
@@ -17,13 +36,23 @@ all: build
 	if [ -f "minio" ]; \
 	then \
 		[ ! -d "./bin" ] && mkdir ./bin; \
-		mv minio ./bin/s3kinetic.arm; \
-		echo === New executable minio was created in ./bin directory ===; \
+		mv minio ./bin/s3kinetic.$(architecture); \
+		echo === New executable minio was created: ./bin/s3kinetic.$(architecture) ===; \
 	fi)
 
 checks:
 	@echo "Checking dependencies"
 	@(env bash $(PWD)/buildscripts/checkdeps.sh)
+
+libs:
+	@( \
+	if [ -d "lib" ]; \
+	then \
+		echo "Found libraries from the kinetic project in ./lib folder: skipping library copy step"; \
+	else \
+		echo "Copying libraries from kineticd"; \
+		./cp_kinetic_libs.sh -a $(architecture); \
+	fi)
 
 getdeps:
 	@mkdir -p ${GOPATH}/bin
@@ -82,9 +111,9 @@ coverage: build
 	@(env bash $(PWD)/buildscripts/go-coverage.sh)
 
 # Builds minio locally.
-build: checks
+build: checks libs
 	@echo "Building minio binary to './minio'"
-	@GO111MODULE=on env GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=1 go build -x -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/minio 1>/dev/null
+	@GO111MODULE=on $(extra_flags) CGO_ENABLED=1 go build -x -tags kqueue --ldflags $(BUILD_LDFLAGS) -o $(PWD)/minio 1>/dev/null
 
 docker: build
 	@docker build -t $(TAG) . -f Dockerfile.dev
@@ -102,6 +131,5 @@ clean:
 	@rm -rvf minio
 	@rm -rvf build
 	@rm -rvf release
-	@rm *.a
-	@rm cmd/*.a
-
+	@rm -rvf lib
+	@rm -rvf bin
