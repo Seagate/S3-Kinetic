@@ -641,6 +641,7 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
         return err
     }
     if !empty {
+        common.KTrace("Bucket is not EMPTY")
         return errBucketNotEmpty
     }
 
@@ -661,15 +662,18 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
             objects = append(objects, obj.Name)
             if len(objects) == maxObjectList {
                 // Reached maximum delete requests, attempt a delete for now.
+                panic("Exceeded maxObjectLists")
                 break
             }
         }
 
         // All objects in the bucket have been deleted.  Nothing to do.
         if len(objects) == 0 {
+            common.KTrace("# of objects through channels = 0")
             break
         }
 
+        common.KTrace(fmt.Sprintf("# of objects through channels to delete = %d", len(objects)))
         // Deletes a list of objects.
         deleteErrs, err := ko.DeleteObjects(ctx, bucket, objects)
 
@@ -698,6 +702,7 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
         }
     }
 
+    common.KTrace(fmt.Sprintf("1. last Error: %V", lastErr))
     if lastErr == nil {
 	    bucketKey := string(make([]byte, 1024))
 	    bucketKey = "bucket." + bucket
@@ -712,15 +717,19 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
 	    }
 	    kineticMutex.Lock()
 	    kc := GetKineticConnection()
+        common.KTrace(fmt.Sprintf("Deleting the bucket, key = %s", bucketKey))
         err = kc.Delete(bucketKey, kopts)
+        /*
         if err == nil {
             metaKey := "bucketKey"
             err = kc.Delete(metaKey, kopts)
         }
+        */
         lastErr = err
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
     } // End of if !hasError
+    common.KTrace(fmt.Sprintf("2. last Error: %V", lastErr))
     return lastErr
 }
 
