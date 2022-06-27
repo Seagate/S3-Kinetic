@@ -40,7 +40,7 @@ import (
         "github.com/minio/minio/common"
         "runtime/debug"
         //"log"
-	jsoniter "github.com/json-iterator/go"
+	//jsoniter "github.com/json-iterator/go"
 	//mioutil "github.com/minio/minio/pkg/ioutil"
 )
 
@@ -89,10 +89,11 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
         defer common.KUntrace(common.KTrace("Enter"))
         common.KTrace(fmt.Sprintf("bucket: %s, object: %s", bucket, object))
 
-        if err := checkNewMultipartArgs(ctx, bucket, object, fs); err != nil {
+	var err error
+        if err = checkNewMultipartArgs(ctx, bucket, object, fs); err != nil {
                 return "", toObjectErr(err, bucket)
         }
-        if _, err := fs.GetBucketInfo(ctx, bucket); err != nil {
+        if _, err = fs.GetBucketInfo(ctx, bucket); err != nil {
                 return "", toObjectErr(err, bucket)
         }
 
@@ -539,7 +540,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     fsMeta.Meta["etag"] = s3MD5
     // Save consolidated actual size.
     fsMeta.Meta[ReservedMetadataPrefix+"actual-size"] = strconv.FormatInt(objectActualSize, 10)
-    key = bucket + "/" + object
+    key := bucket + "/" + object
     bytes, _ := json.Marshal(&fsMeta)
     metaValue := allocateValBuf(len(bytes))
     defer C.free(unsafe.Pointer(&metaValue[0]))
