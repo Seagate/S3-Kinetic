@@ -24,6 +24,7 @@ class ObjectProducer:
 
     def makeAll(self, numObjs):
         """make s3objects with random different sizes"""
+        print(f'Creating {numObjs} objects')
 
         count = numObjs
         while count > 0:
@@ -33,10 +34,13 @@ class ObjectProducer:
                     obj = s3object.S3Object(size)
                     bucket = random.choice(self.__buckets) # randomly pick a bucket
                     bucket.put(obj, newName=f'obj-{count}') # new s3object name is obj-#
+                    if count % 10 == 0:
+                        print(f'Number of remaining objects to create: {count}')
                 else:
                     break
         self.__numObjs = numObjs
         self.__nxtObjIdx = 0
+        print(f'{numObjs} objects created')
 
     def getObject(self):   
         """get an s3object

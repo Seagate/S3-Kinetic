@@ -97,7 +97,7 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
         }
 
         uploadID := mustGetUUID()
-
+        /*
         // Initialize fs.json values.
         fsMeta := newFSMetaV1()
 
@@ -129,6 +129,7 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
         _, err = kc.CPut(key, buf, len(buf), buf, len(buf), kopts)
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
+        */
         return uploadID, err
 }
 
@@ -361,7 +362,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 result.Parts[i].LastModified = stat.ModTime()
                 result.Parts[i].Size = part.ActualSize
         }
-
+        /*
 	key := bucket + "/" + object + "." + fs.metaJSONFile
     common.KTrace(fmt.Sprintf("json file key = %s", key))
 	//log.Println(" GET JSON FILE FOR", key)
@@ -392,6 +393,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         //ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
 	//log.Println("FSMETA", result.UserDefined)
+        */
 	return result, nil
 }
 
@@ -502,7 +504,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
                 }
         }
     }
-
+    /*
     key := bucket + "/" + object + "." + fs.metaJSONFile
     kineticMutex.Lock()
     kc = GetKineticConnection()
@@ -526,6 +528,8 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
             return oi, err
         }
     }
+    */
+    fsMeta = fsMetaV1{}  // Tri
     // Save additional metadata.
     if len(fsMeta.Meta) == 0 {
         fsMeta.Meta = make(map[string]string)
@@ -541,6 +545,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     defer C.free(unsafe.Pointer(&metaValue[0]))
     copy(metaValue, bytes)
     val := allocateValBuf(0)
+    kineticMutex.Lock()  // Tri
     kc = GetKineticConnection()
     _, err = kc.CPut(key, metaValue, len(metaValue), val, 0, kopts)
     if err != nil {
@@ -582,12 +587,14 @@ func (ko *KineticObjects) AbortMultipartUpload(ctx context.Context, bucket, obje
     // Delete temorary json file.
     // If this file name has version in it then it doesn't have to be deleted separately
     objKey := bucket + SlashSeparator + object
+    /*
     jsonKey := objKey + "." + ko.metaJSONFile
     kineticMutex.Lock()
     kc := GetKineticConnection()
     kc.Delete(jsonKey, ko.option())
     ReleaseConnection(kc.Idx)
     kineticMutex.Unlock()
+    */
     // Delete all multiparts belong to the new version object
     objVer, _ := ko.currentVersion(objKey)
     nxtVer := ko.newVersion(objVer)

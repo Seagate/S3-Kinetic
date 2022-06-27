@@ -39,15 +39,19 @@ class BaseTest(unittest.TestCase):
 
     @classmethod
     def removeAllTestBuckets(cls):
+        print(f"Enter removeAllTestBucket")
         args = ['ls']
         result = cls.execute(args)
         flist = result.stdout.split(' ')
+        print(f'File list: %v', flist)
         for f in flist:
             if not f.startswith(f'{S3}{BUCKET_PREFIX}'):
                 continue
             itemList = f.split('\n')
             bucket = s3bucket.S3Bucket(itemList[0], nameType='full')
             bucket.remove()
+            print(f'Removed bucket: {bucket.fullName()}')
+        print(f"Exit removeAllTestBucket")
 
     @classmethod
     def execute(cls, args, stdin=None):
@@ -55,4 +59,5 @@ class BaseTest(unittest.TestCase):
         return executeS3cmd(args, stdin)
 
     def tearDown(self):
+        return
         self.removeAllTestBuckets()

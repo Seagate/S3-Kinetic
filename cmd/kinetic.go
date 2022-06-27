@@ -1710,7 +1710,7 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 	}
 
 	startKey := bucket + "/" + prefix
-	endKey := bucket + "0"
+	endKey := common.IncStr(startKey) // bucket + "0"
 	var lastKey []byte
 	var kc *Client
     var maxKeyRange uint32

@@ -2614,6 +2614,7 @@ func (api objectAPIHandlers) DeleteObjectHandler(w http.ResponseWriter, r *http.
 		switch err {
         case errFileNotFound:
 			writeErrorResponse(ctx, w, toAPIError(ctx, err), r.URL, guessIsBrowserReq(r))
+			panic(err)
             return
 		}
 		// Ignore delete object errors while replying to client, since we are suppposed to reply only 204.
