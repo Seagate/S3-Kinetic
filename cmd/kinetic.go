@@ -642,7 +642,7 @@ func (ko *KineticObjects) DeleteBucket(ctx context.Context, bucket string) error
     }
     if !empty {
         common.KTrace("Bucket is not EMPTY")
-        return errBucketNotEmpty
+        //return errBucketNotEmpty
     }
 
     commonPrefix := ""
@@ -1391,6 +1391,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
     kineticMutex.Lock()
     kc := GetKineticConnection()
     fsMeta := fsMetaV1{}
+	common.KTrace(fmt.Sprintf("key: %s", key))
     cvalue, size, err := kc.CGetMeta(key, kopts)
     if err != nil {
         err = errFileNotFound
@@ -1406,8 +1407,10 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         C.free(unsafe.Pointer(cvalue))
     }
     if len(fsMeta.Parts) == 0 {
+	common.KTrace(fmt.Sprintf("#Parts == 0, key: %s", key))
         key := bucket + SlashSeparator + object
         err = kc.Delete(key, kopts)
+	/*
         if err != nil {
             ReleaseConnection(kc.Idx)
             kineticMutex.Unlock()
@@ -1420,13 +1423,16 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
             kineticMutex.Unlock()
             return err
         }
+	*/
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
         return nil
     }
+	common.KTrace(fmt.Sprintf("#Parts > 0"))
     version := fsMeta.Meta["version"]
     for _, part := range  fsMeta.Parts {
         key =  bucket + SlashSeparator + object + "." +  version + "." + fmt.Sprintf("%.5d.%s.%d", part.Number, part.ETag, part.ActualSize)
+	common.KTrace(fmt.Sprintf("#Parts > 0, key: %s", key))
         kc.Delete(key, kopts)
 	}
     key = bucket + SlashSeparator + object
@@ -1734,7 +1740,9 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 		    return err
 	    }
 
+	common.KTrace(fmt.Sprintf("bucket = %s, # keys = %d", bucket, len(keys)))
 	    for _, key := range keys {
+		common.KTrace(fmt.Sprintf("bucket = %s, # key = %s", bucket, string(key)))
 		    lastKey = key
 		    var objInfo ObjectInfo
 		    if prefix == string(key[len(bucket)+1:len(bucket)+1+len(prefix)]) {
@@ -1762,6 +1770,7 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
                         objInfo.Name = result[0] + SlashSeparator
 				    }
 			    }
+		common.KTrace(fmt.Sprintf("Sending objInfo, name = %s", objInfo.Name))
                 resChannel <- objInfo
                 }
 		    }

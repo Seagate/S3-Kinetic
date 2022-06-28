@@ -416,6 +416,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
     fsMeta := fsMetaV1{}
 
     // Allocate parts similar to incoming slice.
+	common.KTrace(fmt.Sprintf("len(parts) = %d", len(parts)))
     fsMeta.Parts = make([]ObjectPartInfo, len(parts))
     kopts := Opts {
         ClusterVersion:  0,
@@ -530,7 +531,29 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         }
     }
     */
-    fsMeta = fsMetaV1{}  // Tri
+        //fsMeta := newFSMetaV1()
+
+        fsMeta.Meta = opts.UserDefined
+        //fsMeta.Meta["size"] = strconv.FormatInt(0, 10)
+        fsMeta.KoInfo = KOInfo{Name: object, Size: 0, CreatedTime: time.Now()}
+
+	/*
+        fsMetaBytes, err := json.Marshal(fsMeta)
+        if err != nil {
+                logger.LogIf(ctx, err)
+                return "", err
+        }
+	kopts := Opts{
+                ClusterVersion:  0,
+                Force:           true,
+                Tag:             []byte{}, //(fsMeta.Meta),
+                Algorithm:       kinetic_proto.Command_SHA1,
+                Synchronization: kinetic_proto.Command_WRITEBACK,
+                Timeout:         60000, //60 sec
+                Priority:        kinetic_proto.Command_NORMAL,
+        }
+	*/
+    //fsMeta = fsMetaV1{}  // Tri
     // Save additional metadata.
     if len(fsMeta.Meta) == 0 {
         fsMeta.Meta = make(map[string]string)
