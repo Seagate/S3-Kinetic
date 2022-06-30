@@ -14,16 +14,16 @@ import s3object
 
 class TestBucket(bt.BaseTest):
     '''
-    Test s3cmd APIs related to buckets. 
-    
+    Test s3cmd APIs related to buckets.
+
     This class verifies different common operations like:
        * create a bucket
        * delete a bucket
        * list buckets
        * delete buckets
-       
+
     A bucket could be seen as a folder in which objects can be stored
-    ''' 
+    '''
 
     def test_make_single(self):
         bucket = s3bucket.S3Bucket(1)
@@ -57,7 +57,7 @@ class TestBucket(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_CONFLICT, msg=result.stdout)
 
-    def test_list(self):
+    def test_list_buckets(self):
         ''' List all buckets (no contents) '''
         # make a bucket
         bucket = s3bucket.S3Bucket(1)
@@ -68,20 +68,42 @@ class TestBucket(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         self.assertTrue(result.stdout.find(bucket.fullName()) != -1, msg=msg.Message.notFound(bucket.fullName()))
 
-    def test_list_all(self):
-        ''' List bucket contents '''
+    def test_list_bucket_contents(self):
+        ''' List contents of a single bucket '''
         # make a bucket
         bucket = s3bucket.S3Bucket(1)
         bucket.make()
         # put an object to the bucket
         obj = s3object.S3Object(file_system.Size._1MB)
         bucket.put(obj)
-        args = ['la', bucket.fullName()]
+        args = ['ls', bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         self.assertTrue(result.stdout.find(obj.fullName()) != -1, msg=msg.Message.notFound(obj.name(), bucket.fullName()))
 
-    def test_disk_usage(self):
+
+    def test_list_all_objects(self):
+        ''' List all objects in all buckets '''
+        # make two buckets
+        bucket1 = s3bucket.S3Bucket(1)
+        bucket1.make()
+        bucket2 = s3bucket.S3Bucket(2)
+        bucket2.make()
+
+        # put an object to each bucket
+        obj1 = s3object.S3Object(file_system.Size._1MB)
+        bucket1.put(obj1)
+        obj2 = s3object.S3Object(file_system.Size._1MB)
+        bucket2.put(obj2)
+
+        # execute command, assert that both objects are listed by la
+        args = ['la']
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        self.assertTrue(result.stdout.find(obj1.fullName()) != -1, msg=msg.Message.notFound(obj1.name(), bucket1.fullName()))
+        self.assertTrue(result.stdout.find(obj2.fullName()) != -1, msg=msg.Message.notFound(obj2.name(), bucket2.fullName()))
+
+    def test_bucket_disk_usage(self):
         ''' Report disk usage of a bucket '''
         # make a bucket
         bucket = s3bucket.S3Bucket(1)

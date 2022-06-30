@@ -553,5 +553,36 @@ class TestObject(bt.BaseTest):
         self.assertFalse(srcBucket.doesContain(obj1.name()), msg=msg.Message.inSource(obj1.name(), srcBucket.fullName()))
         self.assertFalse(srcBucket.doesContain(obj2.name()), msg=msg.Message.inSource(obj2.name(), srcBucket.fullName()))
 
+    def test_disk_usage(self):
+        """ Test disk usage of a non-multipart object """
+        bucket = s3bucket.S3Bucket(1)
+        bucket.make()
+        obj = s3object.S3Object(file_system.Size._1MB)
+        bucket.put(obj)
+
+        args = ['du', obj.fullName()]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # assert that the object's size matches its corresponding local file's size
+        expectedSize = str(os.path.getsize(obj.fullFileName()))
+        self.assertTrue(result.stdout.find(expectedSize) != -1, msg=msg.Message.wrongDiskUsage())
+
+    def test_disk_usage_multi(self):
+        """ Test disk usage of a non-multipart object """
+        bucket = s3bucket.S3Bucket(1)
+        bucket.make()
+        obj = s3object.S3Object(file_system.Size._16MB)
+        bucket.put(obj)
+
+        args = ['du', obj.fullName()]
+        result = self.execute(args)
+        self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+
+        # assert that the object's size matches its corresponding local file's size
+        expectedSize = str(os.path.getsize(obj.fullFileName()))
+        self.assertTrue(result.stdout.find(expectedSize) != -1, msg=msg.Message.wrongDiskUsage())
+
+
 if __name__ == '__main__':
     unittest.main()
