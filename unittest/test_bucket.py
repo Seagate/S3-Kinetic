@@ -102,7 +102,7 @@ class TestBucket(bt.BaseTest):
         self.assertTrue(result.stdout.find(obj1.fullName()) != -1, msg=msg.Message.notFound(obj1.name(), bucket1.fullName()))
         self.assertTrue(result.stdout.find(obj2.fullName()) != -1, msg=msg.Message.notFound(obj2.name(), bucket2.fullName()))
 
-    def test_bucket_disk_usage(self):
+    def test_disk_usage(self):
         ''' Report disk usage of a bucket '''
         # make a bucket
         bucket = s3bucket.S3Bucket(1)
