@@ -81,7 +81,6 @@ class TestBucket(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         self.assertTrue(result.stdout.find(obj.fullName()) != -1, msg=msg.Message.notFound(obj.name(), bucket.fullName()))
 
-
     def test_list_all_objects(self):
         ''' List all objects in all buckets '''
         # make two buckets
