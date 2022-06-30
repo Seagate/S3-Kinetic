@@ -76,6 +76,8 @@ class TestBucket(bt.BaseTest):
         # put an object to the bucket
         obj = s3object.S3Object(file_system.Size._1MB)
         bucket.put(obj)
+
+        # execute, assert that the object is listed
         args = ['ls', bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
