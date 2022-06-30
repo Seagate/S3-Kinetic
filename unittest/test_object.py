@@ -564,9 +564,13 @@ class TestObject(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
 
+        # get only the file size (in bytes) from du output
+        outputArray = result.stdout.split()
+        actualSize = outputArray[0] # ex: actualSize = "1048576"
+
         # assert that the object's size matches its corresponding local file's size
-        expectedSize = str(os.path.getsize(obj.fullFileName()))
-        self.assertTrue(result.stdout.find(expectedSize) != -1, msg=msg.Message.wrongDiskUsage())
+        expectedSize = str(os.path.getsize(obj.fullFileName())) # ex: expectedSize = "1048576"
+        self.assertEqual(expectedSize, actualSize, msg=msg.Message.wrongDiskUsage())
 
     def test_disk_usage_multi(self):
         """ Test disk usage of a non-multipart object """
@@ -579,10 +583,13 @@ class TestObject(bt.BaseTest):
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
 
-        # assert that the object's size matches its corresponding local file's size
-        expectedSize = str(os.path.getsize(obj.fullFileName()))
-        self.assertTrue(result.stdout.find(expectedSize) != -1, msg=msg.Message.wrongDiskUsage())
+        # get only the file size (in bytes) from du output
+        outputArray = result.stdout.split()
+        actualSize = outputArray[0] # ex: actualSize = "16777216"
 
+        # assert that the object's size matches its corresponding local file's size
+        expectedSize = str(os.path.getsize(obj.fullFileName())) # ex: expectedSize = "16777216"
+        self.assertEqual(expectedSize, actualSize, msg=msg.Message.wrongDiskUsage())
 
 if __name__ == '__main__':
     unittest.main()
