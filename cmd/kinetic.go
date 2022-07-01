@@ -1327,14 +1327,15 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	//wg.Add(1)
 	//go func() {
 	// Write to kinetic
+        kineticMutex.Lock()
         kc = GetKineticConnection()
+	defer ReleaseConnection(kc.Idx)
+	defer kineticMutex.Unlock()
 	_, err = kc.CPut(key, buf, int(len(bytes)), goBuf, int(bufSize), kopts)
 	if err != nil {
             C.free(unsafe.Pointer(&goBuf[0]))
-            ReleaseConnection(kc.Idx)
             return ObjectInfo{}, err
 	}
-        ReleaseConnection(kc.Idx)
 	objectInfo := ObjectInfo{
 		Bucket:  bucket,
 		Name:    object,
