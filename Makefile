@@ -132,4 +132,6 @@ clean:
 	@rm -rvf build
 	@rm -rvf release
 	@rm -rvf lib
-	@rm -rvf bin
+	@rm -rvf bin/s3kinetic.*
+	@rm -rvf cmd/C_Kineticd.h
+	@rm -rvf cmd/C_Operations.h
