@@ -298,7 +298,7 @@ class TestObject(bt.BaseTest):
         args = ['put', obj.fullFileName(), bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        
+
         # verify the file was stored and matches local file
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))    
@@ -316,7 +316,7 @@ class TestObject(bt.BaseTest):
         result = self.execute(args, stdin=f)
         f.close()
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        
+
         # verify the file was stored, matches source object
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
