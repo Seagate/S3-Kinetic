@@ -82,7 +82,7 @@ class TestObject(bt.BaseTest):
                         bucket.fullName()))
         self.assertFalse(bucket.doesContain(objOldName),
                          msg="Object put but not renamed")
-        self.assertTrue(obj.verifyPut(), msg="MD5 error")
+        self.assertTrue(obj.verifyPut(), msg="Uploaded object does not match its source file")
 
     def test_get_wd(self):
         """ Download an object to the current working directory """
@@ -101,7 +101,7 @@ class TestObject(bt.BaseTest):
         # assert object is present in working directory, matches source object
         self.assertTrue(os.path.exists(obj.name()),
                         msg=msg.Message.notFound(obj.name(), os.getcwd()))
-        self.assertTrue(obj.verifyGet(downloadPath), msg="MD5 error")
+        self.assertTrue(obj.verifyGet(downloadPath), msg="Downloaded object does not match source file")
         # delete for cleanup
         if(os.path.exists(obj.name())):
             os.remove(obj.name())
@@ -128,7 +128,7 @@ class TestObject(bt.BaseTest):
                         msg=msg.Message.notFound(objNewName, os.getcwd()))
         self.assertFalse(os.path.exists(objOldName),
                          msg="Object downloaded but not renamed")
-        self.assertTrue(obj.verifyGet(downloadPath), msg="MD5 error")
+        self.assertTrue(obj.verifyGet(downloadPath), msg="Downloaded object does not match source file")
         
         # clean up by deleting downloaded object
         if(os.path.exists(objNewName)):
@@ -187,7 +187,7 @@ class TestObject(bt.BaseTest):
                         bucket.fullName()))
         self.assertFalse(bucket.doesContain(objOldName),
                          msg="Object not renamed")
-        self.assertTrue(obj.verifyPut(), msg="MD5 error")
+        self.assertTrue(obj.verifyPut(), msg="Uploaded object does not match its source file")
 
     def test_get_wd_multipart(self):
         """ Download a multipart object to the working directory """
@@ -205,7 +205,7 @@ class TestObject(bt.BaseTest):
         # verify the object was downloaded to working dir and matches source object
         self.assertTrue(os.path.exists(obj.name()),
                         msg=msg.Message.notFound(obj.name(), os.getcwd()))
-        self.assertTrue(obj.verifyGet(downloadPath), msg="MD5 error")
+        self.assertTrue(obj.verifyGet(downloadPath), msg="Downloaded object does not match source file")
         # clean up
         if(os.path.exists(obj.name())):
             os.remove(obj.name())
@@ -231,7 +231,7 @@ class TestObject(bt.BaseTest):
                         msg=msg.Message.notFound(objNewName, os.getcwd()))
         self.assertFalse(os.path.exists(objOldName),
                          msg="Object downloaded but not renamed")
-        self.assertTrue(obj.verifyGet(downloadPath), msg="MD5 error")
+        self.assertTrue(obj.verifyGet(downloadPath), msg="Downloaded object does not match source file")
         
         # clean up by deleting downloaded object
         if(os.path.exists(objNewName)):
@@ -302,7 +302,7 @@ class TestObject(bt.BaseTest):
         # verify the file was stored and matches local file
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))    
-        self.assertTrue(obj.verifyPut(), msg="Local and uploaded object do not match")
+        self.assertTrue(obj.verifyPut(), msg="Uploaded object does not match its source file")
 
     def test_put_stdin(self):
         """Put an object into a bucket by reading the object from stdin."""
@@ -320,7 +320,7 @@ class TestObject(bt.BaseTest):
         # verify the file was stored, matches source object
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
-        #self.assertTrue(obj.verifyPut())
+        self.assertTrue(obj.verifyPut(), msg="Uploaded object does not match its source file")
 
     def test_put_multipart(self):
         bucket = s3bucket.S3Bucket(1)
@@ -333,7 +333,7 @@ class TestObject(bt.BaseTest):
         obj.setBucket(bucket)
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
-        self.assertTrue(obj.verifyPut())
+        self.assertTrue(obj.verifyPut(), msg="Uploaded object does not match its source file")
 
     def test_put_multipart_stdin(self):
         """Put a multipart object into a bucket by reading the object from stdin."""
@@ -350,7 +350,7 @@ class TestObject(bt.BaseTest):
         # verify the file was stored, matches source object
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
-        self.assertTrue(obj.verifyPut())
+        self.assertTrue(obj.verifyPut(), msg="Uploaded object does not match its source file")
 
     def test_put_multi(self):
         bucket = s3bucket.S3Bucket(1)
@@ -367,8 +367,8 @@ class TestObject(bt.BaseTest):
             bucket.fullName()))
         self.assertTrue(bucket.doesContain(obj2.name()), msg=msg.Message.notFound(obj2.name(),
             bucket.fullName()))
-        self.assertTrue(obj1.verifyPut())
-        self.assertTrue(obj2.verifyPut())
+        self.assertTrue(obj1.verifyPut(), msg="Uploaded object (1) does not match its source file")
+        self.assertTrue(obj2.verifyPut(), msg="Uploaded object (2) does not match its source file")
 
     @unittest.skip
     def test_put_recursive(self):
@@ -401,7 +401,7 @@ class TestObject(bt.BaseTest):
         # verify the object was downloaded and matches its original source object
         self.assertTrue(os.path.exists(f'{file_system.DOWNLOAD_DIR}/{obj.name()}'),
             msg=msg.Message.notFound(obj.name(), file_system.DOWNLOAD_DIR))
-        self.assertTrue(obj.verifyGet(downloadPath))
+        self.assertTrue(obj.verifyGet(downloadPath), msg="Downloaded object does not match source file")
 
     def test_get_multipart(self):
         bucket = s3bucket.S3Bucket(1)
@@ -416,7 +416,7 @@ class TestObject(bt.BaseTest):
         # verify the object was downloaded and matches its source object
         self.assertTrue(os.path.exists(downloadPath),
             msg=msg.Message.notFound(obj.name(), file_system.DOWNLOAD_DIR)) 
-        self.assertTrue(obj.verifyGet(downloadPath))
+        self.assertTrue(obj.verifyGet(downloadPath), msg="Downloaded object does not match source file")
 
     def test_get_multi(self):
         """Get multiple objects from a bucket."""
@@ -437,8 +437,8 @@ class TestObject(bt.BaseTest):
         self.assertTrue(os.path.exists(fpathLarge),
             msg=msg.Message.notFound(largeObj.name(), file_system.DOWNLOAD_DIR))
 
-        self.assertTrue(smallObj.verifyGet(fpathSmall))
-        self.assertTrue(largeObj.verifyGet(fpathLarge))
+        self.assertTrue(smallObj.verifyGet(fpathSmall), msg="Downloaded object (small) does not match source file")
+        self.assertTrue(largeObj.verifyGet(fpathLarge), msg="Downloaded object (large) does not match source file")
 
     def test_delete(self):
         bucket = s3bucket.S3Bucket(1)
@@ -524,7 +524,7 @@ class TestObject(bt.BaseTest):
         obj.setBucket(destBucket)
         self.assertTrue(destBucket.doesContain(obj.name()),
             msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
-        self.assertTrue(obj.verifyCopy(srcBucket, destBucket))
+        self.assertTrue(obj.verifyCopy(srcBucket, destBucket), msg="Source and destination objects do not match")
 
     def test_copy_multipart_between_buckets(self):
         """Copy a multipart object from a bucket to another."""
@@ -541,7 +541,7 @@ class TestObject(bt.BaseTest):
         obj.setBucket(destBucket)
         self.assertTrue(destBucket.doesContain(obj.name()),
             msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
-        self.assertTrue(obj.verifyCopy(srcBucket, destBucket))
+        self.assertTrue(obj.verifyCopy(srcBucket, destBucket), msg="Source and destination objects do not match")
 
     def test_move(self):
         """Move an object from a bucket to another."""
