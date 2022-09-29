@@ -27,6 +27,12 @@ def executeS3cmd(args, stdin=None):
         close_fds=True)
     return result
 
+# Similar to executeS3cmd(), but for generic (non-s3cmd) Linux commands
+def executeLinuxCmd(args, stdin=None):
+    result = subprocess.run(args, stdin=stdin, stdout=PIPE, stderr=STDOUT, universal_newlines=True,
+        close_fds=True)
+    return result
+
 class BaseTest(unittest.TestCase):
     """Base class for test classes."""
 

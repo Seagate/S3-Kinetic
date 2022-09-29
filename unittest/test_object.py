@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+import time
 
 # local imports
 import base_test as bt # required to see PATH_TO_S3CMD used in the next instruction
@@ -64,6 +65,7 @@ class TestObject(bt.BaseTest):
         bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
+        obj.setBucket(bucket)
         objNewName = "test.bin"
         objOldName = obj.name()
 
@@ -72,13 +74,16 @@ class TestObject(bt.BaseTest):
                  bucket.fullName() + "/" + objNewName]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        # set object name to its new name to reflect successful put + rename
+        obj.setName(objNewName)
 
-        # assert object can be found in bucket and is renamed
+        # assert object can be found in bucket, is renamed, and matches local file
         self.assertTrue(bucket.doesContain(objNewName),
                         msg=msg.Message.notFound(objNewName,
                         bucket.fullName()))
         self.assertFalse(bucket.doesContain(objOldName),
                          msg="Object put but not renamed")
+        self.assertTrue(obj.verifyPut(), msg="MD5 error")
 
     def test_get_wd(self):
         """ Download an object to the current working directory """
@@ -86,15 +91,19 @@ class TestObject(bt.BaseTest):
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         bucket.put(obj)
+        obj.setBucket(bucket)
 
         # call command "get --force s3://bucket/<OBJECT>"
         args = ['get', '--force', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        downloadPath = f'{os.getcwd()}/{obj.name()}'
 
-        # assert object is present in working directory, delete for cleanup
+        # assert object is present in working directory, matches source object
         self.assertTrue(os.path.exists(obj.name()),
                         msg=msg.Message.notFound(obj.name(), os.getcwd()))
+        self.assertTrue(obj.verifyGet(downloadPath), msg="MD5 error")
+        # delete for cleanup
         if(os.path.exists(obj.name())):
             os.remove(obj.name())
 
@@ -105,6 +114,7 @@ class TestObject(bt.BaseTest):
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
         bucket.put(obj)
+        obj.setBucket(bucket)
         objNewName = "test.bin"
         objOldName = obj.name()
 
@@ -112,12 +122,15 @@ class TestObject(bt.BaseTest):
         args = ['get', '--force', obj.fullName(), objNewName]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        downloadPath = f'{os.getcwd()}/{objNewName}'
 
-        # assert object was downloaded to working directory and renamed
+        # assert object was downloaded to working directory, renamed, and matches source object
         self.assertTrue(os.path.exists(objNewName),
                         msg=msg.Message.notFound(objNewName, os.getcwd()))
         self.assertFalse(os.path.exists(objOldName),
                          msg="Object downloaded but not renamed")
+        self.assertTrue(obj.verifyGet(downloadPath), msg="MD5 error")
+        
         # clean up by deleting downloaded object
         if(os.path.exists(objNewName)):
             os.remove(objNewName)
@@ -165,14 +178,17 @@ class TestObject(bt.BaseTest):
                 bucket.fullName() + "/" + objNewName]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        # Rename object to reflect successful put+rename
+        obj.setName(objNewName)
 
-        # verify the file was stored and renamed
+        # verify the file was stored, renamed, and matches source object
         obj.setBucket(bucket)
         self.assertTrue(bucket.doesContain(objNewName),
                         msg=msg.Message.notFound(obj.name(),
                         bucket.fullName()))
         self.assertFalse(bucket.doesContain(objOldName),
                          msg="Object not renamed")
+        self.assertTrue(obj.verifyPut(), msg="MD5 error")
 
     def test_get_wd_multipart(self):
         """ Download a multipart object to the working directory """
@@ -185,15 +201,12 @@ class TestObject(bt.BaseTest):
         args = ['get', '--force', obj.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        downloadPath = f'{os.getcwd()}/{obj.name()}'
 
-        # verify the object was downloaded to working dir + size is correct
+        # verify the object was downloaded to working dir and matches source object
         self.assertTrue(os.path.exists(obj.name()),
                         msg=msg.Message.notFound(obj.name(), os.getcwd()))
-        self.assertEqual(file_system.Size._16MB, os.path.getsize(obj.name()),
-                         msg=msg.Message.sizeMismatch(os.getcwd()))
-
-        # TODO: add file comparison assertion(s)
-
+        self.assertTrue(obj.verifyGet(downloadPath), msg="MD5 error")
         # clean up
         if(os.path.exists(obj.name())):
             os.remove(obj.name())
@@ -212,15 +225,15 @@ class TestObject(bt.BaseTest):
         args = ['get', '--force', obj.fullName(), objNewName]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
+        downloadPath = f'{os.getcwd()}/{objNewName}'
 
-        # assert object was downloaded to working directory and renamed
+        # assert object was downloaded to working directory, renamed, and matches source object
         self.assertTrue(os.path.exists(objNewName),
                         msg=msg.Message.notFound(objNewName, os.getcwd()))
         self.assertFalse(os.path.exists(objOldName),
                          msg="Object downloaded but not renamed")
-
-        # TODO: add file comparison assertion(s)
-
+        self.assertTrue(obj.verifyGet(downloadPath), msg="MD5 error")
+        
         # clean up by deleting downloaded object
         if(os.path.exists(objNewName)):
             os.remove(objNewName)
@@ -282,27 +295,33 @@ class TestObject(bt.BaseTest):
         bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
+        obj.setBucket(bucket)
         args = ['put', obj.fullFileName(), bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the file was stored
+        
+        # verify the file was stored and matches local file
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
-            bucket.fullName()))
+            bucket.fullName()))    
+        self.assertTrue(obj.verifyPut(), msg="Local and uploaded object do not match")
 
     def test_put_stdin(self):
         """Put an object into a bucket by reading the object from stdin."""
         bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._1KB)
+        obj.setBucket(bucket)
         objFullName = f'{bucket.fullName()}/{obj.name()}'
         f = open(obj.fullFileName(), 'r')
         args = ['put', '-', objFullName]
         result = self.execute(args, stdin=f)
         f.close()
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the file was stored
+        
+        # verify the file was stored, matches source object
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
+        #self.assertTrue(obj.verifyPut())
 
     def test_put_multipart(self):
         bucket = s3bucket.S3Bucket(1)
@@ -311,25 +330,28 @@ class TestObject(bt.BaseTest):
         args = ['put', '--multipart-chunk-size-mb=5', obj.fullFileName(), bucket.fullName()]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the file was stored
+        # verify the file was stored, matches source object
         obj.setBucket(bucket)
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
+        self.assertTrue(obj.verifyPut())
 
     def test_put_multipart_stdin(self):
         """Put a multipart object into a bucket by reading the object from stdin."""
         bucket = s3bucket.S3Bucket(1)
         bucket.make()
         obj = s3object.S3Object(file_system.Size._16MB)
+        obj.setBucket(bucket)
         objFullName = f'{bucket.fullName()}/{obj.name()}'
         f = open(obj.fullFileName(), 'r')
         args = ['put', '--multipart-chunk-size-mb=5', '-', objFullName]
         result = self.execute(args, stdin=f)
         f.close()
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the file was stored
+        # verify the file was stored, matches source object
         self.assertTrue(bucket.doesContain(obj.name()), msg=msg.Message.notFound(obj.name(),
             bucket.fullName()))
+        self.assertTrue(obj.verifyPut())
 
     def test_put_multi(self):
         bucket = s3bucket.S3Bucket(1)
@@ -341,11 +363,13 @@ class TestObject(bt.BaseTest):
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
         obj1.setBucket(bucket)
         obj2.setBucket(bucket)
-        # verify the file was stored
+        # verify both files were stored and both match their source objects
         self.assertTrue(bucket.doesContain(obj1.name()), msg=msg.Message.notFound(obj1.name(),
             bucket.fullName()))
         self.assertTrue(bucket.doesContain(obj2.name()), msg=msg.Message.notFound(obj2.name(),
             bucket.fullName()))
+        self.assertTrue(obj1.verifyPut())
+        self.assertTrue(obj2.verifyPut())
 
     @unittest.skip
     def test_put_recursive(self):
@@ -373,9 +397,12 @@ class TestObject(bt.BaseTest):
         args = ['get', '--force', obj.fullName(), file_system.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the object was downloaded
+        downloadPath = f'{file_system.DOWNLOAD_DIR}/{obj.name()}'
+
+        # verify the object was downloaded and matches its original source object
         self.assertTrue(os.path.exists(f'{file_system.DOWNLOAD_DIR}/{obj.name()}'),
             msg=msg.Message.notFound(obj.name(), file_system.DOWNLOAD_DIR))
+        self.assertTrue(obj.verifyGet(downloadPath))
 
     def test_get_multipart(self):
         bucket = s3bucket.S3Bucket(1)
@@ -385,11 +412,12 @@ class TestObject(bt.BaseTest):
         args = ['get', '--force', obj.fullName(), file_system.DOWNLOAD_DIR]
         result = self.execute(args)
         self.assertEqual(result.returncode, xcodes.EX_OK, msg=result.stdout)
-        # verify the object was downloaded and its size is right
-        fpath = f'{file_system.DOWNLOAD_DIR}/{obj.name()}'
-        self.assertTrue(os.path.exists(fpath),
-        msg=msg.Message.notFound(obj.name(), file_system.DOWNLOAD_DIR)) 
-        self.assertEqual(file_system.Size._16MB, os.path.getsize(fpath), msg=msg.Message.sizeMismatch(fpath))
+        downloadPath = f'{file_system.DOWNLOAD_DIR}/{obj.name()}'
+
+        # verify the object was downloaded and matches its source object
+        self.assertTrue(os.path.exists(downloadPath),
+            msg=msg.Message.notFound(obj.name(), file_system.DOWNLOAD_DIR)) 
+        self.assertTrue(obj.verifyGet(downloadPath))
 
     def test_get_multi(self):
         """Get multiple objects from a bucket."""
@@ -410,10 +438,8 @@ class TestObject(bt.BaseTest):
         self.assertTrue(os.path.exists(fpathLarge),
             msg=msg.Message.notFound(largeObj.name(), file_system.DOWNLOAD_DIR))
 
-        self.assertEqual(file_system.Size._1KB, os.path.getsize(fpathSmall),
-            msg=msg.Message.sizeMismatch(fpathSmall))
-        self.assertEqual(file_system.Size._16MB, os.path.getsize(fpathLarge),
-            msg=msg.Message.sizeMismatch(fpathLarge))
+        self.assertTrue(smallObj.verifyGet(fpathSmall))
+        self.assertTrue(largeObj.verifyGet(fpathLarge))
 
     def test_delete(self):
         bucket = s3bucket.S3Bucket(1)
@@ -499,6 +525,7 @@ class TestObject(bt.BaseTest):
         obj.setBucket(destBucket)
         self.assertTrue(destBucket.doesContain(obj.name()),
             msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
+        self.assertTrue(obj.verifyCopy(srcBucket, destBucket))
 
     def test_copy_multipart_between_buckets(self):
         """Copy a multipart object from a bucket to another."""
@@ -515,6 +542,7 @@ class TestObject(bt.BaseTest):
         obj.setBucket(destBucket)
         self.assertTrue(destBucket.doesContain(obj.name()),
             msg=msg.Message.notInDest(obj.name(), destBucket.fullName()))
+        self.assertTrue(obj.verifyCopy(srcBucket, destBucket))
 
     def test_move(self):
         """Move an object from a bucket to another."""
