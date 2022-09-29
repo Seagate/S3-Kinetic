@@ -232,7 +232,7 @@ class TestObject(bt.BaseTest):
         self.assertFalse(os.path.exists(objOldName),
                          msg="Object downloaded but not renamed")
         self.assertTrue(obj.verifyGet(downloadPath), msg="Downloaded object does not match source file")
-        
+
         # clean up by deleting downloaded object
         if(os.path.exists(objNewName)):
             os.remove(objNewName)
