@@ -1,7 +1,6 @@
 import os
 import sys
 import unittest
-import time
 
 # local imports
 import base_test as bt # required to see PATH_TO_S3CMD used in the next instruction

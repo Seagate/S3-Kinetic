@@ -1,6 +1,5 @@
 import sys
 import os
-import hashlib
 
 import base_test as bt
 
@@ -43,7 +42,6 @@ class S3Object:
 
     def setName(self, name):
         self.__name = name
-        #self.__fullFileName = f'{file_system.DATA_DIR}/{self.__name}'
 
     def fullFileName(self):
         """Return full file path name of this object."""
