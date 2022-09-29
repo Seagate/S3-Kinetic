@@ -128,8 +128,8 @@ class S3Object:
         destArgs = ['get', '--force', destObject, "dest"]
         srcResult = bt.executeS3cmd(srcArgs)
         destResult = bt.executeS3cmd(destArgs)
-        assert srcResult.returncode == xcodes.EX_OK, result.stdout
-        assert destResult.returncode == xcodes.EX_OK, result.stdout
+        assert srcResult.returncode == xcodes.EX_OK, srcResult.stdout
+        assert destResult.returncode == xcodes.EX_OK, destResult.stdout
 
         srcPath = f'{os.getcwd()}/source'
         destPath = f'{os.getcwd()}/dest'
