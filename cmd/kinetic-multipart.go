@@ -120,7 +120,7 @@ func (fs *KineticObjects) NewMultipartUpload(ctx context.Context, bucket, object
                 Timeout:         60000, //60 sec
                 Priority:        kinetic_proto.Command_NORMAL,
         }
-	key := bucket + "/" + object + "." + fs.metaJSONFile
+	key := bucket + "/" + object + "." + fs.metaJSONFile + "." + uploadID
         // metadata file
         buf := allocateValBuf(len(fsMetaBytes))
         copy(buf, fsMetaBytes)
@@ -296,12 +296,12 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                     continue
                 }
                 //log.Println("GET PART FILE 1 ",  getPartKO(Keys, partNumber, etag1))
-		stat1, serr := koStat(getPartKO(Keys, partNumber, etag1))
+		stat1, serr := koStat(startKey + getPartKO(Keys, partNumber, etag1))
                 if serr != nil {
                         return result, toObjectErr(serr)
                 }
                 //log.Println("GET PART FILE 2",  getPartKO(Keys, partNumber, etag2))
-                stat2, serr := koStat(getPartKO(Keys, partNumber, etag2))
+                stat2, serr := koStat(startKey + getPartKO(Keys, partNumber, etag2))
                 if serr != nil {
                         return result, toObjectErr(serr)
                 }
@@ -362,7 +362,7 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
                 result.Parts[i].Size = part.ActualSize
         }
 
-	key := bucket + "/" + object + "." + fs.metaJSONFile
+	key := bucket + "/" + object + "." + fs.metaJSONFile + "." + uploadID
     common.KTrace(fmt.Sprintf("json file key = %s", key))
 	//log.Println(" GET JSON FILE FOR", key)
         kineticMutex.Lock()
@@ -503,7 +503,7 @@ func (fs *KineticObjects) CompleteMultipartUpload(ctx context.Context, bucket st
         }
     }
 
-    key := bucket + "/" + object + "." + fs.metaJSONFile
+    key := bucket + "/" + object + "." + fs.metaJSONFile + "." + uploadID
     kineticMutex.Lock()
     kc = GetKineticConnection()
     cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1) // -1 to indicate it doesn't know the size
@@ -582,7 +582,7 @@ func (ko *KineticObjects) AbortMultipartUpload(ctx context.Context, bucket, obje
     // Delete temorary json file.
     // If this file name has version in it then it doesn't have to be deleted separately
     objKey := bucket + SlashSeparator + object
-    jsonKey := objKey + "." + ko.metaJSONFile
+    jsonKey := objKey + "." + ko.metaJSONFile + "." + uploadID
     kineticMutex.Lock()
     kc := GetKineticConnection()
     kc.Delete(jsonKey, ko.option())
