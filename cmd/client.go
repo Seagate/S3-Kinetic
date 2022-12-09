@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	//"runtime"
-        "runtime/debug"
+//        "runtime/debug"
 	"strings"
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
@@ -68,7 +68,6 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        defer debug.FreeOSMemory()
         requestSize := len(value)
         fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
@@ -125,7 +124,6 @@ func (c *Client) Read(value []byte) (int, error) {
                     return int(size), err
                 }
             }
-            debug.FreeOSMemory()
         }
 	return 0, err
 }
@@ -543,7 +541,6 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    defer debug.FreeOSMemory()
     var psv C._CPrimaryStoreValue
     psv.version = C.CString(string(acmd.NewVersion))
     psv.tag = C.CString(string(acmd.Tag))
@@ -1368,7 +1365,6 @@ func (c *Client) GetMessage(message *kinetic_proto.Message) (uint32, error) {
 	}
 	//log.Println(" MESSAGE SIZE ", messageSize)
 	buff := make([]byte, messageSize)
-	defer debug.FreeOSMemory()
 	err = Read(c.socket, buff, messageSize)
 	if err != nil {
 		//log.Println(" FAILED TO GET MESSAGE")
@@ -1429,7 +1425,6 @@ func (c *Client) GetSignOnMessage() error {
 	}
 	message := make([]byte, messageSize)
 	value := make([]byte, valueSize)
-	defer debug.FreeOSMemory()
 
 	err = Read(c.socket, message, messageSize)
 	if err != nil {

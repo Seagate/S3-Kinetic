@@ -34,7 +34,7 @@ import (
 	//"os/user"
 	"path"
 	"runtime"
-	"runtime/debug"
+//	"runtime/debug"
 	"sort"
 	"time"
 	"strings"
@@ -566,7 +566,6 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
         var bucketInfos []BucketInfo
         var value []byte
         var lastKey []byte 
-        defer debug.FreeOSMemory()
 	for true {
         	kineticMutex.Lock()
 		kc := GetKineticConnection()
@@ -1138,7 +1137,6 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
     cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1)  // -1 to indicate it doesn't know the size
-    defer debug.FreeOSMemory()
 	ReleaseConnection(kc.Idx)
 	if err != nil {
 		err = errFileNotFound
@@ -1490,7 +1488,6 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     for _, prefixPart := range prefixParts {
         regexpStr  += ".*" + prefixPart     // ".*":  zero or more of any character
     }
-    defer debug.FreeOSMemory()
     for !bDone && nRemainKeys > 0 {
         kineticMutex.Lock()
         kc = GetKineticConnection()
@@ -1557,7 +1554,6 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
             startKey = string(keys[len(keys) - 1])
         }
         bStartKeyInclusive = false
-        debug.FreeOSMemory()
     }  // End of FOR !nDone && nRemainKeys > 0
     if (nRemainKeys > 0) || maxKeys <= maxKeyRange {
         result.IsTruncated = false
@@ -1697,7 +1693,6 @@ func (ko *KineticObjects) HealBucket(ctx context.Context, bucket string, dryRun,
 func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delimiter string, resChannel chan<- ObjectInfo) (e error) {
     defer common.KUntrace(common.KTrace("Enter"))
     defer close(resChannel)
-    defer debug.FreeOSMemory()
 
 	kopts := Opts{
 		ClusterVersion:  0,
@@ -1978,7 +1973,6 @@ func (ko *KineticObjects) deleteKeys(keys [][]byte) error {
 }
 
 func (ko *KineticObjects) deleteParts(objKey, version string) error {
-    defer debug.FreeOSMemory()
     // Get the new version multipart keys to delete
     startKey := objKey + "." + version + "."
     endKey := common.IncStr(startKey)
