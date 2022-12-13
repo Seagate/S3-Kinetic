@@ -253,7 +253,6 @@ func initKineticMeta(kc *Client) error {
             gbuf := allocateValBuf(buf.Len())
 	    copy(gbuf, buf.Bytes())
             _, err = kc.CPut(bucketKey, gbuf, buf.Len(), value, 0, kopts)
-            C.free(unsafe.Pointer(&gbuf[0]))
             if err != nil {
                 return  err
             }
@@ -269,7 +268,6 @@ func initKineticMeta(kc *Client) error {
             gbuf1 := allocateValBuf(buf1.Len())
             copy(gbuf1, buf1.Bytes())
 	    _, err = kc.CPut(bucketKey, gbuf1, buf1.Len(), value, 0, kopts)
-            C.free(unsafe.Pointer(&gbuf1[0]))
             if err != nil {
                 return  err
             }
@@ -285,7 +283,6 @@ func initKineticMeta(kc *Client) error {
             gbuf2 := allocateValBuf(buf2.Len())
             copy(gbuf2, buf2.Bytes())
             _, err = kc.CPut(bucketKey, gbuf2, buf2.Len(), value, 0, kopts)
-            C.free(unsafe.Pointer(&gbuf2[0]))
         }
 
 	return err
@@ -412,7 +409,6 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
         kineticMutex.Lock()
         kc := GetKineticConnection()
         cvalue, size, err := kc.CGetMeta(key, kopts)
-        defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
         if err != nil {
                 err = errFileNotFound
@@ -483,7 +479,6 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 	enc := gob.NewEncoder(&buf)
 	enc.Encode(bucketInfo)
 	gbuf := allocateValBuf(buf.Len())
-	defer C.free(unsafe.Pointer(&gbuf[0]))
 	copy(gbuf, buf.Bytes())
 	value := allocateValBuf(0)
     kc = GetKineticConnection()
@@ -1306,13 +1301,11 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         fsMeta.KoInfo = KOInfo{Name: object, Size: data.Size(), CreatedTime: time.Now()}
         bytes, _ := json.Marshal(&fsMeta)
         buf := allocateValBuf(len(bytes))
-        defer C.free(unsafe.Pointer(&buf[0]))
         goBuf := allocateValBuf(int(bufSize))
         copy(buf, bytes)
 	//Read data to buf
 	_, err = readToBuffer(r, goBuf)
 	if err != nil {
-            C.free(unsafe.Pointer(&goBuf[0]))
             return ObjectInfo{}, err
 	}
 	//wg.Add(1)
@@ -1321,7 +1314,6 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         kc = GetKineticConnection()
 	_, err = kc.CPut(key, buf, int(len(bytes)), goBuf, int(bufSize), kopts)
 	if err != nil {
-            C.free(unsafe.Pointer(&goBuf[0]))
             ReleaseConnection(kc.Idx)
             return ObjectInfo{}, err
 	}
