@@ -782,9 +782,9 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject, 
                 fsMeta.Meta = srcInfo.UserDefined
                 fsMeta.Meta["etag"] = srcInfo.ETag
         fsMeta.Meta["size"] =  strconv.FormatInt(fsMeta.KoInfo.Size, 10)
-	        bytes, _ := json.Marshal(&fsMeta)
-	        buf := allocateValBuf(len(bytes))
-		copy(buf, bytes)
+	        //bytes, _ := json.Marshal(&fsMeta)
+	        //buf := allocateValBuf(len(bytes))
+		//copy(buf, bytes)
 
 	        kc = GetKineticConnection()
                 // get file size.

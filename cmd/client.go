@@ -546,6 +546,8 @@ func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    common.KTrace(fmt.Sprintf("key %s", key))
+
         var psv C._CPrimaryStoreValue
         psv.version = C.CString(string(acmd.NewVersion))
         psv.tag = C.CString(string(acmd.Tag))
