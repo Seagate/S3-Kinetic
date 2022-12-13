@@ -409,6 +409,7 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
         kineticMutex.Lock()
         kc := GetKineticConnection()
         cvalue, size, err := kc.CGetMeta(key, kopts)
+        defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
         if err != nil {
                 err = errFileNotFound
