@@ -531,12 +531,13 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 		dec := gob.NewDecoder(buf)
 		dec.Decode(&bi)
                 common.KTrace(fmt.Sprintf("bucket info: %+v", bi))
-        common.KTrace("Free meta")
-        C.free(unsafe.Pointer(cvalue))
+                common.KTrace("Free meta")
+                C.free(unsafe.Pointer(cvalue))
 	} else {
         common.KTrace("cvalue is nil")
-    }
+        }
         kineticMutex.Unlock()
+        //log.Println(" END. GET BUCKET INFO ", bucket)
 	return bi, nil
 }
 
@@ -576,18 +577,18 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			var bucketInfo BucketInfo
 			if string(key[:7]) == "bucket." && (string(key[:8]) != "bucket..") {
 				cvalue, size, err := kc.CGetMeta(string(key), kopts)
-                if err != nil {
-                    return nil, err
-                }
-				if (cvalue != nil) {
-                    common.KTrace(fmt.Sprintf("size = %d", size))
-					value = (*[1<<30]byte)(unsafe.Pointer(cvalue))[:size:size]
+                                if err != nil {
+                                     return nil, err
+                                }
+		                if (cvalue != nil) {
+                                        common.KTrace(fmt.Sprintf("size = %d", size))
+				        value = (*[1<<30]byte)(unsafe.Pointer(cvalue))[:size:size]
 					buf := bytes.NewBuffer(value[:size])
 					dec := gob.NewDecoder(buf)
 					dec.Decode(&bucketInfo)
-                    common.KTrace("Free meta")
-                    C.free(unsafe.Pointer(cvalue))
-                    common.KTrace(fmt.Sprintf("MyBucketInfo: %+v", bucketInfo))
+                                        common.KTrace("Free meta")
+                                        C.free(unsafe.Pointer(cvalue))
+                                        common.KTrace(fmt.Sprintf("MyBucketInfo: %+v", bucketInfo))
 					name := []byte(bucketInfo.Name)
 					bucketInfo.Name = string(name[7:])
 					bucketInfos = append(bucketInfos, bucketInfo)
@@ -601,6 +602,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			endKey = ""
 		}
 	}
+	log.Println("END. LIST BUCKET")
         return bucketInfos, nil
 }
 
@@ -1076,9 +1078,12 @@ func (ko *KineticObjects) GetObjectInfo(ctx context.Context, bucket, object stri
 //THAI:
 func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, opts ObjectOptions) (err error) {
         defer common.KUntrace(common.KTrace("Enter"))
+	//log.Println("GET OBJECT")
 	if err = checkGetObjArgs(ctx, bucket, object); err != nil {
 		return err
 	}
+        //log.Println("1. GET OBJECT")
+
 	objectLock := ko.NewNSLock(ctx, bucket, object)
 	if err := objectLock.GetRLock(globalObjectTimeout); err != nil {
 		logger.LogIf(ctx, err)
@@ -1089,6 +1094,7 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
         defer func() {
                 atomic.AddInt64(&ko.activeIOCount, -1)
         }()
+        //log.Println("END. GET OBJECT")
 
         //log.Println(" END: GET KINETIC OBJECT FROM BUCKET ", bucket, " ", object, " ", offset, " ", length)
 
@@ -1098,10 +1104,11 @@ func (ko *KineticObjects) GetObject(ctx context.Context, bucket, object string, 
 //getObject - wrapper for GetObject
 func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, offset int64, length int64, writer io.Writer, etag string, lock bool) (err error) {
         defer common.KUntrace(common.KTrace("Enter"))
-	//log.Println(" GETOBJECT ", bucket, object, length)
+	//log.Println(" gETOBJECT ", bucket, object, length)
 	if _, err = ko.statBucketDir(ctx, bucket); err != nil {
 		return toObjectErr(err, bucket)
 	}
+        //log.Println(" 1. gETOBJECT")
 
 	// Offset cannot be negative.
 	if offset < 0 {
@@ -1134,6 +1141,8 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
     cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1)  // -1 to indicate it doesn't know the size
+           // log.Println(" 2. gETOBJECT")
+
     defer debug.FreeOSMemory()
 	ReleaseConnection(kc.Idx)
 	if err != nil {
@@ -1185,7 +1194,10 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
 	if  cvalue != nil {
 	        value := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		writer.Write(value[:size])
+
 	}
+	     //   log.Println(" END. gETOBJECT")
+
         //log.Printf(" END: 1. GET OBJ %s %s %d\n", bucket, object, length)
 	kineticMutex.Unlock()
 	return err
@@ -1219,6 +1231,7 @@ func (ko *KineticObjects) PutObject(ctx context.Context, bucket string, object s
 // putObject - wrapper for PutObject
 func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object string, r *PutObjReader, opts ObjectOptions) (objInfo ObjectInfo, retErr error) {
         defer common.KUntrace(common.KTrace("Enter"))
+	//log.Println(" pPUTOBJECT ", bucket, " ", object)
 	data := r.Reader
 
 	// Validate if bucket name is valid and exists.
@@ -1330,6 +1343,7 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	//Force Garbage Collection
 	runtime.GC()
 	//PrintMemUsage()
+	//log.Println(" END. pUTOBJECT")
 	return objectInfo, nil
 }
 
@@ -1427,6 +1441,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    //log.Println(" LIST OBJECTS")
     atomic.AddInt64(&ko.activeIOCount, 1)
     defer func() {
         atomic.AddInt64(&ko.activeIOCount, -1)
@@ -1559,6 +1574,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
         result.NextMarker = nextKey[len(bucketPrefix):]
         result.IsTruncated = true
     }
+    //log.Println("END. LIST OBJECTS")
     return result, nil
 }
 

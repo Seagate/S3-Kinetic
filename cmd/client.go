@@ -68,31 +68,38 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
+	//log.Println("READ VALUE")
         requestSize := len(value)
         fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
         if err != nil {
                 err = errFileNotFound
+		//log.Println(" RETURN READ VALUE NOT FOUND")
                 return 0, err
         }
         if (cvalue != nil) {
 		fsMetaBytes := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-        common.KTrace("Free meta")
-        C.free(unsafe.Pointer(cvalue))
+                common.KTrace("Free meta")
+                C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
             if err != nil {
+		//log.Println("0. RETURN READ VALUE")
                 return 0, err
             }
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        copy(value, value1[0:size])
+		C.deallocate_gvalue_buffer(cvalue)
+                //log.Println("99. RETURN READ VALUE")
+
                 return int(size), err
             }
+	    //log.Println(" 1. RETURN READ VALUE")
 	    return 0, err
         }
 
@@ -125,6 +132,7 @@ func (c *Client) Read(value []byte) (int, error) {
                 }
             }
         }
+	//log.Println(" END. READ VALUE")
 	return 0, err
 }
 
@@ -534,13 +542,20 @@ func (c *Client) DoesObjExist(key string, option Opts) bool {
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    //log.Println(" CGETMETA ....", key)
+    var err error = nil
+    var dataSize uint32
     acmd.MetaDataOnly = true
-	return c.CGet(key, -1, acmd, 0, -1)  // -1 to indicate it doesn't know the size
+         //log.Println(" END. CGETMETA ....", key)
+	 cvalue, dataSize, err := c.CGet(key, -1, acmd, 0, -1) 
+     return cvalue, uint32(dataSize), err
+//	return c.CGet(key, -1, acmd, 0, -1)  // -1 to indicate it doesn't know the size
 }
 
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    //log.Println(" CGET .....", key)
     var psv C._CPrimaryStoreValue
     psv.version = C.CString(string(acmd.NewVersion))
     psv.tag = C.CString(string(acmd.Tag))
@@ -563,6 +578,7 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
             requestSize = objSize
         }
         if (offset == 0 && requestSize == objSize) {
+	    //log.Println(" GET IN CGET")
             cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
                       (*C.int)(unsafe.Pointer(&dataSize)),
                       (*C.int)(unsafe.Pointer(&status)))
@@ -578,6 +594,8 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
         common.KTrace(fmt.Sprintf("failed, status = %d", status))
         err =  errKineticNotFound
     }
+    //log.Println(" END. CGET  ", key)
+
     return cvalue, uint32(dataSize), err
 }
 
@@ -585,7 +603,7 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
 //Use this for Kinetic API 
 func (c *Client) Get(key string, value []byte, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        //log.Println(" NORMAL GET")
+        //log.Println(" GET   ", key)
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
 	err := SetCmdInHeader(c, cmdHeader, kinetic_proto.Command_GET, cmd)
@@ -621,6 +639,7 @@ func (c *Client) Get(key string, value []byte, cmd Opts) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+	//log.Println("END. GET  ", key)
 	return valueSize, err
 }
 
@@ -680,7 +699,7 @@ func (c *Client) Delete(key string, cmd Opts) error {
 
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-
+        //log.Println(" CPUT ", key)
 	var psv C._CPrimaryStoreValue
 	psv.version = C.CString(string(cmd.NewVersion))
 	psv.tag = C.CString(string(cmd.Tag))
@@ -699,12 +718,14 @@ func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size i
 	}
 	var status C.int
 	status = C.Put(1, cKey, C.CString(currentVersion), &psv, cValue, C.size_t(size), false, 1, 1)
+	//log.Println("END. CPUT ", key)
     return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
 
 func (c *Client) Put(key string, meta []byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    //log.Println(" PUT ", key)
     if SkinnyWaistIF {
 		return c.CPut(key, meta, metaSize, value, size, cmd)
 	}
@@ -745,6 +766,7 @@ func (c *Client) Put(key string, meta []byte, metaSize int, value []byte, size i
 		//log.Println("PUT FAILED")
 		return 0, err
 	}
+	//log.Println("END. PUT", key)
 	return uint32(size), nil
 }
 
