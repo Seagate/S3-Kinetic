@@ -266,6 +266,7 @@ func koStat(key string) (KVInfo, error) {
 
         kc := GetKineticConnection()
         cvalue, size, err := kc.CGetMeta(key, kopts)
+	defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
         if err != nil {
                 err = errFileNotFound
@@ -278,7 +279,6 @@ func koStat(key string) (KVInfo, error) {
     common.KTrace(fmt.Sprintf("cvalue meta: %s, size = %d", string(value), size))
     err = json.Unmarshal(value[:size], &fsMeta)
     common.KTrace("Free meta")
-    C.free(unsafe.Pointer(cvalue))
     if err != nil {
         return oi, err
 	}

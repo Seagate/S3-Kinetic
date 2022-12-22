@@ -72,6 +72,7 @@ func (c *Client) Read(value []byte) (int, error) {
         requestSize := len(value)
         fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
+        defer C.free(unsafe.Pointer(cvalue))
         if err != nil {
                 err = errFileNotFound
 		//log.Println(" RETURN READ VALUE NOT FOUND")
@@ -81,25 +82,22 @@ func (c *Client) Read(value []byte) (int, error) {
 		fsMetaBytes := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
                 common.KTrace("Free meta")
-                C.free(unsafe.Pointer(cvalue))
+                //C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
             cvalue, size, err := c.CGet(string(c.Key), objSize, c.Opts, c.DataOffset, requestSize)
             if err != nil {
-		//log.Println("0. RETURN READ VALUE")
                 return 0, err
             }
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        copy(value, value1[0:size])
 		C.deallocate_gvalue_buffer(cvalue)
-                //log.Println("99. RETURN READ VALUE")
 
                 return int(size), err
             }
-	    //log.Println(" 1. RETURN READ VALUE")
 	    return 0, err
         }
 
@@ -530,11 +528,12 @@ func (c *Client) AbortBatch(cmd Opts) error {
 ****************/
 func (c *Client) DoesObjExist(key string, option Opts) bool {
     bExist := false
-    cValue, _, err := c.CGetMeta(key, option)
+    cvalue, _, err := c.CGetMeta(key, option)
+    defer C.free(unsafe.Pointer(cvalue))
     if (err == nil) {
-        if (cValue != nil) {
+        if (cvalue != nil) {
             bExist = true
-            C.free(unsafe.Pointer(cValue))
+            //C.free(unsafe.Pointer(cValue))
         }
     }
     return bExist
@@ -542,14 +541,11 @@ func (c *Client) DoesObjExist(key string, option Opts) bool {
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    //log.Println(" CGETMETA ....", key)
     var err error = nil
     var dataSize uint32
     acmd.MetaDataOnly = true
-         //log.Println(" END. CGETMETA ....", key)
-	 cvalue, dataSize, err := c.CGet(key, -1, acmd, 0, -1) 
-     return cvalue, uint32(dataSize), err
-//	return c.CGet(key, -1, acmd, 0, -1)  // -1 to indicate it doesn't know the size
+    cvalue, dataSize, err := c.CGet(key, -1, acmd, 0, -1) 
+    return cvalue, uint32(dataSize), err
 }
 
 //CGet: Use this for Skinny Waist interface

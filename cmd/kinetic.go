@@ -466,9 +466,10 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
         kineticMutex.Lock()
         kc := GetKineticConnection()
         cvalue, _, err := kc.CGetMeta(key, kopts)
+        defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
 	if err == nil {
-		C.free(unsafe.Pointer(cvalue))
+		//C.free(unsafe.Pointer(cvalue))
 		kineticMutex.Unlock()
 		return  toObjectErr(errVolumeExists, bucket)
 	}
@@ -482,11 +483,11 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
 	gbuf := allocateValBuf(buf.Len())
 	copy(gbuf, buf.Bytes())
 	value := allocateValBuf(0)
-    kc = GetKineticConnection()
-    kc.CPut(bucketKey, gbuf, buf.Len(), value, 0, kopts)
+        kc = GetKineticConnection()
+        kc.CPut(bucketKey, gbuf, buf.Len(), value, 0, kopts)
 	ReleaseConnection(kc.Idx)
 	kineticMutex.Unlock()
-    err = nil
+        err = nil
 	return err
 }
 
@@ -520,6 +521,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
         kc := GetKineticConnection()
 	kc.Key = []byte(key)
         cvalue, size, err := kc.CGetMeta(key, kopts)
+        defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
         if err != nil {
                 kineticMutex.Unlock()
@@ -532,7 +534,7 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 		dec.Decode(&bi)
                 common.KTrace(fmt.Sprintf("bucket info: %+v", bi))
                 common.KTrace("Free meta")
-                C.free(unsafe.Pointer(cvalue))
+                //C.free(unsafe.Pointer(cvalue))
 	} else {
         common.KTrace("cvalue is nil")
         }
@@ -577,6 +579,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			var bucketInfo BucketInfo
 			if string(key[:7]) == "bucket." && (string(key[:8]) != "bucket..") {
 				cvalue, size, err := kc.CGetMeta(string(key), kopts)
+			        defer C.free(unsafe.Pointer(cvalue))
                                 if err != nil {
                                      return nil, err
                                 }
@@ -587,7 +590,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 					dec := gob.NewDecoder(buf)
 					dec.Decode(&bucketInfo)
                                         common.KTrace("Free meta")
-                                        C.free(unsafe.Pointer(cvalue))
+                                        //C.free(unsafe.Pointer(cvalue))
                                         common.KTrace(fmt.Sprintf("MyBucketInfo: %+v", bucketInfo))
 					name := []byte(bucketInfo.Name)
 					bucketInfo.Name = string(name[7:])
@@ -602,7 +605,7 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			endKey = ""
 		}
 	}
-	log.Println("END. LIST BUCKET")
+	//log.Println("END. LIST BUCKET")
         return bucketInfos, nil
 }
 
@@ -764,6 +767,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
 	        kineticMutex.Lock()
 		kc := GetKineticConnection()
 		cvalue, size, err := kc.CGetMeta(key, kopts)
+	        defer C.free(unsafe.Pointer(cvalue))
 	        ReleaseConnection(kc.Idx)
 		if err != nil {
 			err = errFileNotFound
@@ -774,8 +778,8 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
 			value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 			fsMeta.Meta = make(map[string]string)
 			err = json.Unmarshal(value[:size], &fsMeta)
-            common.KTrace("Free meta")
-            C.free(unsafe.Pointer(cvalue))
+                        common.KTrace("Free meta")
+                        //C.free(unsafe.Pointer(cvalue))
 			if err != nil {
 	                        // For any error to read fsMeta, set default ETag and proceed.
 	                        fsMeta = ko.defaultFsJSON(srcObject)
@@ -1001,6 +1005,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
     kineticMutex.Lock()
 	kc := GetKineticConnection()
     cvalue, size, err := kc.CGetMeta(key, kopts)
+    defer C.free(unsafe.Pointer(cvalue))
     ReleaseConnection(kc.Idx)
     if err != nil {
         err = errFileNotFound
@@ -1008,24 +1013,24 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
 	    return oi, err
 	}
     if (cvalue != nil) {
-		value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
-		fsMeta.Meta = make(map[string]string)
-		err = json.Unmarshal(value[:size], &fsMeta)
+	value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
+	fsMeta.Meta = make(map[string]string)
+	err = json.Unmarshal(value[:size], &fsMeta)
         common.KTrace("Free meta")
-        C.free(unsafe.Pointer(cvalue))
-		if err != nil {
-			kineticMutex.Unlock()
-			return oi, err
-		}
+        //C.free(unsafe.Pointer(cvalue))
+	if err != nil {
+		kineticMutex.Unlock()
+		return oi, err
 	}
-	    fi := &KVInfo{
-		name:    fsMeta.KoInfo.Name,
-		size:    fsMeta.KoInfo.Size,
-                modTime: fsMeta.KoInfo.CreatedTime,
-        }
-        fi.hidden = (fsMeta.Meta["hidden"] != "" && fsMeta.Meta["hidden"] != "0")
+    }
+    fi := &KVInfo{
+	name:    fsMeta.KoInfo.Name,
+	size:    fsMeta.KoInfo.Size,
+        modTime: fsMeta.KoInfo.CreatedTime,
+    }
+    fi.hidden = (fsMeta.Meta["hidden"] != "" && fsMeta.Meta["hidden"] != "0")
     kineticMutex.Unlock()
-	return fsMeta.KVInfoToObjectInfo(bucket, object, fi), err
+    return fsMeta.KVInfoToObjectInfo(bucket, object, fi), err
 }
 
 // getObjectInfoWithLock - reads object metadata and replies back ObjectInfo.
@@ -1140,10 +1145,8 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
-    cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1)  // -1 to indicate it doesn't know the size
-           // log.Println(" 2. gETOBJECT")
-
-    defer debug.FreeOSMemory()
+        cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1)  // -1 to indicate it doesn't know the size
+        //defer debug.FreeOSMemory()
 	ReleaseConnection(kc.Idx)
 	if err != nil {
 		err = errFileNotFound
@@ -1390,6 +1393,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
     kc := GetKineticConnection()
     fsMeta := fsMetaV1{}
     cvalue, size, err := kc.CGetMeta(key, kopts)
+    defer C.free(unsafe.Pointer(cvalue))
     if err != nil {
         err = errFileNotFound
         ReleaseConnection(kc.Idx)
@@ -1401,7 +1405,6 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         fsMetaBytes = (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
         err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
         common.KTrace("Free meta")
-        C.free(unsafe.Pointer(cvalue))
     }
     if len(fsMeta.Parts) == 0 {
         key := bucket + SlashSeparator + object
@@ -1930,6 +1933,7 @@ func (ko *KineticObjects) currentVersion(key string) (string, error) {
     kineticMutex.Lock()
     kc := GetKineticConnection()
     cvalue, size, err := kc.CGetMeta(key, option)
+    defer C.free(unsafe.Pointer(cvalue))
     ReleaseConnection(kc.Idx)
     kineticMutex.Unlock()
     if err == nil && cvalue != nil {
@@ -1939,7 +1943,6 @@ func (ko *KineticObjects) currentVersion(key string) (string, error) {
         meta := fsMetaV1{}
         err = json.Unmarshal(value[:size], &meta)
         common.KTrace("Free meta")
-        C.free(unsafe.Pointer(cvalue))
         common.KTrace(fmt.Sprintf("err = %+v, Meta: %+v", err, meta))
         if err == nil {
             curVer = meta.Meta["version"]
