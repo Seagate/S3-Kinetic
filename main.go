@@ -55,7 +55,7 @@ func main() {
     debug.SetMemoryLimit(1<<30)
     debug.SetGCPercent(25)
     go func() {
-        log.Println(http.ListenAndServe("10.230.35.130:8082", nil))
+        log.Println(http.ListenAndServe("localhost:8082", nil))
     }()
     log.Println("*****111 *MAIN******")
     minio.Main(os.Args)
