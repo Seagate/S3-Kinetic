@@ -368,10 +368,11 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         kineticMutex.Lock()
         kc = GetKineticConnection()
         cvalue, size, err := kc.CGetMeta(key, kopts)
-        defer C.free(unsafe.Pointer(cvalue))
+        //defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
         if err != nil {
             common.KTrace(fmt.Sprintf("err = %+v", err))
+	    C.FreeCmemory(cvalue)
             err = errFileNotFound
 	    kineticMutex.Unlock()
             return result, err
@@ -383,15 +384,15 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 	        var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	        err = json.Unmarshal(fsMetaBytes, &fsMeta);
                 common.KTrace("Free meta")
-                //C.free(unsafe.Pointer(cvalue))
 		if err != nil {
+			C.FreeCmemory(cvalue)
 	                kineticMutex.Unlock()
 			return result, err
 		}
 		result.UserDefined = fsMeta.Meta
 	}
-        //ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
+	C.FreeCmemory(cvalue)
 	return result, nil
 }
 

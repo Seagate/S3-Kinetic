@@ -99,9 +99,9 @@ func PrintMemUsage() {
 func InitKineticd(argv []string) {
     defer common.KUntrace(common.KTrace("Enter"))
     argc := C.int(len(argv))
-	CArgv := (*[0xfff]*C.char)(C.allocArgv(argc))
-	defer C.free(unsafe.Pointer(CArgv))
-	for i, arg := range argv {
+    CArgv := (*[0xfff]*C.char)(C.allocArgv(argc))
+    defer C.free(unsafe.Pointer(CArgv))
+    for i, arg := range argv {
         CArgv[i] = C.CString(arg)
         defer C.free(unsafe.Pointer(CArgv[i]))
     }
@@ -157,7 +157,7 @@ type KVInfo struct {
 	mode    FileMode  `json:"Mode"`  // file mode bits
 	createdTime time.Time `json:"CreatedTime"`
 	modTime time.Time `json:"ModTime"`  // modification time
-    hidden bool
+        hidden bool
 }
 
 func ReleaseConnection(ix int) {
@@ -330,7 +330,7 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 		nsMutex:  newNSLock(false),
 		listPool: NewTreeWalkPool(globalLookupTimeout),
 	}
-	//PrintMemUsage()
+	PrintMemUsage()
 	return Ko, nil
 }
 
@@ -409,9 +409,10 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
         kineticMutex.Lock()
         kc := GetKineticConnection()
         cvalue, size, err := kc.CGetMeta(key, kopts)
-        defer C.free(unsafe.Pointer(cvalue))
+        //defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
         if err != nil {
+		C.FreeCmemory(cvalue)
                 err = errFileNotFound
                 kineticMutex.Unlock()
                 return &KVInfo{}, err
@@ -430,6 +431,8 @@ func (ko *KineticObjects) statBucketDir(ctx context.Context, bucket string) (*KV
                 size:    0,
                 modTime: bi.Created,
 	}
+        //C.free(unsafe.Pointer(cvalue))
+	C.FreeCmemory(cvalue)
 	return st, nil
 }
 
@@ -466,13 +469,14 @@ func (ko *KineticObjects) MakeBucketWithLocation(ctx context.Context, bucket, lo
         kineticMutex.Lock()
         kc := GetKineticConnection()
         cvalue, _, err := kc.CGetMeta(key, kopts)
-        defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
 	if err == nil {
-		//C.free(unsafe.Pointer(cvalue))
+		C.FreeCmemory(cvalue)
 		kineticMutex.Unlock()
 		return  toObjectErr(errVolumeExists, bucket)
 	}
+	//C.free(unsafe.Pointer(cvalue))
+	C.FreeCmemory(cvalue)
 	bucketKey := "bucket." + bucket
 	var bucketInfo BucketInfo
 	bucketInfo.Name = bucketKey
@@ -521,9 +525,9 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
         kc := GetKineticConnection()
 	kc.Key = []byte(key)
         cvalue, size, err := kc.CGetMeta(key, kopts)
-        defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
         if err != nil {
+		C.FreeCmemory(cvalue)
                 kineticMutex.Unlock()
                 return bi, toObjectErr(errVolumeNotFound, bucket)
         }
@@ -534,18 +538,16 @@ func (ko *KineticObjects) GetBucketInfo(ctx context.Context, bucket string) (bi 
 		dec.Decode(&bi)
                 common.KTrace(fmt.Sprintf("bucket info: %+v", bi))
                 common.KTrace("Free meta")
-                //C.free(unsafe.Pointer(cvalue))
 	} else {
         common.KTrace("cvalue is nil")
         }
         kineticMutex.Unlock()
-        //log.Println(" END. GET BUCKET INFO ", bucket)
+	C.FreeCmemory(cvalue)
 	return bi, nil
 }
 
 func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-	//log.Println("LIST BUCKET")
         atomic.AddInt64(&ko.activeIOCount, 1)
         defer func() {
                 atomic.AddInt64(&ko.activeIOCount, -1)
@@ -566,9 +568,16 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
         var value []byte
         var lastKey []byte 
         defer debug.FreeOSMemory()
+        defer debug.FreeOSMemory()
+
 	for true {
         	kineticMutex.Lock()
 		kc := GetKineticConnection()
+		log.Println("LIST BUCKETS")
+	        runtime.GC()
+        	debug.FreeOSMemory()
+        	PrintMemUsage()
+
 		keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
         	ReleaseConnection(kc.Idx)
         	kineticMutex.Unlock()
@@ -579,8 +588,8 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			var bucketInfo BucketInfo
 			if string(key[:7]) == "bucket." && (string(key[:8]) != "bucket..") {
 				cvalue, size, err := kc.CGetMeta(string(key), kopts)
-			        defer C.free(unsafe.Pointer(cvalue))
                                 if err != nil {
+				     C.FreeCmemory(cvalue)
                                      return nil, err
                                 }
 		                if (cvalue != nil) {
@@ -590,12 +599,12 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 					dec := gob.NewDecoder(buf)
 					dec.Decode(&bucketInfo)
                                         common.KTrace("Free meta")
-                                        //C.free(unsafe.Pointer(cvalue))
                                         common.KTrace(fmt.Sprintf("MyBucketInfo: %+v", bucketInfo))
 					name := []byte(bucketInfo.Name)
 					bucketInfo.Name = string(name[7:])
 					bucketInfos = append(bucketInfos, bucketInfo)
 				}
+				C.FreeCmemory(cvalue)
 			}
 		}
 		if len(keys) < 800 {
@@ -605,7 +614,6 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
 			endKey = ""
 		}
 	}
-	//log.Println("END. LIST BUCKET")
         return bucketInfos, nil
 }
 
@@ -767,7 +775,6 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
 	        kineticMutex.Lock()
 		kc := GetKineticConnection()
 		cvalue, size, err := kc.CGetMeta(key, kopts)
-	        defer C.free(unsafe.Pointer(cvalue))
 	        ReleaseConnection(kc.Idx)
 		if err != nil {
 			err = errFileNotFound
@@ -779,11 +786,11 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
 			fsMeta.Meta = make(map[string]string)
 			err = json.Unmarshal(value[:size], &fsMeta)
                         common.KTrace("Free meta")
-                        //C.free(unsafe.Pointer(cvalue))
 			if err != nil {
 	                        // For any error to read fsMeta, set default ETag and proceed.
 	                        fsMeta = ko.defaultFsJSON(srcObject)
 		                kineticMutex.Unlock()
+				C.FreeCmemory(cvalue)
 	                        return objInfo, toObjectErr(err, srcBucket, srcObject)
 			}
 		}
@@ -796,6 +803,7 @@ func (ko *KineticObjects) CopyObject(ctx context.Context, srcBucket, srcObject,
 
                 // Return the new object info.
                 kineticMutex.Unlock()
+		C.FreeCmemory(cvalue)
                 return fsMeta.KVInfoToObjectInfo(srcBucket, srcObject, fi), nil
 	} // End of IF cpSrcDstSame && srcInfo.metadataOnly
         if err = checkPutObjectArgs(ctx, dstBucket, dstObject, ko, srcInfo.PutObjReader.Size()); err != nil {
@@ -1005,21 +1013,22 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
     kineticMutex.Lock()
 	kc := GetKineticConnection()
     cvalue, size, err := kc.CGetMeta(key, kopts)
-    defer C.free(unsafe.Pointer(cvalue))
+    //defer C.free(unsafe.Pointer(cvalue))
     ReleaseConnection(kc.Idx)
     if err != nil {
         err = errFileNotFound
-	    kineticMutex.Unlock()
-	    return oi, err
-	}
+	kineticMutex.Unlock()
+	C.FreeCmemory(cvalue)
+	return oi, err
+    }
     if (cvalue != nil) {
 	value := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	fsMeta.Meta = make(map[string]string)
 	err = json.Unmarshal(value[:size], &fsMeta)
         common.KTrace("Free meta")
-        //C.free(unsafe.Pointer(cvalue))
 	if err != nil {
 		kineticMutex.Unlock()
+		C.FreeCmemory(cvalue)
 		return oi, err
 	}
     }
@@ -1030,6 +1039,7 @@ func (ko *KineticObjects) getObjectInfo(ctx context.Context, bucket, object stri
     }
     fi.hidden = (fsMeta.Meta["hidden"] != "" && fsMeta.Meta["hidden"] != "0")
     kineticMutex.Unlock()
+    C.FreeCmemory(cvalue)
     return fsMeta.KVInfoToObjectInfo(bucket, object, fi), err
 }
 
@@ -1145,6 +1155,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
+	log.Println(" IN getObject")
         cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1)  // -1 to indicate it doesn't know the size
         //defer debug.FreeOSMemory()
 	ReleaseConnection(kc.Idx)
@@ -1236,7 +1247,6 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         defer common.KUntrace(common.KTrace("Enter"))
 	//log.Println(" pPUTOBJECT ", bucket, " ", object)
 	data := r.Reader
-
 	// Validate if bucket name is valid and exists.
 	// Kinetic Get bucket to check if it exists.
 	key := "bucket." + bucket
@@ -1251,12 +1261,13 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
         kineticMutex.Lock()
         kc := GetKineticConnection()
         cMeta, _, err := kc.CGetMeta(key, kopts)
-        C.free(unsafe.Pointer(cMeta))
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
 	if err != nil && err != errKineticNotFound {
+		C.FreeCmemory(cMeta)
 		return ObjectInfo{}, toObjectErr(err, bucket, object)
 	}
+	C.FreeCmemory(cMeta)
         // No metadata is set, allocate a new one.
         //var metaBytes []byte
         meta := make(map[string]string)
@@ -1325,8 +1336,6 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	if err != nil {
             return ObjectInfo{}, err
 	}
-	//wg.Add(1)
-	//go func() {
 	// Write to kinetic
         kc = GetKineticConnection()
 	_, err = kc.CPut(key, buf, int(len(bytes)), goBuf, int(bufSize), kopts)
@@ -1344,7 +1353,8 @@ func (ko *KineticObjects) putObject(ctx context.Context, bucket string, object s
 	}
 	// Success.
 	//Force Garbage Collection
-	runtime.GC()
+	//runtime.GC()
+	//debug.FreeOSMemory()
 	//PrintMemUsage()
 	//log.Println(" END. pUTOBJECT")
 	return objectInfo, nil
@@ -1393,11 +1403,11 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
     kc := GetKineticConnection()
     fsMeta := fsMetaV1{}
     cvalue, size, err := kc.CGetMeta(key, kopts)
-    defer C.free(unsafe.Pointer(cvalue))
     if err != nil {
+	C.FreeCmemory(cvalue)
         err = errFileNotFound
         ReleaseConnection(kc.Idx)
-	    kineticMutex.Unlock()
+        kineticMutex.Unlock()
         return  err
     }
     var fsMetaBytes []byte
@@ -1406,6 +1416,7 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
         err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
         common.KTrace("Free meta")
     }
+    C.FreeCmemory(cvalue)
     if len(fsMeta.Parts) == 0 {
         key := bucket + SlashSeparator + object
         err = kc.Delete(key, kopts)
@@ -1444,13 +1455,12 @@ func (ko *KineticObjects) DeleteObject(ctx context.Context, bucket, object strin
 
 func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marker, delimiter string, maxKeys int) (loi ListObjectsInfo, e error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    //log.Println(" LIST OBJECTS")
     atomic.AddInt64(&ko.activeIOCount, 1)
     defer func() {
         atomic.AddInt64(&ko.activeIOCount, -1)
     }()
-	result := ListObjectsInfo{}
-	kopts := Opts{
+    result := ListObjectsInfo{}
+    kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{},
@@ -1458,7 +1468,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
 		Synchronization: kinetic_proto.Command_WRITEBACK,
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
-	}
+    }
     // Default is recursive, if delimiter is set then list non recursive.
     recursive := true
     if delimiter == SlashSeparator {
@@ -1501,29 +1511,29 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     for _, prefixPart := range prefixParts {
         regexpStr  += ".*" + prefixPart     // ".*":  zero or more of any character
     }
-    defer debug.FreeOSMemory()
     for !bDone && nRemainKeys > 0 {
         kineticMutex.Lock()
         kc = GetKineticConnection()
-	    keys, err := kc.CGetKeyRange(startKey, endKey, bStartKeyInclusive, true, uint32(nRemainKeys), false, kopts)
+	log.Println("LIST OBJECTS")
+	keys, err := kc.CGetKeyRange(startKey, endKey, bStartKeyInclusive, true, uint32(nRemainKeys), false, kopts)
         ReleaseConnection(kc.Idx)
-	    kineticMutex.Unlock()
+	kineticMutex.Unlock()
         if len(keys) < nRemainKeys {
             bDone = true
             result.IsTruncated = false
         }
-	    if err != nil {
-		    return loi, err
-	    }
+	if err != nil {
+	    return loi, err
+	}
         var key []byte
-	    for _, key = range keys {
+	for _, key = range keys {
             if bRegexp {
                 matched, err := regexp.MatchString(regexpStr, string(key))
                 if err != nil || !matched {
                     continue
                 }
             }
-		    var objInfo ObjectInfo
+	    var objInfo ObjectInfo
             name = string(key[len(bucketPrefix):])
 			objInfo, err = ko.getObjectInfo(ctx, bucket, name)
 			if err != nil {
@@ -1532,43 +1542,42 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
             if  objInfo.Hidden {
                 nRemainKeys -= 1
             } else {
-		    if recursive {
-                result.Objects = append(result.Objects, objInfo)
-                nRemainKeys -= 1
-            } else {
-                // TODO:  Tri:  Need to rework this when DIR is considered as OBJECT when do put.
-                afterPrefixDir := name[len(prefixDir):]
-                afterPrefixDirSplit := strings.Split(afterPrefixDir, SlashSeparator)
-                if len(afterPrefixDirSplit) > 1 {
-                    name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
-                    objInfo.IsDir = true
-                    objInfo.Name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
-                }
-                if objInfo.IsDir {
-                    bExist := false
-                    for _, pfix := range result.Prefixes {
-                        if pfix == objInfo.Name {
-                            bExist = true
-                            break
-                        }
-                    }
-                    if !bExist {
-                        result.Prefixes = append(result.Prefixes, objInfo.Name)
-                        nRemainKeys -= 1
-                    }
-                } else {
+	        if recursive {
                     result.Objects = append(result.Objects, objInfo)
                     nRemainKeys -= 1
+                } else {
+                // TODO:  Tri:  Need to rework this when DIR is considered as OBJECT when do put.
+                    afterPrefixDir := name[len(prefixDir):]
+                    afterPrefixDirSplit := strings.Split(afterPrefixDir, SlashSeparator)
+                    if len(afterPrefixDirSplit) > 1 {
+                        name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
+                        objInfo.IsDir = true
+                        objInfo.Name = prefixDir + afterPrefixDirSplit[0] + SlashSeparator
+                    }
+                    if objInfo.IsDir {
+                        bExist := false
+                        for _, pfix := range result.Prefixes {
+                            if pfix == objInfo.Name {
+                                bExist = true
+                                break
+                            }
+                        }
+                        if !bExist {
+                            result.Prefixes = append(result.Prefixes, objInfo.Name)
+                            nRemainKeys -= 1
+                        }
+                    } else {
+                        result.Objects = append(result.Objects, objInfo)
+                        nRemainKeys -= 1
+                    }
                 }
             }
-            }
-	    } // End of FOR _, key := range keys
+        } // End of FOR _, key := range keys
         if len(keys) > 0 {
             // The last key becomes startKey
             startKey = string(keys[len(keys) - 1])
         }
         bStartKeyInclusive = false
-        debug.FreeOSMemory()
     }  // End of FOR !nDone && nRemainKeys > 0
     if (nRemainKeys > 0) || maxKeys <= maxKeyRange {
         result.IsTruncated = false
@@ -1577,7 +1586,6 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
         result.NextMarker = nextKey[len(bucketPrefix):]
         result.IsTruncated = true
     }
-    //log.Println("END. LIST OBJECTS")
     return result, nil
 }
 
@@ -1709,9 +1717,7 @@ func (ko *KineticObjects) HealBucket(ctx context.Context, bucket string, dryRun,
 func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delimiter string, resChannel chan<- ObjectInfo) (e error) {
     defer common.KUntrace(common.KTrace("Enter"))
     defer close(resChannel)
-    defer debug.FreeOSMemory()
-
-	kopts := Opts{
+    kopts := Opts{
 		ClusterVersion:  0,
 		Force:           true,
 		Tag:             []byte{},
@@ -1719,64 +1725,64 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
 		Synchronization: kinetic_proto.Command_WRITEBACK,
 		Timeout:         60000, //60 sec
 		Priority:        kinetic_proto.Command_NORMAL,
-	}
+    }
 
-	startKey := bucket + "/" + prefix
-	endKey := bucket + "0"
-	var lastKey []byte
-	var kc *Client
+    startKey := bucket + "/" + prefix
+    endKey := bucket + "0"
+    var lastKey []byte
+    var kc *Client
     var maxKeyRange uint32
     maxKeyRange = 800
     for true {
         kineticMutex.Lock()
         kc = GetKineticConnection()
+	log.Println("list OBJECTS")
         keys, err := kc.CGetKeyRange(startKey, endKey, false, true, maxKeyRange, false, kopts)
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
-	    if err != nil {
+        if err != nil {
+	    return err
+        }
+	for _, key := range keys {
+	    lastKey = key
+	    var objInfo ObjectInfo
+	    if prefix == string(key[len(bucket)+1:len(bucket)+1+len(prefix)]) {
+	        objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len(bucket)+1):]))
+		if err != nil {
 		    return err
-	    }
-
-	    for _, key := range keys {
-		    lastKey = key
-		    var objInfo ObjectInfo
-		    if prefix == string(key[len(bucket)+1:len(bucket)+1+len(prefix)]) {
-			    objInfo, err = ko.getObjectInfo(ctx, bucket, string(key[(len(bucket)+1):]))
-			    if err != nil {
-				    return err
-			    }
+		}
                 if !objInfo.Hidden {
 	            if delimiter == SlashSeparator && prefix != "" {
-                    if  !HasSuffix(string(prefix), SlashSeparator) {
-					    objInfo.IsDir = true
-					    objInfo.Name = prefix + SlashSeparator
-				    } else {
+                        if  !HasSuffix(string(prefix), SlashSeparator) {
+		            objInfo.IsDir = true
+		            objInfo.Name = prefix + SlashSeparator
+		        } else {
 	                    result := strings.Split(string(key[len(bucket) +1 + len(prefix):]), SlashSeparator)
-					    if len(result) == 1 {
-					    } else if len(result) > 1 {
-                            objInfo.IsDir = true
-                            objInfo.Name = prefix + result[0] + SlashSeparator
-                        }
-				    }
-			    } else if delimiter == SlashSeparator && prefix == "" {
-				    result := strings.Split(string(key[len(bucket)+1:]), SlashSeparator)
-				    if len(result) > 1 {
-		                objInfo.IsDir = true
-                        objInfo.Name = result[0] + SlashSeparator
-				    }
-			    }
-                resChannel <- objInfo
+		            if len(result) == 1 {
+		            } else if len(result) > 1 {
+                                objInfo.IsDir = true
+                                objInfo.Name = prefix + result[0] + SlashSeparator
+                            }
+		        }
+		     } else if delimiter == SlashSeparator && prefix == "" {
+		         result := strings.Split(string(key[len(bucket)+1:]), SlashSeparator)
+		         if len(result) > 1 {
+		             objInfo.IsDir = true
+                             objInfo.Name = result[0] + SlashSeparator
+		         }
+		     }
+                     resChannel <- objInfo
                 }
-		    }
 	    }
+        }
         if len(keys) < int(maxKeyRange) {
             break
         } else {
-		    startKey = string(lastKey)
-		    endKey = ""
-	    }
+	    startKey = string(lastKey)
+	    endKey = ""
+	}
     }
-	return nil
+    return nil
 }
 
 // Walk a bucket, optionally prefix recursively, until we have returned
@@ -1933,7 +1939,6 @@ func (ko *KineticObjects) currentVersion(key string) (string, error) {
     kineticMutex.Lock()
     kc := GetKineticConnection()
     cvalue, size, err := kc.CGetMeta(key, option)
-    defer C.free(unsafe.Pointer(cvalue))
     ReleaseConnection(kc.Idx)
     kineticMutex.Unlock()
     if err == nil && cvalue != nil {
@@ -1948,6 +1953,7 @@ func (ko *KineticObjects) currentVersion(key string) (string, error) {
             curVer = meta.Meta["version"]
         }
     }
+    C.FreeCmemory(cvalue)
     common.KTrace(fmt.Sprintf("curVersion: %s", curVer))
     return curVer, err
 }
@@ -1990,12 +1996,12 @@ func (ko *KineticObjects) deleteKeys(keys [][]byte) error {
 }
 
 func (ko *KineticObjects) deleteParts(objKey, version string) error {
-    defer debug.FreeOSMemory()
     // Get the new version multipart keys to delete
     startKey := objKey + "." + version + "."
     endKey := common.IncStr(startKey)
     kineticMutex.Lock()
     kc := GetKineticConnection()
+    log.Println("delete PARTS")
     objKeys, err := kc.CGetKeyRange(startKey, endKey, true, false, 800, false, ko.option())
     ReleaseConnection(kc.Idx)
     kineticMutex.Unlock()
@@ -2007,6 +2013,7 @@ func (ko *KineticObjects) deleteParts(objKey, version string) error {
             endKey := common.IncStr(startKey)
             kineticMutex.Lock()
             kc = GetKineticConnection()
+	    log.Println("delete PARTS 2")
             metaKeys, err := kc.CGetKeyRange(startKey, endKey, true, false, 800, false, ko.option())
             ReleaseConnection(kc.Idx)
             kineticMutex.Unlock()

@@ -72,18 +72,17 @@ func (c *Client) Read(value []byte) (int, error) {
         requestSize := len(value)
         fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
-        defer C.free(unsafe.Pointer(cvalue))
+        //defer C.free(unsafe.Pointer(cvalue))
         if err != nil {
                 err = errFileNotFound
-		//log.Println(" RETURN READ VALUE NOT FOUND")
+		C.FreeCmemory(cvalue)
                 return 0, err
         }
         if (cvalue != nil) {
 		fsMetaBytes := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-                common.KTrace("Free meta")
-                //C.free(unsafe.Pointer(cvalue))
 	}
+        C.FreeCmemory(cvalue)
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
@@ -95,7 +94,6 @@ func (c *Client) Read(value []byte) (int, error) {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        copy(value, value1[0:size])
 		C.deallocate_gvalue_buffer(cvalue)
-
                 return int(size), err
             }
 	    return 0, err
@@ -120,6 +118,7 @@ func (c *Client) Read(value []byte) (int, error) {
                 if cvalue != nil {
                     value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
                     copy(value, value1[0:size])
+                    C.deallocate_gvalue_buffer(cvalue)
                     requestSize -= int(size)
                     if i ==  len(fsMeta.Parts) -1 {
                         *(c.NextPartNumber) = 0
@@ -529,12 +528,11 @@ func (c *Client) AbortBatch(cmd Opts) error {
 func (c *Client) DoesObjExist(key string, option Opts) bool {
     bExist := false
     cvalue, _, err := c.CGetMeta(key, option)
-    defer C.free(unsafe.Pointer(cvalue))
-    if (err == nil) {
-        if (cvalue != nil) {
-            bExist = true
-            //C.free(unsafe.Pointer(cValue))
-        }
+    if (err == nil && cvalue != nil) {
+        bExist = true
+    } 
+    if (cvalue != nil) {
+        C.FreeCmemory(cvalue)
     }
     return bExist
 }
@@ -562,6 +560,7 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
     var cvalue *C.char
     var bvalue []byte
     if acmd.MetaDataOnly {
+        //log.Println(" META ONLY")
         cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&dataSize)),
                         (*C.int)(unsafe.Pointer(&status)))
     } else {
@@ -850,7 +849,7 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 	keyStrings := strings.Split(string(Keys[:size]), ":")
 	var keys [][]byte
 	for i := range  keyStrings {
-		//log.Println("KEY ", keyStrings[i])
+		log.Println("KEY ", keyStrings[i])
 		if len(keyStrings[i]) > 0 {
 			keys = append(keys, []byte(keyStrings[i]))
 		}
@@ -862,7 +861,7 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 
 func (c *Client) GetKeyRange(startKey string, endKey string, startKeyInclusive bool, endKeyInclusive bool, maxReturned uint32, reverse bool, cmd Opts) ([][]byte, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-	//log.Println("CMD GETKEYRANGE: ")
+	log.Println("CMD GETKEYRANGE: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
 	SetCmdInHeader(c, cmdHeader, kinetic_proto.Command_GETKEYRANGE, cmd)

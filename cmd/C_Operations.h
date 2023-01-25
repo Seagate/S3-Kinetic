@@ -32,6 +32,7 @@ typedef struct _CPrimaryStoreValue {
 char* allocate_pvalue_buffer(int size);
 void deallocate_pvalue_buffer(char* buff, int n);
 void deallocate_gvalue_buffer(char* buff);
+void FreeCmemory(char* mem);
 
 
 char* Get(int64_t user_id, char* key, char* bvalue, struct _CPrimaryStoreValue* psvalue, int* dataSize, int* status);
