@@ -849,7 +849,7 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 	keyStrings := strings.Split(string(Keys[:size]), ":")
 	var keys [][]byte
 	for i := range  keyStrings {
-		log.Println("KEY ", keyStrings[i])
+		//log.Println("KEY ", keyStrings[i])
 		if len(keyStrings[i]) > 0 {
 			keys = append(keys, []byte(keyStrings[i]))
 		}
@@ -861,7 +861,7 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 
 func (c *Client) GetKeyRange(startKey string, endKey string, startKeyInclusive bool, endKeyInclusive bool, maxReturned uint32, reverse bool, cmd Opts) ([][]byte, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-	log.Println("CMD GETKEYRANGE: ")
+	//log.Println("CMD GETKEYRANGE: ")
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
 	SetCmdInHeader(c, cmdHeader, kinetic_proto.Command_GETKEYRANGE, cmd)

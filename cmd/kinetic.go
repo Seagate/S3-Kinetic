@@ -34,7 +34,7 @@ import (
 	//"os/user"
 	"path"
 	"runtime"
-	"runtime/debug"
+	//"runtime/debug"
 	"sort"
 	"time"
 	"strings"
@@ -330,7 +330,7 @@ func NewKineticObjectLayer(IP string) (ObjectLayer, error) {
 		nsMutex:  newNSLock(false),
 		listPool: NewTreeWalkPool(globalLookupTimeout),
 	}
-	PrintMemUsage()
+	//PrintMemUsage()
 	return Ko, nil
 }
 
@@ -567,17 +567,9 @@ func (ko *KineticObjects) ListBuckets(ctx context.Context) ([]BucketInfo, error)
         var bucketInfos []BucketInfo
         var value []byte
         var lastKey []byte 
-        defer debug.FreeOSMemory()
-        defer debug.FreeOSMemory()
-
 	for true {
         	kineticMutex.Lock()
 		kc := GetKineticConnection()
-		log.Println("LIST BUCKETS")
-	        runtime.GC()
-        	debug.FreeOSMemory()
-        	PrintMemUsage()
-
 		keys, err := kc.CGetKeyRange(startKey, endKey, true, true, 800, false, kopts)
         	ReleaseConnection(kc.Idx)
         	kineticMutex.Unlock()
@@ -1155,7 +1147,7 @@ func (ko *KineticObjects) getObject(ctx context.Context, bucket, object string, 
         kineticMutex.Lock()
 	kc := GetKineticConnection()
 	kc.Key = []byte(key)
-	log.Println(" IN getObject")
+	//log.Println(" IN getObject")
         cvalue, size, err := kc.CGet(key, -1, kopts, 0, -1)  // -1 to indicate it doesn't know the size
         //defer debug.FreeOSMemory()
 	ReleaseConnection(kc.Idx)
@@ -1514,7 +1506,7 @@ func (ko *KineticObjects) ListObjects(ctx context.Context, bucket, prefix, marke
     for !bDone && nRemainKeys > 0 {
         kineticMutex.Lock()
         kc = GetKineticConnection()
-	log.Println("LIST OBJECTS")
+	//log.Println("LIST OBJECTS")
 	keys, err := kc.CGetKeyRange(startKey, endKey, bStartKeyInclusive, true, uint32(nRemainKeys), false, kopts)
         ReleaseConnection(kc.Idx)
 	kineticMutex.Unlock()
@@ -1736,7 +1728,7 @@ func (ko *KineticObjects) listObjects(ctx context.Context, bucket, prefix, delim
     for true {
         kineticMutex.Lock()
         kc = GetKineticConnection()
-	log.Println("list OBJECTS")
+	//log.Println("list OBJECTS")
         keys, err := kc.CGetKeyRange(startKey, endKey, false, true, maxKeyRange, false, kopts)
         ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
@@ -2001,7 +1993,7 @@ func (ko *KineticObjects) deleteParts(objKey, version string) error {
     endKey := common.IncStr(startKey)
     kineticMutex.Lock()
     kc := GetKineticConnection()
-    log.Println("delete PARTS")
+    //log.Println("delete PARTS")
     objKeys, err := kc.CGetKeyRange(startKey, endKey, true, false, 800, false, ko.option())
     ReleaseConnection(kc.Idx)
     kineticMutex.Unlock()
@@ -2013,7 +2005,7 @@ func (ko *KineticObjects) deleteParts(objKey, version string) error {
             endKey := common.IncStr(startKey)
             kineticMutex.Lock()
             kc = GetKineticConnection()
-	    log.Println("delete PARTS 2")
+	    //log.Println("delete PARTS 2")
             metaKeys, err := kc.CGetKeyRange(startKey, endKey, true, false, 800, false, ko.option())
             ReleaseConnection(kc.Idx)
             kineticMutex.Unlock()
