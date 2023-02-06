@@ -41,6 +41,7 @@ import (
 	"net/http"
         _ "net/http/pprof"
 	"runtime/debug"
+	//"github.com/sqreen/go-agent/sdk/leakdetector"
 )
 
 func main() {
@@ -57,6 +58,6 @@ func main() {
     go func() {
         log.Println(http.ListenAndServe("localhost:8082", nil))
     }()
-    log.Println("*****111 *MAIN******")
+    //log.Println("*****111 *MAIN******")
     minio.Main(os.Args)
 }

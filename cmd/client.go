@@ -75,14 +75,16 @@ func (c *Client) Read(value []byte) (int, error) {
         //defer C.free(unsafe.Pointer(cvalue))
         if err != nil {
                 err = errFileNotFound
-		C.FreeCmemory(cvalue)
+		if cvalue != nil {
+		    C.FreeCmemory(cvalue)
+		}
                 return 0, err
         }
         if (cvalue != nil) {
 		fsMetaBytes := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
+		C.FreeCmemory(cvalue)
 	}
-        C.FreeCmemory(cvalue)
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
             objSize, _ := strconv.Atoi(fsMeta.Meta["size"])
@@ -93,7 +95,6 @@ func (c *Client) Read(value []byte) (int, error) {
 	    if cvalue  != nil {
 	        value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        copy(value, value1[0:size])
-		C.deallocate_gvalue_buffer(cvalue)
                 return int(size), err
             }
 	    return 0, err
@@ -118,7 +119,6 @@ func (c *Client) Read(value []byte) (int, error) {
                 if cvalue != nil {
                     value1 := (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
                     copy(value, value1[0:size])
-                    C.deallocate_gvalue_buffer(cvalue)
                     requestSize -= int(size)
                     if i ==  len(fsMeta.Parts) -1 {
                         *(c.NextPartNumber) = 0
@@ -559,26 +559,38 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
     var status int
     var cvalue *C.char
     var bvalue []byte
+    //var bvalue *C.char
     if acmd.MetaDataOnly {
         //log.Println(" META ONLY")
         cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&dataSize)),
                         (*C.int)(unsafe.Pointer(&status)))
     } else {
+	//log.Println(" DATA ONLY")
         if (objSize > 0) {
             bvalue = make([]byte, objSize + 1024)  // Add 1024 for meta data
+	    //bvalue := C.malloc(C.ulong(objSize) +  C.sizeof_char * 1024)
+	    //log.Println( " BVALUE = ", (*C.char)(unsafe.Pointer(&bvalue[0])))
+            // defer C.free(unsafe.Pointer(bvalue))
         } else { // Don't know the size, allocate largest size
             bvalue = make([]byte, 5*1024*1024 + 2*4096)
+	    //bvalue := C.malloc(C.sizeof_char * 5 *1024 * 1024 +  C.sizeof_char * 2 * 4096)
+            //defer C.free(unsafe.Pointer(bvalue))
+	    //log.Println(" BVALUE ")
+	    //defer debug.FreeOSMemory()
         }
+//        defer C.free(unsafe.Pointer(bvalue))
+        //defer debug.FreeOSMemory()
+
         if (requestSize == -1 || requestSize >  objSize) {
             requestSize = objSize
         }
         if (offset == 0 && requestSize == objSize) {
-	    //log.Println(" GET IN CGET")
             cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
+            //cvalue = C.Get(1,  cKey, (*C.char)(bvalue), &psv,
                       (*C.int)(unsafe.Pointer(&dataSize)),
                       (*C.int)(unsafe.Pointer(&status)))
         } else {
-            cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
+		cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
                       (C.int)(offset), (C.int)(requestSize),
                       (*C.int)(unsafe.Pointer(&dataSize)),
                       (*C.int)(unsafe.Pointer(&status)))
@@ -699,10 +711,10 @@ func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size i
 	psv.version = C.CString(string(cmd.NewVersion))
 	psv.tag = C.CString(string(cmd.Tag))
 	psv.algorithm = C.int(cmd.Algorithm)
-    psv.meta = (*C.char)(unsafe.Pointer(&meta[0]))
-    psv.metaSize = C.int(len(meta))
-    common.KTrace(fmt.Sprintf("meta len = %d, psv metaSize = %d", len(meta), psv.metaSize))
-    currentVersion := "1"
+        psv.meta = (*C.char)(unsafe.Pointer(&meta[0]))
+        psv.metaSize = C.int(len(meta))
+        common.KTrace(fmt.Sprintf("meta len = %d, psv metaSize = %d", len(meta), psv.metaSize))
+        currentVersion := "1"
 	cKey := C.CString(key)
 	var cValue *C.char
 	if  size  > 0 {
@@ -714,7 +726,7 @@ func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size i
 	var status C.int
 	status = C.Put(1, cKey, C.CString(currentVersion), &psv, cValue, C.size_t(size), false, 1, 1)
 	//log.Println("END. CPUT ", key)
-    return uint32(size),  toKineticError(KineticError(int(status)))
+        return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
 
@@ -840,20 +852,25 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
         defer common.KUntrace(common.KTrace("Enter"))
 	cStartKey := C.CString(startKey)
 	cEndKey := C.CString(endKey)
-	Keys  := make([]byte, 1024*1024)
-	cKeys :=  (*C.char)(unsafe.Pointer(&Keys[0]))
+	//Keys  := make([]byte, 1024*1024)
+	//defer debug.FreeOSMemory()
+	//cKeys :=  (*C.char)(unsafe.Pointer(&Keys[0]))
+        cKeys := C.malloc(C.sizeof_char * 1024 * 1024)
+	//log.Println("CGEKEYRANGE cKeys ", unsafe.Pointer(cKeys))
+	defer C.free(unsafe.Pointer(cKeys))
 	var size int
 	cSize := (*C.int)(unsafe.Pointer(&size))
-	C.GetKeyRange(1, cStartKey, cEndKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), C.uint32_t(maxReturned), false, cKeys, cSize)
-        Keys = (*[1 << 30 ]byte)(unsafe.Pointer(cKeys))[:size:size]
-	keyStrings := strings.Split(string(Keys[:size]), ":")
+	C.GetKeyRange(1, cStartKey, cEndKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), C.uint32_t(maxReturned), false, (*C.char)(cKeys), cSize)
+	//Keys = (*[1 << 30 ]byte)(unsafe.Pointer(cKeys))[:size:size]
+	Keys := C.GoBytes(cKeys,(C.int)(size))
+	keyStrings := strings.Split(string(Keys[:size]), ":") 
 	var keys [][]byte
 	for i := range  keyStrings {
 		//log.Println("KEY ", keyStrings[i])
 		if len(keyStrings[i]) > 0 {
 			keys = append(keys, []byte(keyStrings[i]))
 		}
-	}
+	} 
 	return keys, nil
 }
 
