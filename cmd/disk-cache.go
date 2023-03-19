@@ -27,7 +27,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-        "log" 
 
 	"github.com/djherbis/atime"
 	"github.com/minio/minio/cmd/config/cache"
@@ -501,7 +500,6 @@ func (c *cacheObjects) hashIndex(bucket, object string) int {
 // newCache initializes the cacheFSObjects for the "drives" specified in config.json
 // or the global env overrides.
 func newCache(config cache.Config) ([]*diskCache, bool, error) {
-	log.Println(" NEW CACHE")
 	var caches []*diskCache
 	ctx := logger.SetReqInfo(context.Background(), &logger.ReqInfo{})
 	formats, migrating, err := loadAndValidateCacheFormat(ctx, config.Drives)
@@ -522,14 +520,12 @@ func newCache(config cache.Config) ([]*diskCache, bool, error) {
 		if quota == 0 {
 			quota = config.Quota
 		}
-		log.Println(" NEW DISK CACHE")
 		cache, err := newDiskCache(dir, quota, config.After, config.WatermarkLow, config.WatermarkHigh)
 		if err != nil {
 			return nil, false, err
 		}
 		caches = append(caches, cache)
 	}
-	log.Println("END NEW CACHE")
 	return caches, migrating, nil
 }
 

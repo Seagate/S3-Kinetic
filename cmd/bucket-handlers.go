@@ -262,7 +262,6 @@ func (api objectAPIHandlers) ListMultipartUploadsHandler(w http.ResponseWriter, 
 // owned by the authenticated sender of the request.
 func (api objectAPIHandlers) ListBucketsHandler(w http.ResponseWriter, r *http.Request) {
     defer common.KUntrace(common.KTrace("Enter"))
-	//fmt.Println(" LIST BUCKET HANDLER")
 	ctx := newContext(r, w, "ListBuckets")
 
 	defer logger.AuditLog(w, r, "ListBuckets", mustGetClaimsFromToken(r))
