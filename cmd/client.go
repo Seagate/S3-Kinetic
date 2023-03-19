@@ -76,14 +76,14 @@ func (c *Client) Read(value []byte) (int, error) {
         if err != nil {
                 err = errFileNotFound
 		if cvalue != nil {
-		    C.FreeCmemory(cvalue)
+   		    C.free(unsafe.Pointer(cvalue))
 		}
                 return 0, err
         }
         if (cvalue != nil) {
 		fsMetaBytes := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-		C.FreeCmemory(cvalue)
+		C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
@@ -532,7 +532,7 @@ func (c *Client) DoesObjExist(key string, option Opts) bool {
         bExist = true
     } 
     if (cvalue != nil) {
-        C.FreeCmemory(cvalue)
+	C.free(unsafe.Pointer(cvalue))
     }
     return bExist
 }
@@ -552,9 +552,12 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
     //log.Println(" CGET .....", key)
     var psv C._CPrimaryStoreValue
     psv.version = C.CString(string(acmd.NewVersion))
+    //defer C.free(unsafe.Pointer(psv.version))
     psv.tag = C.CString(string(acmd.Tag))
+    //defer C.free(unsafe.Pointer(psv.tag))
     psv.algorithm = C.int(acmd.Algorithm)
     cKey := C.CString(key)
+    //defer C.free(unsafe.Pointer(cKey))
     var dataSize int
     var status int
     var cvalue *C.char
@@ -564,6 +567,9 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
         //log.Println(" META ONLY")
         cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&dataSize)),
                         (*C.int)(unsafe.Pointer(&status)))
+	C.free(unsafe.Pointer(psv.version))
+	C.free(unsafe.Pointer(psv.tag))
+	C.free(unsafe.Pointer(cKey))
     } else {
 	//log.Println(" DATA ONLY")
         if (objSize > 0) {
@@ -586,15 +592,18 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
         }
         if (offset == 0 && requestSize == objSize) {
             cvalue = C.Get(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
-            //cvalue = C.Get(1,  cKey, (*C.char)(bvalue), &psv,
                       (*C.int)(unsafe.Pointer(&dataSize)),
                       (*C.int)(unsafe.Pointer(&status)))
         } else {
-		cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
+	    cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
                       (C.int)(offset), (C.int)(requestSize),
                       (*C.int)(unsafe.Pointer(&dataSize)),
                       (*C.int)(unsafe.Pointer(&status)))
         }
+        C.free(unsafe.Pointer(psv.version))
+        C.free(unsafe.Pointer(psv.tag))
+        C.free(unsafe.Pointer(cKey))
+
     }
     var err error = nil
     if status != 0 || cvalue == nil {
@@ -655,8 +664,14 @@ func (c *Client) cDelete(key string, cmd Opts)  error {
         defer common.KUntrace(common.KTrace("Enter"))
         currentVersion := "1"
         cKey := C.CString(key)
+	//defer C.free(unsafe.Pointer(cKey))
 	var status C.int
-        status = C.Delete(1, cKey, C.CString(currentVersion), false, 1, 1)
+	cVersion := C.CString(currentVersion)
+	//defer C.free(unsafe.Pointer(cVersion))
+        status = C.Delete(1, cKey, cVersion, false, 1, 1)
+        C.free(unsafe.Pointer(cKey))
+        C.free(unsafe.Pointer(cVersion))
+
 	//log.Println(" STATUS DEL ", int(status))
         return  toKineticError(KineticError(int(status)))
 }
@@ -706,26 +721,36 @@ func (c *Client) Delete(key string, cmd Opts) error {
 
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-        //log.Println(" CPUT ", key)
+    log.Println(" Client: CPUT ", key)
 	var psv C._CPrimaryStoreValue
 	psv.version = C.CString(string(cmd.NewVersion))
+	//defer C.free(unsafe.Pointer(psv.version))
 	psv.tag = C.CString(string(cmd.Tag))
+	//defer C.free(unsafe.Pointer(psv.tag))
 	psv.algorithm = C.int(cmd.Algorithm)
         psv.meta = (*C.char)(unsafe.Pointer(&meta[0]))
         psv.metaSize = C.int(len(meta))
         common.KTrace(fmt.Sprintf("meta len = %d, psv metaSize = %d", len(meta), psv.metaSize))
         currentVersion := "1"
 	cKey := C.CString(key)
+	//defer C.free(unsafe.Pointer(cKey))
 	var cValue *C.char
 	if  size  > 0 {
 		cValue = (*C.char)(unsafe.Pointer(&value[0]))
 	} else {
 		cValue  = (*C.char)(nil)
-        size = 0
+                size = 0
 	}
 	var status C.int
-	status = C.Put(1, cKey, C.CString(currentVersion), &psv, cValue, C.size_t(size), false, 1, 1)
+	cVersion := C.CString(currentVersion)
+	//defer C.free(unsafe.Pointer(cVersion))
+	status = C.Put(1, cKey, cVersion, &psv, cValue, C.size_t(size), false, 1, 1)
 	//log.Println("END. CPUT ", key)
+        C.free(unsafe.Pointer(psv.version))
+        C.free(unsafe.Pointer(psv.tag))
+        C.free(unsafe.Pointer(cKey))
+        C.free(unsafe.Pointer(cVersion))
+
         return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
@@ -851,13 +876,15 @@ func (c *Client) GetNext(key string, value []byte, cmd Opts) (uint32, error) {
 func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive bool, endKeyInclusive bool, maxReturned uint32, reverse bool, cmd Opts) ([][]byte, error) {
         defer common.KUntrace(common.KTrace("Enter"))
 	cStartKey := C.CString(startKey)
+	//defer C.free(unsafe.Pointer(cStartKey))
 	cEndKey := C.CString(endKey)
+	//defer C.free(unsafe.Pointer(cEndKey))
 	//Keys  := make([]byte, 1024*1024)
 	//defer debug.FreeOSMemory()
 	//cKeys :=  (*C.char)(unsafe.Pointer(&Keys[0]))
         cKeys := C.malloc(C.sizeof_char * 1024 * 1024)
 	//log.Println("CGEKEYRANGE cKeys ", unsafe.Pointer(cKeys))
-	defer C.free(unsafe.Pointer(cKeys))
+	//defer C.free(unsafe.Pointer(cKeys))
 	var size int
 	cSize := (*C.int)(unsafe.Pointer(&size))
 	C.GetKeyRange(1, cStartKey, cEndKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), C.uint32_t(maxReturned), false, (*C.char)(cKeys), cSize)
@@ -871,6 +898,9 @@ func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive 
 			keys = append(keys, []byte(keyStrings[i]))
 		}
 	} 
+	C.free(unsafe.Pointer(cStartKey))
+	C.free(unsafe.Pointer(cEndKey))
+	C.free(unsafe.Pointer(cKeys))
 	return keys, nil
 }
 

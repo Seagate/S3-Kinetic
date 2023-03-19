@@ -54,7 +54,7 @@ func main() {
     defer common.KUntrace(common.KTrace("Enter"))
     log.Println("******MAIN******")
     debug.SetMemoryLimit(1<<30)
-    debug.SetGCPercent(50)
+    debug.SetGCPercent(25)
     go func() {
         log.Println(http.ListenAndServe("localhost:8082", nil))
     }()
