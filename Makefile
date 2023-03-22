@@ -16,6 +16,8 @@ x86: set_x86 target
 
 arm: set_arm target
 
+arm64: set_arm64 target
+
 set_x86:
 	$(eval architecture := x86)
 	$(shell ./gox86env.sh)
@@ -24,6 +26,12 @@ set_arm:
 	$(eval architecture := arm)
 	$(eval extra_flags := env GOOS=linux GOARCH=arm GOARM=7)
 	$(shell ./goarmenv.sh)
+
+set_arm64:
+        $(eval architecture := arm64)
+        $(eval extra_flags := env GOOS=linux GOARCH=arm64 GOARM=7)
+        $(shell ./goarm64env.sh)
+
 
 target: build
 	# Adding @() to any bash command removes the echo
