@@ -28,9 +28,9 @@ set_arm:
 	$(shell ./goarmenv.sh)
 
 set_arm64:
-        $(eval architecture := arm64)
-        $(eval extra_flags := env GOOS=linux GOARCH=arm64 GOARM=7)
-        $(shell ./goarm64env.sh)
+	$(eval architecture := arm64)
+	$(eval extra_flags := env GOOS=linux GOARCH=arm64 GOARM=64)
+	$(shell ./goarm64env.sh)
 
 
 target: build
