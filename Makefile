@@ -29,7 +29,7 @@ set_arm:
 
 set_arm64:
 	$(eval architecture := arm64)
-	$(eval extra_flags := env GOOS=linux GOARCH=arm64 GOARM=64)
+	$(eval extra_flags := env GOOS=linux GOARCH=arm64 GOARM=7)
 	$(shell ./goarm64env.sh)
 
 
