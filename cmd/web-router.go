@@ -17,15 +17,15 @@
 package cmd
 
 import (
-	"fmt"
+//	"fmt"
 	"net/http"
 
-	assetfs "github.com/elazarl/go-bindata-assetfs"
-	"github.com/gorilla/handlers"
+//	assetfs "github.com/elazarl/go-bindata-assetfs"
+//	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	jsonrpc "github.com/gorilla/rpc/v2"
-	"github.com/gorilla/rpc/v2/json2"
-	"github.com/minio/minio/browser"
+//	jsonrpc "github.com/gorilla/rpc/v2"
+//	"github.com/gorilla/rpc/v2/json2"
+//	"github.com/minio/minio/browser"
 )
 
 // webAPI container for Web API.
@@ -46,6 +46,7 @@ func (h indexHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 const assetPrefix = "production"
 
+/*
 func assetFS() *assetfs.AssetFS {
 	return &assetfs.AssetFS{
 		Asset:     browser.Asset,
@@ -54,13 +55,14 @@ func assetFS() *assetfs.AssetFS {
 		Prefix:    assetPrefix,
 	}
 }
+*/
 
 // specialAssets are files which are unique files not embedded inside index_bundle.js.
 const specialAssets = "index_bundle.*.js|loader.css|logo.svg|firefox.png|safari.png|chrome.png|favicon-16x16.png|favicon-32x32.png|favicon-96x96.png"
 
 // registerWebRouter - registers web router for serving minio browser.
 func registerWebRouter(router *mux.Router) error {
-	// Initialize Web.
+/*	// Initialize Web.
 	web := &webAPIHandlers{
 		ObjectAPI: newObjectLayerFn,
 		CacheAPI:  newCachedObjectLayerFn,
@@ -99,6 +101,6 @@ func registerWebRouter(router *mux.Router) error {
 
 	// Serve index.html from assets for rest of the requests.
 	webBrowserRouter.Path("/{index:.*}").Handler(indexHandler{compressAssets})
-
+*/
 	return nil
 }
