@@ -295,6 +295,7 @@ func initAllSubsystems(buckets []BucketInfo, newObject ObjectLayer) (err error) 
 // serverMain handler called for 'minio server' command.
 func serverMain(ctx *cli.Context) {
         defer common.KUntrace(common.KTrace("Enter"))
+        fmt.Println(" SERVER MAIN")
 	if ctx.Args().First() == "help" || !endpointsPresent(ctx) {
 		cli.ShowCommandHelpAndExit(ctx, "server", 1)
 	}
