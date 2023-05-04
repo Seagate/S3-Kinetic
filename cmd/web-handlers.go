@@ -19,15 +19,15 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"encoding/xml"
-	"errors"
+//	"encoding/xml"
+//	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
+//	"os"
 	"path"
-	"runtime"
+//	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -36,8 +36,8 @@ import (
 	"github.com/klauspost/compress/zip"
 	miniogopolicy "github.com/minio/minio-go/v6/pkg/policy"
 	"github.com/minio/minio-go/v6/pkg/s3utils"
-	"github.com/minio/minio/browser"
-	"github.com/minio/minio/cmd/config/etcd/dns"
+//	"github.com/minio/minio/browser"
+//	"github.com/minio/minio/cmd/config/etcd/dns"
 	"github.com/minio/minio/cmd/config/identity/openid"
 	"github.com/minio/minio/cmd/crypto"
 	xhttp "github.com/minio/minio/cmd/http"
@@ -75,7 +75,7 @@ type ServerInfoRep struct {
 
 // ServerInfo - get server info.
 func (web *webAPIHandlers) ServerInfo(r *http.Request, args *WebGenericArgs, reply *ServerInfoRep) error {
-	ctx := newWebContext(r, args, "WebServerInfo")
+/*	ctx := newWebContext(r, args, "WebServerInfo")
 	claims, owner, authErr := webRequestAuthenticate(r)
 	if authErr != nil {
 		return toJSONError(ctx, authErr)
@@ -108,6 +108,7 @@ func (web *webAPIHandlers) ServerInfo(r *http.Request, args *WebGenericArgs, rep
 	reply.MinioPlatform = platform
 	reply.MinioRuntime = goruntime
 	reply.UIVersion = browser.UIVersion
+*/
 	return nil
 }
 
@@ -119,7 +120,7 @@ type StorageInfoRep struct {
 
 // StorageInfo - web call to gather storage usage statistics.
 func (web *webAPIHandlers) StorageInfo(r *http.Request, args *WebGenericArgs, reply *StorageInfoRep) error {
-	ctx := newWebContext(r, args, "WebStorageInfo")
+/*	ctx := newWebContext(r, args, "WebStorageInfo")
 	objectAPI := web.ObjectAPI()
 	if objectAPI == nil {
 		return toJSONError(ctx, errServerNotInitialized)
@@ -130,6 +131,7 @@ func (web *webAPIHandlers) StorageInfo(r *http.Request, args *WebGenericArgs, re
 	}
 	reply.StorageInfo = objectAPI.StorageInfo(ctx, false)
 	reply.UIVersion = browser.UIVersion
+*/
 	return nil
 }
 
@@ -140,7 +142,7 @@ type MakeBucketArgs struct {
 
 // MakeBucket - creates a new bucket.
 func (web *webAPIHandlers) MakeBucket(r *http.Request, args *MakeBucketArgs, reply *WebGenericRep) error {
-	ctx := newWebContext(r, args, "WebMakeBucket")
+/*	ctx := newWebContext(r, args, "WebMakeBucket")
 	objectAPI := web.ObjectAPI()
 	if objectAPI == nil {
 		return toJSONError(ctx, errServerNotInitialized)
@@ -192,6 +194,7 @@ func (web *webAPIHandlers) MakeBucket(r *http.Request, args *MakeBucketArgs, rep
 	}
 
 	reply.UIVersion = browser.UIVersion
+*/
 	return nil
 }
 
@@ -202,6 +205,7 @@ type RemoveBucketArgs struct {
 
 // DeleteBucket - removes a bucket, must be empty.
 func (web *webAPIHandlers) DeleteBucket(r *http.Request, args *RemoveBucketArgs, reply *WebGenericRep) error {
+/*
 	ctx := newWebContext(r, args, "WebDeleteBucket")
 	objectAPI := web.ObjectAPI()
 	if objectAPI == nil {
@@ -266,7 +270,7 @@ func (web *webAPIHandlers) DeleteBucket(r *http.Request, args *RemoveBucketArgs,
 	}
 
 	globalNotificationSys.DeleteBucket(ctx, args.BucketName)
-
+*/
 	return nil
 }
 
@@ -286,6 +290,7 @@ type WebBucketInfo struct {
 
 // ListBuckets - list buckets api.
 func (web *webAPIHandlers) ListBuckets(r *http.Request, args *WebGenericArgs, reply *ListBucketsRep) error {
+/*
 	ctx := newWebContext(r, args, "WebListBuckets")
 	objectAPI := web.ObjectAPI()
 	if objectAPI == nil {
@@ -350,6 +355,7 @@ func (web *webAPIHandlers) ListBuckets(r *http.Request, args *WebGenericArgs, re
 	}
 
 	reply.UIVersion = browser.UIVersion
+*/
 	return nil
 }
 
@@ -381,7 +387,7 @@ type WebObjectInfo struct {
 
 // ListObjects - list objects api.
 func (web *webAPIHandlers) ListObjects(r *http.Request, args *ListObjectsArgs, reply *ListObjectsRep) error {
-	ctx := newWebContext(r, args, "WebListObjects")
+/*	ctx := newWebContext(r, args, "WebListObjects")
 	reply.UIVersion = browser.UIVersion
 	objectAPI := web.ObjectAPI()
 	if objectAPI == nil {
@@ -563,6 +569,8 @@ func (web *webAPIHandlers) ListObjects(r *http.Request, args *ListObjectsArgs, r
 			return nil
 		}
 	}
+*/
+    return nil
 }
 
 // RemoveObjectArgs - args to remove an object, JSON will look like.
@@ -582,6 +590,7 @@ type RemoveObjectArgs struct {
 
 // RemoveObject - removes an object, or all the objects at a given prefix.
 func (web *webAPIHandlers) RemoveObject(r *http.Request, args *RemoveObjectArgs, reply *WebGenericRep) error {
+/*
 	ctx := newWebContext(r, args, "WebRemoveObject")
 	objectAPI := web.ObjectAPI()
 	if objectAPI == nil {
@@ -770,7 +779,7 @@ next:
 		// Ignore object not found error.
 		return toJSONError(ctx, err, args.BucketName, "")
 	}
-
+*/
 	return nil
 }
 
@@ -788,7 +797,7 @@ type LoginRep struct {
 
 // Login - user login handler.
 func (web *webAPIHandlers) Login(r *http.Request, args *LoginArgs, reply *LoginRep) error {
-	ctx := newWebContext(r, args, "WebLogin")
+/*	ctx := newWebContext(r, args, "WebLogin")
 	token, err := authenticateWeb(args.Username, args.Password)
 	if err != nil {
 		return toJSONError(ctx, err)
@@ -796,6 +805,7 @@ func (web *webAPIHandlers) Login(r *http.Request, args *LoginArgs, reply *LoginR
 
 	reply.Token = token
 	reply.UIVersion = browser.UIVersion
+*/
 	return nil
 }
 
@@ -807,7 +817,7 @@ type GenerateAuthReply struct {
 }
 
 func (web webAPIHandlers) GenerateAuth(r *http.Request, args *WebGenericArgs, reply *GenerateAuthReply) error {
-	ctx := newWebContext(r, args, "WebGenerateAuth")
+/*	ctx := newWebContext(r, args, "WebGenerateAuth")
 	_, owner, authErr := webRequestAuthenticate(r)
 	if authErr != nil {
 		return toJSONError(ctx, authErr)
@@ -822,6 +832,7 @@ func (web webAPIHandlers) GenerateAuth(r *http.Request, args *WebGenericArgs, re
 	reply.AccessKey = cred.AccessKey
 	reply.SecretKey = cred.SecretKey
 	reply.UIVersion = browser.UIVersion
+*/
 	return nil
 }
 
@@ -842,7 +853,7 @@ type SetAuthReply struct {
 
 // SetAuth - Set accessKey and secretKey credentials.
 func (web *webAPIHandlers) SetAuth(r *http.Request, args *SetAuthArgs, reply *SetAuthReply) error {
-	ctx := newWebContext(r, args, "WebSetAuth")
+/*	ctx := newWebContext(r, args, "WebSetAuth")
 	claims, owner, authErr := webRequestAuthenticate(r)
 	if authErr != nil {
 		return toJSONError(ctx, authErr)
@@ -886,7 +897,7 @@ func (web *webAPIHandlers) SetAuth(r *http.Request, args *SetAuthArgs, reply *Se
 	}
 
 	reply.UIVersion = browser.UIVersion
-
+*/
 	return nil
 }
 
@@ -898,7 +909,7 @@ type URLTokenReply struct {
 
 // CreateURLToken creates a URL token (short-lived) for GET requests.
 func (web *webAPIHandlers) CreateURLToken(r *http.Request, args *WebGenericArgs, reply *URLTokenReply) error {
-	ctx := newWebContext(r, args, "WebCreateURLToken")
+/*	ctx := newWebContext(r, args, "WebCreateURLToken")
 	claims, owner, authErr := webRequestAuthenticate(r)
 	if authErr != nil {
 		return toJSONError(ctx, authErr)
@@ -925,6 +936,7 @@ func (web *webAPIHandlers) CreateURLToken(r *http.Request, args *WebGenericArgs,
 	}
 
 	reply.UIVersion = browser.UIVersion
+*/
 	return nil
 }
 
@@ -1582,7 +1594,7 @@ type GetBucketPolicyRep struct {
 
 // GetBucketPolicy - get bucket policy for the requested prefix.
 func (web *webAPIHandlers) GetBucketPolicy(r *http.Request, args *GetBucketPolicyArgs, reply *GetBucketPolicyRep) error {
-	ctx := newWebContext(r, args, "WebGetBucketPolicy")
+/*	ctx := newWebContext(r, args, "WebGetBucketPolicy")
 	objectAPI := web.ObjectAPI()
 	if objectAPI == nil {
 		return toJSONError(ctx, errServerNotInitialized)
@@ -1656,7 +1668,7 @@ func (web *webAPIHandlers) GetBucketPolicy(r *http.Request, args *GetBucketPolic
 
 	reply.UIVersion = browser.UIVersion
 	reply.Policy = miniogopolicy.GetPolicy(policyInfo.Statements, args.BucketName, args.Prefix)
-
+*/
 	return nil
 }
 
@@ -1680,7 +1692,10 @@ type ListAllBucketPoliciesRep struct {
 
 // ListAllBucketPolicies - get all bucket policy.
 func (web *webAPIHandlers) ListAllBucketPolicies(r *http.Request, args *ListAllBucketPoliciesArgs, reply *ListAllBucketPoliciesRep) error {
+/*
 	ctx := newWebContext(r, args, "WebListAllBucketPolicies")
+
+
 	objectAPI := web.ObjectAPI()
 	if objectAPI == nil {
 		return toJSONError(ctx, errServerNotInitialized)
@@ -1756,7 +1771,7 @@ func (web *webAPIHandlers) ListAllBucketPolicies(r *http.Request, args *ListAllB
 			Policy: policy,
 		})
 	}
-
+*/
 	return nil
 }
 
@@ -1769,6 +1784,7 @@ type SetBucketPolicyWebArgs struct {
 
 // SetBucketPolicy - set bucket policy.
 func (web *webAPIHandlers) SetBucketPolicy(r *http.Request, args *SetBucketPolicyWebArgs, reply *WebGenericRep) error {
+/*
 	ctx := newWebContext(r, args, "WebSetBucketPolicy")
 	objectAPI := web.ObjectAPI()
 	reply.UIVersion = browser.UIVersion
@@ -1894,7 +1910,7 @@ func (web *webAPIHandlers) SetBucketPolicy(r *http.Request, args *SetBucketPolic
 		globalPolicySys.Set(args.BucketName, *bucketPolicy)
 		globalNotificationSys.SetBucketPolicy(ctx, args.BucketName, bucketPolicy)
 	}
-
+*/
 	return nil
 }
 
@@ -1922,7 +1938,7 @@ type PresignedGetRep struct {
 
 // PresignedGET - returns presigned-Get url.
 func (web *webAPIHandlers) PresignedGet(r *http.Request, args *PresignedGetArgs, reply *PresignedGetRep) error {
-	ctx := newWebContext(r, args, "WebPresignedGet")
+/*	ctx := newWebContext(r, args, "WebPresignedGet")
 	claims, owner, authErr := webRequestAuthenticate(r)
 	if authErr != nil {
 		return toJSONError(ctx, authErr)
@@ -1952,6 +1968,7 @@ func (web *webAPIHandlers) PresignedGet(r *http.Request, args *PresignedGetArgs,
 
 	reply.UIVersion = browser.UIVersion
 	reply.URL = presignedGet(args.HostName, args.BucketName, args.ObjectName, args.Expiry, creds, region)
+*/
 	return nil
 }
 
@@ -2003,11 +2020,13 @@ type DiscoveryDocResp struct {
 
 // GetDiscoveryDoc - returns parsed value of OpenID discovery document
 func (web *webAPIHandlers) GetDiscoveryDoc(r *http.Request, args *WebGenericArgs, reply *DiscoveryDocResp) error {
+/*
 	if globalOpenIDConfig.DiscoveryDoc.AuthEndpoint != "" {
 		reply.DiscoveryDoc = globalOpenIDConfig.DiscoveryDoc
 		reply.ClientID = globalOpenIDConfig.ClientID
 	}
 	reply.UIVersion = browser.UIVersion
+*/
 	return nil
 }
 
@@ -2024,6 +2043,7 @@ type LoginSTSRep struct {
 
 // LoginSTS - STS user login handler.
 func (web *webAPIHandlers) LoginSTS(r *http.Request, args *LoginSTSArgs, reply *LoginRep) error {
+/*
 	ctx := newWebContext(r, args, "WebLoginSTS")
 
 	v := url.Values{}
@@ -2069,6 +2089,7 @@ func (web *webAPIHandlers) LoginSTS(r *http.Request, args *LoginSTSArgs, reply *
 
 	reply.Token = a.Result.Credentials.SessionToken
 	reply.UIVersion = browser.UIVersion
+*/
 	return nil
 }
 
