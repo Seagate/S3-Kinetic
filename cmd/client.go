@@ -30,7 +30,7 @@ import (
 	"encoding/json"
 	"fmt"
 	//"runtime"
-        "runtime/debug"
+        //"runtime/debug"
 	"strings"
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
@@ -83,19 +83,22 @@ type Client struct {
 
 func (c *Client) Read(value []byte) (int, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        defer debug.FreeOSMemory()
+	//log.Println("READ VALUE")
         requestSize := len(value)
         fsMeta := fsMetaV1{}
         cvalue, size, err := c.CGetMeta(string(c.Key), c.Opts)
+        //defer C.free(unsafe.Pointer(cvalue))
         if err != nil {
                 err = errFileNotFound
+		if cvalue != nil {
+   		    C.free(unsafe.Pointer(cvalue))
+		}
                 return 0, err
         }
         if (cvalue != nil) {
 		fsMetaBytes := (*[1 << 16 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 		err = json.Unmarshal(fsMetaBytes[:size], &fsMeta)
-        common.KTrace("Free meta")
-        C.free(unsafe.Pointer(cvalue))
+		C.free(unsafe.Pointer(cvalue))
 	}
 	c.LastPartNumber =  len(fsMeta.Parts)
 	if len(fsMeta.Parts) == 0 {
@@ -140,8 +143,8 @@ func (c *Client) Read(value []byte) (int, error) {
                     return int(size), err
                 }
             }
-            debug.FreeOSMemory()
         }
+	//log.Println(" END. READ VALUE")
 	return 0, err
 }
 
@@ -539,44 +542,66 @@ func (c *Client) AbortBatch(cmd Opts) error {
 ****************/
 func (c *Client) DoesObjExist(key string, option Opts) bool {
     bExist := false
-    cValue, _, err := c.CGetMeta(key, option)
-    if (err == nil) {
-        if (cValue != nil) {
-            bExist = true
-            C.free(unsafe.Pointer(cValue))
-        }
+    cvalue, _, err := c.CGetMeta(key, option)
+    if (err == nil && cvalue != nil) {
+        bExist = true
+    } 
+    if (cvalue != nil) {
+	C.free(unsafe.Pointer(cvalue))
     }
     return bExist
 }
 
 func (c *Client) CGetMeta(key string, acmd Opts) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    var err error = nil
+    var dataSize uint32
     acmd.MetaDataOnly = true
-	return c.CGet(key, -1, acmd, 0, -1)  // -1 to indicate it doesn't know the size
+    cvalue, dataSize, err := c.CGet(key, -1, acmd, 0, -1) 
+    return cvalue, uint32(dataSize), err
 }
 
 //CGet: Use this for Skinny Waist interface
 func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSize int) (*C.char, uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    defer debug.FreeOSMemory()
+    //log.Println(" CGET .....", key)
     var psv C._CPrimaryStoreValue
     psv.version = C.CString(string(acmd.NewVersion))
+    //defer C.free(unsafe.Pointer(psv.version))
     psv.tag = C.CString(string(acmd.Tag))
+    //defer C.free(unsafe.Pointer(psv.tag))
     psv.algorithm = C.int(acmd.Algorithm)
     cKey := C.CString(key)
+    //defer C.free(unsafe.Pointer(cKey))
     var dataSize int
     var status int
     var cvalue *C.char
     var bvalue []byte
+    //var bvalue *C.char
     if acmd.MetaDataOnly {
+        //log.Println(" META ONLY")
         cvalue = C.GetMeta(1, cKey, &psv, (*C.int)(unsafe.Pointer(&dataSize)),
                         (*C.int)(unsafe.Pointer(&status)))
+	C.free(unsafe.Pointer(psv.version))
+	C.free(unsafe.Pointer(psv.tag))
+	C.free(unsafe.Pointer(cKey))
     } else {
+	//log.Println(" DATA ONLY")
         if (objSize > 0) {
             bvalue = make([]byte, objSize + 1024)  // Add 1024 for meta data
+	    //bvalue := C.malloc(C.ulong(objSize) +  C.sizeof_char * 1024)
+	    //log.Println( " BVALUE = ", (*C.char)(unsafe.Pointer(&bvalue[0])))
+            // defer C.free(unsafe.Pointer(bvalue))
         } else { // Don't know the size, allocate largest size
             bvalue = make([]byte, 5*1024*1024 + 2*4096)
+	    //bvalue := C.malloc(C.sizeof_char * 5 *1024 * 1024 +  C.sizeof_char * 2 * 4096)
+            //defer C.free(unsafe.Pointer(bvalue))
+	    //log.Println(" BVALUE ")
+	    //defer debug.FreeOSMemory()
         }
+//        defer C.free(unsafe.Pointer(bvalue))
+        //defer debug.FreeOSMemory()
+
         if (requestSize == -1 || requestSize >  objSize) {
             requestSize = objSize
         }
@@ -585,17 +610,23 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
                       (*C.int)(unsafe.Pointer(&dataSize)),
                       (*C.int)(unsafe.Pointer(&status)))
         } else {
-            cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
+	    cvalue = C.PartialGet(1, cKey, (*C.char)(unsafe.Pointer(&bvalue[0])), &psv,
                       (C.int)(offset), (C.int)(requestSize),
                       (*C.int)(unsafe.Pointer(&dataSize)),
                       (*C.int)(unsafe.Pointer(&status)))
         }
+        C.free(unsafe.Pointer(psv.version))
+        C.free(unsafe.Pointer(psv.tag))
+        C.free(unsafe.Pointer(cKey))
+
     }
     var err error = nil
     if status != 0 || cvalue == nil {
         common.KTrace(fmt.Sprintf("failed, status = %d", status))
         err =  errKineticNotFound
     }
+    //log.Println(" END. CGET  ", key)
+
     return cvalue, uint32(dataSize), err
 }
 
@@ -603,7 +634,7 @@ func (c *Client) CGet(key string, objSize int, acmd Opts, offset int, requestSiz
 //Use this for Kinetic API 
 func (c *Client) Get(key string, value []byte, cmd Opts) (uint32, error) {
         defer common.KUntrace(common.KTrace("Enter"))
-        //log.Println(" NORMAL GET")
+        //log.Println(" GET   ", key)
 	authType := kinetic_proto.Message_HMACAUTH
 	cmdHeader := &kinetic_proto.Command_Header{}
 	err := SetCmdInHeader(c, cmdHeader, kinetic_proto.Command_GET, cmd)
@@ -639,6 +670,7 @@ func (c *Client) Get(key string, value []byte, cmd Opts) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
+	//log.Println("END. GET  ", key)
 	return valueSize, err
 }
 
@@ -647,8 +679,14 @@ func (c *Client) cDelete(key string, cmd Opts)  error {
         defer common.KUntrace(common.KTrace("Enter"))
         currentVersion := "1"
         cKey := C.CString(key)
+	//defer C.free(unsafe.Pointer(cKey))
 	var status C.int
-        status = C.Delete(1, cKey, C.CString(currentVersion), false, 1, 1)
+	cVersion := C.CString(currentVersion)
+	//defer C.free(unsafe.Pointer(cVersion))
+        status = C.Delete(1, cKey, cVersion, false, 1, 1)
+        C.free(unsafe.Pointer(cKey))
+        C.free(unsafe.Pointer(cVersion))
+
 	//log.Println(" STATUS DEL ", int(status))
         return  toKineticError(KineticError(int(status)))
 }
@@ -698,31 +736,43 @@ func (c *Client) Delete(key string, cmd Opts) error {
 
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-
+    log.Println(" Client: CPUT ", key)
 	var psv C._CPrimaryStoreValue
 	psv.version = C.CString(string(cmd.NewVersion))
+	//defer C.free(unsafe.Pointer(psv.version))
 	psv.tag = C.CString(string(cmd.Tag))
+	//defer C.free(unsafe.Pointer(psv.tag))
 	psv.algorithm = C.int(cmd.Algorithm)
-    psv.meta = (*C.char)(unsafe.Pointer(&meta[0]))
-    psv.metaSize = C.int(len(meta))
-    common.KTrace(fmt.Sprintf("meta len = %d, psv metaSize = %d", len(meta), psv.metaSize))
-    currentVersion := "1"
+        psv.meta = (*C.char)(unsafe.Pointer(&meta[0]))
+        psv.metaSize = C.int(len(meta))
+        common.KTrace(fmt.Sprintf("meta len = %d, psv metaSize = %d", len(meta), psv.metaSize))
+        currentVersion := "1"
 	cKey := C.CString(key)
+	//defer C.free(unsafe.Pointer(cKey))
 	var cValue *C.char
 	if  size  > 0 {
 		cValue = (*C.char)(unsafe.Pointer(&value[0]))
 	} else {
 		cValue  = (*C.char)(nil)
-        size = 0
+                size = 0
 	}
 	var status C.int
-	status = C.Put(1, cKey, C.CString(currentVersion), &psv, cValue, C.size_t(size), false, 1, 1)
-    return uint32(size),  toKineticError(KineticError(int(status)))
+	cVersion := C.CString(currentVersion)
+	//defer C.free(unsafe.Pointer(cVersion))
+	status = C.Put(1, cKey, cVersion, &psv, cValue, C.size_t(size), false, 1, 1)
+	//log.Println("END. CPUT ", key)
+        C.free(unsafe.Pointer(psv.version))
+        C.free(unsafe.Pointer(psv.tag))
+        C.free(unsafe.Pointer(cKey))
+        C.free(unsafe.Pointer(cVersion))
+
+        return uint32(size),  toKineticError(KineticError(int(status)))
 }
 
 
 func (c *Client) Put(key string, meta []byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
+    //log.Println(" PUT ", key)
     if SkinnyWaistIF {
 		return c.CPut(key, meta, metaSize, value, size, cmd)
 	}
@@ -763,6 +813,7 @@ func (c *Client) Put(key string, meta []byte, metaSize int, value []byte, size i
 		//log.Println("PUT FAILED")
 		return 0, err
 	}
+	//log.Println("END. PUT", key)
 	return uint32(size), nil
 }
 
@@ -840,21 +891,31 @@ func (c *Client) GetNext(key string, value []byte, cmd Opts) (uint32, error) {
 func (c *Client) CGetKeyRange(startKey string, endKey string, startKeyInclusive bool, endKeyInclusive bool, maxReturned uint32, reverse bool, cmd Opts) ([][]byte, error) {
         defer common.KUntrace(common.KTrace("Enter"))
 	cStartKey := C.CString(startKey)
+	//defer C.free(unsafe.Pointer(cStartKey))
 	cEndKey := C.CString(endKey)
-	Keys  := make([]byte, 1024*1024)
-	cKeys :=  (*C.char)(unsafe.Pointer(&Keys[0]))
+	//defer C.free(unsafe.Pointer(cEndKey))
+	//Keys  := make([]byte, 1024*1024)
+	//defer debug.FreeOSMemory()
+	//cKeys :=  (*C.char)(unsafe.Pointer(&Keys[0]))
+        cKeys := C.malloc(C.sizeof_char * 1024 * 1024)
+	//log.Println("CGEKEYRANGE cKeys ", unsafe.Pointer(cKeys))
+	//defer C.free(unsafe.Pointer(cKeys))
 	var size int
 	cSize := (*C.int)(unsafe.Pointer(&size))
-	C.GetKeyRange(1, cStartKey, cEndKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), C.uint32_t(maxReturned), false, cKeys, cSize)
-        Keys = (*[1 << 30 ]byte)(unsafe.Pointer(cKeys))[:size:size]
-	keyStrings := strings.Split(string(Keys[:size]), ":")
+	C.GetKeyRange(1, cStartKey, cEndKey, C.bool(startKeyInclusive), C.bool(endKeyInclusive), C.uint32_t(maxReturned), false, (*C.char)(cKeys), cSize)
+	//Keys = (*[1 << 30 ]byte)(unsafe.Pointer(cKeys))[:size:size]
+	Keys := C.GoBytes(cKeys,(C.int)(size))
+	keyStrings := strings.Split(string(Keys[:size]), ":") 
 	var keys [][]byte
 	for i := range  keyStrings {
 		//log.Println("KEY ", keyStrings[i])
 		if len(keyStrings[i]) > 0 {
 			keys = append(keys, []byte(keyStrings[i]))
 		}
-	}
+	} 
+	C.free(unsafe.Pointer(cStartKey))
+	C.free(unsafe.Pointer(cEndKey))
+	C.free(unsafe.Pointer(cKeys))
 	return keys, nil
 }
 
@@ -1383,7 +1444,6 @@ func (c *Client) GetMessage(message *kinetic_proto.Message) (uint32, error) {
 	}
 	//log.Println(" MESSAGE SIZE ", messageSize)
 	buff := make([]byte, messageSize)
-	defer debug.FreeOSMemory()
 	err = Read(c.socket, buff, messageSize)
 	if err != nil {
 		//log.Println(" FAILED TO GET MESSAGE")
@@ -1444,7 +1504,6 @@ func (c *Client) GetSignOnMessage() error {
 	}
 	message := make([]byte, messageSize)
 	value := make([]byte, valueSize)
-	defer debug.FreeOSMemory()
 
 	err = Read(c.socket, message, messageSize)
 	if err != nil {

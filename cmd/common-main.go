@@ -184,10 +184,11 @@ func handleCommonCmdArgs(ctx *cli.Context) {
 func handleCommonEnvVars() {
         defer common.KUntrace(common.KTrace("Enter"))
 	var err error
-	globalBrowserEnabled, err = config.ParseBool(env.Get(config.EnvBrowser, config.EnableOn))
-	if err != nil {
-		logger.Fatal(config.ErrInvalidBrowserValue(err), "Invalid MINIO_BROWSER value in environment variable")
-	}
+//	globalBrowserEnabled, err = config.ParseBool(env.Get(config.EnvBrowser, config.EnableOn))
+	globalBrowserEnabled = false
+	//if err != nil {
+	//	logger.Fatal(config.ErrInvalidBrowserValue(err), "Invalid MINIO_BROWSER value in environment variable")
+	//}
 
 	domains := env.Get(config.EnvDomain, "")
 	if len(domains) != 0 {

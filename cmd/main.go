@@ -18,7 +18,15 @@
 package cmd
 
 import (
+// #cgo CXXFLAGS: --std=c++0x  -DNDEBUG -DNDEBUGW -DSMR_ENABLED
+// #cgo LDFLAGS: -L../lib -lkinetic
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include "C_Operations.h"
+        "C"
 	"fmt"
+	//"time"
+	//"unsafe"
 	"github.com/minio/cli"
 	"github.com/minio/minio/pkg/console"
 	"github.com/minio/minio/pkg/trie"
@@ -26,6 +34,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	//"log"
     "github.com/minio/minio/common"
 )
 
@@ -166,6 +175,51 @@ func newApp(name string) *cli.App {
 func Main(args []string) {
         defer common.KUntrace(common.KTrace("Enter"))
 	// Set the minio app name.
+// This is for testing memory allocation by C
+//  time.Sleep(20 * time.Second)
+/*
+  var  pbuf  [1000] *byte
+  var buf []byte
+  time.Sleep(20 * time.Second)
+  for j:=0; j < 100; j++ {
+      //time.Sleep(60 * time.Second)
+      log.Println("WAKE UP")
+      size := int(64*1024)
+      for i:=0; i< 1000; i++ {
+          buf = allocateValBuf(size)
+	  pbuf[i] = &buf[0]
+          log.Println(" ALLOC BUF ", pbuf[i])
+      }
+      log.Println("AFTER ALLOC 50MB")
+      //time.Sleep(60 * time.Second)   
+      for i:=0; i< 1000; i++ {
+          deallocateValBuf(pbuf[i], size)
+          log.Println(" FREE BUF ", pbuf[i])
+      }
+  }
+*/
+/*
+for j:=0; j < 1000 ; j++ {
+      //time.Sleep(20 *time.Second)
+      var gptrbuf [10000] *byte
+      log.Println(" ALLOC USING calloc ", j)
+      //size := int(1048576)
+      for i:=0; i< 10000; i++ {
+	  cptrbuf := C.calloc(1, 64*1024)
+          //cptrbuf := C.malloc(64*1024)
+	  gbuf := (*[1 << 30 ]byte)(unsafe.Pointer(cptrbuf))[:1048576:1048576]
+          gptrbuf[i]= &gbuf[0]
+      }
+      log.Println("DEALLOC ")
+      //time.Sleep(20 * time.Second)
+      for i:=0; i< 10000; i++ {
+          C.free(unsafe.Pointer(gptrbuf[i]))
+          //log.Println(" FREE BUF ", gptrbuf[i])
+       }
+  }
+  log.Println(" *******DONE MEM ALLOC TEST ********")
+  for ;;{}
+*/
 	appName := filepath.Base(args[0])
 	fmt.Println(" APP NAME ", appName)
 	// Run the app - exit on error.

@@ -369,12 +369,14 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
         kineticMutex.Lock()
         kc = GetKineticConnection()
         cvalue, size, err := kc.CGetMeta(key, kopts)
+        //defer C.free(unsafe.Pointer(cvalue))
         ReleaseConnection(kc.Idx)
         if err != nil {
-    common.KTrace(fmt.Sprintf("err = %+v", err))
-                err = errFileNotFound
-	        kineticMutex.Unlock()
-                return result, err
+            common.KTrace(fmt.Sprintf("err = %+v", err))
+	    C.FreeCmemory(cvalue)
+            err = errFileNotFound
+	    kineticMutex.Unlock()
+            return result, err
         }
         var fsMetaBytes []byte
         var fsMeta fsMetaV1
@@ -382,17 +384,16 @@ func (fs *KineticObjects) ListObjectParts(ctx context.Context, bucket, object, u
 		fsMetaBytes = (*[1 << 30 ]byte)(unsafe.Pointer(cvalue))[:size:size]
 	        var json = jsoniter.ConfigCompatibleWithStandardLibrary
 	        err = json.Unmarshal(fsMetaBytes, &fsMeta);
-            common.KTrace("Free meta")
-            C.free(unsafe.Pointer(cvalue))
+                common.KTrace("Free meta")
 		if err != nil {
+			C.FreeCmemory(cvalue)
 	                kineticMutex.Unlock()
 			return result, err
 		}
 		result.UserDefined = fsMeta.Meta
 	}
-        //ReleaseConnection(kc.Idx)
         kineticMutex.Unlock()
-	//log.Println("FSMETA", result.UserDefined)
+	C.FreeCmemory(cvalue)
 	return result, nil
 }
 

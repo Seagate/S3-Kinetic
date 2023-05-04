@@ -106,6 +106,7 @@ func (u URL) DialHTTP(transport *http.Transport) error {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		client.CloseIdleConnections()
 		return err
 	}
 	io.Copy(ioutil.Discard, resp.Body)
