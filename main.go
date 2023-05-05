@@ -1,6 +1,7 @@
 // +build go1.13
 
 /*
+ * Copyright (c) 2023 Seagate Technology LLC and/or its Affiliates
  * MinIO Cloud Storage, (C) 2016, 2017, 2018 MinIO, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
