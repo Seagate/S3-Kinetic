@@ -736,7 +736,7 @@ func (c *Client) Delete(key string, cmd Opts) error {
 
 func (c *Client) CPut(key string, meta[]byte, metaSize int, value []byte, size int, cmd Opts) (uint32, error) {
     defer common.KUntrace(common.KTrace("Enter"))
-    log.Println(" Client: CPUT ", key)
+    //log.Println(" Client: CPUT ", key)
 	var psv C._CPrimaryStoreValue
 	psv.version = C.CString(string(cmd.NewVersion))
 	//defer C.free(unsafe.Pointer(psv.version))
