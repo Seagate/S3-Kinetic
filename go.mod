@@ -9,7 +9,6 @@ require (
 	github.com/Shopify/sarama v1.24.1
 	github.com/alecthomas/participle v0.2.1
 	github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5
-	github.com/aws/aws-sdk-go v1.20.21
 	github.com/bcicen/jstream v0.0.0-20190220045926-16c1f8af81c2
 	github.com/beevik/ntp v0.2.0
 	github.com/cheggaaa/pb v1.0.28
@@ -19,19 +18,17 @@ require (
 	github.com/djherbis/atime v1.0.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/eclipse/paho.mqtt.golang v1.2.0
-	github.com/elazarl/go-bindata-assetfs v1.0.0
 	github.com/fatih/color v1.7.0
 	github.com/fatih/structs v1.1.0
 	github.com/go-sql-driver/mysql v1.5.0
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.2
 	github.com/gomodule/redigo v2.0.0+incompatible
-	github.com/gorilla/handlers v1.4.0
 	github.com/gorilla/mux v1.7.0
 	github.com/gorilla/rpc v1.2.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/json-iterator/go v1.1.9
-	github.com/klauspost/compress v1.10.3
+	github.com/klauspost/compress v1.14.4
 	github.com/klauspost/cpuid v1.2.2
 	github.com/klauspost/pgzip v1.2.1
 	github.com/klauspost/readahead v1.3.1
@@ -44,7 +41,7 @@ require (
 	github.com/minio/cli v1.22.0
 	github.com/minio/gokrb5/v7 v7.2.5
 	github.com/minio/hdfs/v3 v3.0.1
-	github.com/minio/highwayhash v1.0.0
+	github.com/minio/highwayhash v1.0.2
 	github.com/minio/lsync v1.0.1
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/minio/minio-go/v6 v6.0.50-0.20200306231101-b882ba63d570
@@ -53,8 +50,8 @@ require (
 	github.com/minio/simdjson-go v0.1.5-0.20200303142138-b17fe061ea37
 	github.com/minio/sio v0.2.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/nats-io/nats-server/v2 v2.1.2
-	github.com/nats-io/nats.go v1.9.1
+	github.com/nats-io/nats-server/v2 v2.7.4
+	github.com/nats-io/nats.go v1.13.1-0.20220308171302-2f2f6968e98d
 	github.com/nats-io/stan.go v0.4.5
 	github.com/ncw/directio v1.0.5
 	github.com/nsqio/go-nsq v1.0.7
@@ -69,8 +66,8 @@ require (
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
 	github.com/valyala/tcplisten v0.0.0-20161114210144-ceec8f93295a
 	go.uber.org/atomic v1.6.0
-	golang.org/x/crypto v0.0.0-20201116153603-4be66e5b6582
-	golang.org/x/sys v0.0.0-20210510120138-977fb7262007
+	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce
+	golang.org/x/sys v0.0.0-20220111092808-5a964db01320
 	google.golang.org/api v0.5.0
 	gopkg.in/ldap.v3 v3.0.3
 	gopkg.in/olivere/elastic.v5 v5.0.80
@@ -119,7 +116,6 @@ require (
 	github.com/hashicorp/raft v1.1.1-0.20190703171940-f639636d18e0 // indirect
 	github.com/hashicorp/vault/sdk v0.1.13 // indirect
 	github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03 // indirect
-	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/mailru/easyjson v0.0.0-20180730094502-03f2033d19d5 // indirect
@@ -127,16 +123,15 @@ require (
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
-	github.com/mmcloughlin/avo v0.0.0-20200303042253-6df701fe672f // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/nats-io/gnatsd v1.4.1 // indirect
 	github.com/nats-io/go-nats v1.7.2 // indirect
 	github.com/nats-io/go-nats-streaming v0.4.4 // indirect
-	github.com/nats-io/jwt v0.3.2 // indirect
+	github.com/nats-io/jwt/v2 v2.2.1-0.20220113022732-58e87895b296 // indirect
 	github.com/nats-io/nats-server v1.4.1 // indirect
 	github.com/nats-io/nats-streaming-server v0.14.2 // indirect
-	github.com/nats-io/nkeys v0.1.3 // indirect
+	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pierrec/lz4 v2.4.0+incompatible // indirect
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90 // indirect
@@ -159,16 +154,17 @@ require (
 	go.opencensus.io v0.21.0 // indirect
 	go.uber.org/multierr v1.5.0 // indirect
 	go.uber.org/zap v1.10.0 // indirect
-	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a // indirect
-	golang.org/x/text v0.3.3 // indirect
-	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
+	golang.org/x/text v0.3.6 // indirect
+	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11 // indirect
 	golang.org/x/tools v0.1.5 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/appengine v1.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20190513181449-d00d292a067c // indirect
 	google.golang.org/grpc v1.22.0 // indirect
+	google.golang.org/protobuf v1.23.0 // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
