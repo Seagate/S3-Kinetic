@@ -1,195 +1,139 @@
-# MinIO Quickstart Guide
-[![Slack](https://slack.min.io/slack?type=svg)](https://slack.min.io) [![Go Report Card](https://goreportcard.com/badge/minio/minio)](https://goreportcard.com/report/minio/minio) [![Docker Pulls](https://img.shields.io/docker/pulls/minio/minio.svg?maxAge=604800)](https://hub.docker.com/r/minio/minio/)
+# S3-Kinetic
+S3-Kinetic is a fork of MinIO, specifically [this release](https://github.com/minio/minio/tree/RELEASE.2019-10-12T01-39-57Z). Much of this repository is identical to its MinIO counterpart; however, several files have been added and/or modified(link). 
 
-[![MinIO](https://raw.githubusercontent.com/minio/minio/master/.github/logo.svg?sanitize=true)](https://min.io)
+These modifications allow MinIO's S3 server to  interface with [kineticd](https://gitlab.com/kinetic-storage/kineticd), an on-disk key-value storage application developed by Seagate. **This code depends heavily on libraries from kineticd; it will not compile without kineticd**. 
 
-MinIO is High Performance Object Storage released under Apache License v2.0. It is API compatible with Amazon S3 cloud storage service. Using MinIO build high performance infrastructure for machine learning, analytics and application data workloads.
+When compiled, this code produces an executable, **s3kinetic**, that runs an S3 server largely similar to that provided by a local MinIO executable. However, **s3kinetic** will store incoming data (e.g., from an S3 PutObject request) in a key-value database derived from **kineticd**, rather than employing a traditional filesystem as a standard MinIO server would. 
 
-## Docker Container
-### Stable
+This repository was developed as part of an effort to explore additional functionalities for **kineticd**. It is an **experimental** repository and will NOT function as a drop-in replacement for MinIO.
+
+# Prerequisites
+* [kineticd](https://gitlab.com/kinetic-storage/kineticd) and [its dependencies](https://gitlab.com/kinetic-storage/kineticd#requirements-for-getting-started)
+* Go v1.20 or higher ([download here](https://go.dev/dl/))
+* [libkinetic "develop" branch](https://gitlab.com/kinetic-storage/libkinetic/-/tree/develop/) - required to interact with server. See [notes on libkinetic](#installing-libkinetic)
+* A spare hard disk drive, 512k or 512e (4kn drives are NOT supported)
+
+ **Optional, but recommended**: [s3cmd](https://s3tools.org/s3cmd), simple command line tool for S3 testing
+
+# Compiling
+1. Compile kineticd for [x86](https://gitlab.com/kinetic-storage/kineticd#building-for-x86) or [ARM](https://gitlab.com/kinetic-storage/kineticd#building-for-ARM) according to your system architecture
+2. Clone (or move) the S3-Kinetic repository into the the same parent directory as kineticd
+3. Compile s3kinetic with `make clean x86`
+
+# Installing the memMgr kernel module
+S3-Kinetic depends on memMgr, a kernel memory management module included in kineticd's source code. To install this module:
 ```
-docker pull minio/minio
-docker run -p 9000:9000 minio/minio server /data
-```
+# Compile and insert
+cd kineticd/driver/memMgr
+make
+sudo insmod memMgr_drv.ko
 
-### Edge
-```
-docker pull minio/minio:edge
-docker run -p 9000:9000 minio/minio:edge server /data
-```
-
-> NOTE: Docker will not display the default keys unless you start the container with the `-it`(interactive TTY) argument. Generally, it is not recommended to use default keys with containers. Please visit MinIO Docker quickstart guide for more information [here](https://docs.min.io/docs/minio-docker-quickstart-guide)
-
-## macOS
-### Homebrew (recommended)
-Install minio packages using [Homebrew](http://brew.sh/)
-```sh
-brew install minio/stable/minio
-minio server /data
-```
-
-> NOTE: If you previously installed minio using `brew install minio` then it is recommended that you reinstall minio from `minio/stable/minio` official repo instead.
-```sh
-brew uninstall minio
-brew install minio/stable/minio
-```
-
-### Binary Download
-| Platform    | Architecture | URL                                                       |
-| ----------  | --------     | ------                                                    |
-| Apple macOS | 64-bit Intel | https://dl.min.io/server/minio/release/darwin-amd64/minio |
-```sh
-chmod 755 minio
-./minio server /data
+# Create device node
+cat /proc/devices | grep mem   # retrieve major device number for memMgr
+sudo mknod /dev/memMgr c <MAJOR_NUMBER> 0
 ```
 
-## GNU/Linux
-### Binary Download
-| Platform   | Architecture | URL                                                      |
-| ---------- | --------     | ------                                                   |
-| GNU/Linux  | 64-bit Intel | https://dl.min.io/server/minio/release/linux-amd64/minio |
-```sh
-wget https://dl.min.io/server/minio/release/linux-amd64/minio
-chmod +x minio
-./minio server /data
+# Installing libkinetic
+At the moment, the only way to perform certain backend operations on S3-Kinetic - i.e. erasing and rebuilding a database for the server - is to use the **kctl** module provided by **libkinetic**. 
+
+* Download the **develop** branch of libkinetic - only this branch will work for S3-Kinetic:
 ```
-
-| Platform   | Architecture | URL                                                        |
-| ---------- | --------     | ------                                                     |
-| GNU/Linux  | ppc64le      | https://dl.min.io/server/minio/release/linux-ppc64le/minio |
-```sh
-wget https://dl.min.io/server/minio/release/linux-ppc64le/minio
-chmod +x minio
-./minio server /data
+ git clone --recurse-submodules -b develop https://gitlab.com/kinetic-storage/libkinetic.git   
 ```
-
-## Microsoft Windows
-### Binary Download
-| Platform          | Architecture | URL                                                            |
-| ----------        | --------     | ------                                                         |
-| Microsoft Windows | 64-bit       | https://dl.min.io/server/minio/release/windows-amd64/minio.exe |
-```sh
-minio.exe server D:\Photos
+* Configure protobuf-c:
 ```
-
-## FreeBSD
-### Port
-Install minio packages using [pkg](https://github.com/freebsd/pkg), MinIO doesn't officially build FreeBSD binaries but is maintained by FreeBSD upstream [here](https://www.freshports.org/www/minio).
-
-```sh
-pkg install minio
-sysrc minio_enable=yes
-sysrc minio_disks=/home/user/Photos
-service minio start
+cd libkinetic/vendor/protobuf-c
+./autogen.sh
 ```
-
-## Install from Source
-Source installation is only intended for developers and advanced users. If you do not have a working Golang environment, please follow [How to install Golang](https://golang.org/doc/install). Minimum version required is [go1.13](https://golang.org/dl/#stable)
-
-```sh
-GO111MODULE=on go get github.com/minio/minio
+* Compile libkinetic and kctl:
 ```
-
-## Allow port access for Firewalls
-
-By default MinIO uses the port 9000 to listen for incoming connections. If your platform blocks the port by default, you may need to enable access to the port.
-
-### iptables
-
-For hosts with iptables enabled (RHEL, CentOS, etc), you can use `iptables` command to enable all traffic coming to specific ports. Use below command to allow
-access to port 9000
-
-```sh
-iptables -A INPUT -p tcp --dport 9000 -j ACCEPT
-service iptables restart
+cd libkinetic
+make
 ```
+**Note**: libkinetic depends on protobuf-2.6.1. This library should already be installed by kineticd. If libkinetic is unable to locate this library, refer to the libkinetic [README](https://gitlab.com/kinetic-storage/libkinetic.git) for installation instructions
 
-Below command enables all incoming traffic to ports ranging from 9000 to 9010.
-
-```sh
-iptables -A INPUT -p tcp --dport 9000:9010 -j ACCEPT
-service iptables restart
+# Operating the Server
+## Starting the server
+Start the S3-Kinetic server with
 ```
-
-### ufw
-
-For hosts with ufw enabled (Debian based distros), you can use `ufw` command to allow traffic to specific ports. Use below command to allow access to port 9000
-
-```sh
-ufw allow 9000
+sudo ./s3kinetic server[.x86 | .arm] kinetic:skinny:<SHORT_DEVICE_PATH> kineticd --store_device=<DEVICE_PATH>
 ```
+where `<DEVICE_PATH>` represents the full path to your spare drive's device file, e.g. `/dev/sdb`, and `<SHORT_DEVICE_PATH>` represents the specific device file within `/dev`, e.g. `sdb`.
 
-Below command enables all incoming traffic to ports ranging from 9000 to 9010.
-
-```sh
-ufw allow 9000:9010/tcp
-```
-
-### firewall-cmd
-
-For hosts with firewall-cmd enabled (CentOS), you can use `firewall-cmd` command to allow traffic to specific ports. Use below commands to allow access to port 9000
-
-```sh
-firewall-cmd --get-active-zones
-```
-
-This command gets the active zone(s). Now, apply port rules to the relevant zones returned above. For example if the zone is `public`, use
-
-```sh
-firewall-cmd --zone=public --add-port=9000/tcp --permanent
-```
-
-Note that `permanent` makes sure the rules are persistent across firewall start, restart or reload. Finally reload the firewall for changes to take effect.
-
-```sh
-firewall-cmd --reload
-```
-
-## Test using MinIO Browser
-MinIO Server comes with an embedded web based object browser. Point your web browser to http://127.0.0.1:9000 ensure your server has started successfully.
-
-![Screenshot](https://github.com/minio/minio/blob/master/docs/screenshots/minio-browser.png?raw=true)
-
-## Test using MinIO Client `mc`
-`mc` provides a modern alternative to UNIX commands like ls, cat, cp, mirror, diff etc. It supports filesystems and Amazon S3 compatible cloud storage services. Follow the MinIO Client [Quickstart Guide](https://docs.min.io/docs/minio-client-quickstart-guide) for further instructions.
-
-## Pre-existing data
-When deployed on a single drive, MinIO server lets clients access any pre-existing data in the data directory. For example, if MinIO is started with the command  `minio server /mnt/data`, any pre-existing data in the `/mnt/data` directory would be accessible to the clients.
-
-The above statement is also valid for all gateway backends.
-
-## Upgrading MinIO
-MinIO server supports rolling upgrades, i.e. you can update one MinIO instance at a time in a distributed cluster. This allows upgrades with no downtime. Upgrades can be done manually by replacing the binary with the latest release and restarting all servers in a rolling fashion. However, we recommend all our users to use [`mc admin update`](https://docs.min.io/docs/minio-admin-complete-guide.html#update) from the client. This will update all the nodes in the cluster and restart them, as shown in the following command from the MinIO client (mc):
+For example, to run the S3-Kinetic server on an x86 platform, using `/dev/sdb` as S3-Kinetic's backing store:
 
 ```
-mc admin update <minio alias, e.g., myminio>
+sudo ./skinetic.x86 server kinetic:skinny:sdb kineticd --store_device=/dev/sdb
 ```
 
-**Important things to remember during upgrades**:
+## Opening or clearing a database
+S3-Kinetic will attempt to reopen a Kinetic database if one exists on the target device. However, if the database is corrupt or nonexistent, S3-Kinetic will not create a new database by default. To erase any existing data and establish a new database, perform the following commands ***while S3-Kinetic or kineticd are running***:
 
-- `mc admin update` will only work if the user running MinIO has write access to the parent directory where the binary is located, for example if the current binary is at `/usr/local/bin/minio`, you would need write access to `/usr/local/bin`.
-- In the case of federated setups `mc admin update` should be run against each cluster individually. Avoid updating `mc` until all clusters have been updated.
-- If you are updating the server it is always recommended (unless explicitly mentioned in MinIO server release notes), to update `mc` once all the servers have been upgraded using `mc update`.
-- `mc admin update` is disabled in docker/container environments, container environments provide their own mechanisms for updating running containers.
-- If you are using Vault as KMS with MinIO, ensure you have followed the Vault upgrade procedure outlined here: https://www.vaultproject.io/docs/upgrading/index.html
-- If you are using etcd with MinIO for the federation, ensure you have followed the etcd upgrade procedure outlined here: https://github.com/etcd-io/etcd/blob/master/Documentation/upgrades/upgrading-etcd.md
+```
+cd libkinetic/toolbox/kctl
+./kctl -h 127.0.0.1 -s device erase
+```
+This command will attempt to establish a connection with a kineticd/s3kinetic server on the same machine, erase the server's database, and create a new database.
 
-## Explore Further
-- [MinIO Erasure Code QuickStart Guide](https://docs.min.io/docs/minio-erasure-code-quickstart-guide)
-- [Use `mc` with MinIO Server](https://docs.min.io/docs/minio-client-quickstart-guide)
-- [Use `aws-cli` with MinIO Server](https://docs.min.io/docs/aws-cli-with-minio)
-- [Use `s3cmd` with MinIO Server](https://docs.min.io/docs/s3cmd-with-minio)
-- [Use `minio-go` SDK with MinIO Server](https://docs.min.io/docs/golang-client-quickstart-guide)
-- [The MinIO documentation website](https://docs.min.io)
-
-## Contribute to MinIO Project
-Please follow MinIO [Contributor's Guide](https://github.com/minio/minio/blob/master/CONTRIBUTING.md)
-
-## Caveats
-MinIO in its default mode doesn't use MD5Sum checkums of incoming streams unless requested by the client in `Content-Md5` header for validation. This may lead to incompatibility with rare S3 clients like `s3ql` which unfortunately do not set `Content-Md5` but depend on hex MD5Sum for the stream to be calculated by the server. MinIO considers this as a bug in `s3ql` and should be fixed on the client side because MD5Sum is a poor way to checksum and validate the authenticity of the objects. Although MinIO provides a workaround until client applications are fixed use `--compat` option instead to start the server.
-```sh
-./minio --compat server /data
+A large amount of console output will be generated upon issuing the erase command; the server will indicate that the process is complete with the following lines:
+```
+[I0626 15:16:25.299952 478545 server.cc:821] ========== In Restore Drive State
+[I0626 15:16:25.300041 478545 server.cc:821] ========== In Ready State
 ```
 
-## License
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fminio%2Fminio.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fminio%2Fminio?ref=badge_large)
+## Testing the server with s3cmd
+The S3-Kinetic server will accept properly formatted S3 requests from any source. s3cmd is a lightweight tool that can easily be used to test the server's functionality. After [downloading and installing s3cmd](https://s3tools.org/download), modify or add the following lines to your ~/.s3cfg file:
+
+```
+host_base = 127.0.0.1:9000      # default S3-Kinetic server IP:port
+host_bucket = 127.0.0.1:9000
+use_https = False
+access_key =  minioadmin
+secret_key = minioadmin  
+signature_v2 = False
+```
+After configuring s3cmd, test out the server with the following commands:
+
+```
+# Create a bucket
+$> s3cmd mb s3://testbucket
+
+# Store (PUT) an object (<5MB)
+$> s3cmd put your_file.txt s3://testbucket
+
+# Store (PUT) a multipart object (>5MB)
+#$> s3cmd put --multipart-chunk-size=5MB your_big_file.txt s3://testbucket
+
+# Retrieve (GET) an object
+$> s3cmd get s3://testbucket/your_file.txt
+
+# Delete an object
+$> s3cmd del s3://testbucket/your_file.txt
+
+# Delete a bucket
+$> s3cmd rb [--recursive for non-empty buckets] s3://testbucket
+```
+
+See [s3cmd usage](https://s3tools.org/usage) for a complete list of operations supported by s3cmd.
+
+
+# Features and Limitations
+S3-Kinetic supports a limited set of fundamental S3 operations:
+
+* Creating and deleting buckets
+* Uploading, downloading, and deleting objects from buckets
+* Renaming buckets and objects
+* Copying objects between buckets
+* Multipart uploads (with 5MB chunk sizes)
+
+However, S3-Kinetic does *not* currently support:
+* S3 SELECT queries
+* Object/bucket versioning
+* Access Control Lists (ACLs)
+* MinIO Client (mc) 
+* MinIO Browser
+
+S3-Kinetic does not have a maximum object size; however, any objects larger than 5MB must be uploaded as multipart objects in <=5MB chunks.
+
+# License
+This repository is licensed under the **Apache 2.0 License**, as it was forked from an APL-licensed release of MinIO (RELEASE.2019-10-12T01-39-57Z). This code is NOT subject to the AGPL-3.0 license used by newer releases of MinIO. A copy of this repository's license can be found in the [LICENSE](https://github.com/Seagate/S3-Kinetic/blob/master/LICENSE) file or at https://www.apache.org/licenses/LICENSE-2.0.     
